@@ -380,3 +380,152 @@ fn pss_check(d : Digest, msg : BytesView, em : Bytes, _salt_len : Int) -> Bool {
   }
   @spec.eq(@spec.digest(hasher(d), Bytes::from_array(primed)[:])[:], digest)
 }
+
+// ----------------------------------------------------------------- encryption
+
+///|
+/// Encrypt under RSAES-OAEP (RFC 8017 §7.1.1), returning a block exactly as
+/// wide as the modulus.
+///
+/// `seed` is the `hLen` random octets OAEP masks with, and it is a required
+/// parameter rather than something drawn here: this library holds no entropy
+/// source, and the seed is what makes the same message encrypt differently
+/// twice. Go's `rsa.EncryptOAEP` and Rust's `rsa` crate take the randomness the
+/// same way. **Reusing a seed across messages destroys OAEP's security** — draw
+/// it fresh from the platform's CSPRNG for every call.
+///
+/// `digest` is the hash OAEP runs, and `mgf` the one MGF1 masks with; leaving
+/// `mgf` out uses `digest`, which is what Go and Node do, while Python and Java
+/// let the two differ, which is why it is a parameter here.
+///
+/// `digest` defaults to SHA-1: it is RFC 8017's own default, and what OpenSSL,
+/// Java's `OAEPParameterSpec.DEFAULT` and Node all take. OAEP does not rest on
+/// the hash's collision resistance, so this is not the choice it would be for a
+/// signature — but Go and Python require the caller to name it, and a new
+/// design should pass `digest=Sha256`.
+///
+/// The key's own `digest` and `scheme` govern signatures and are not consulted
+/// here; encryption and signing are separate schemes over the same key.
+pub fn PublicKey::encrypt(
+  self : PublicKey,
+  plain : BytesView,
+  seed~ : BytesView,
+  digest? : Digest = Sha1,
+  mgf? : Digest,
+  label? : BytesView = b""[:],
+) -> Bytes raise @spec.Broken {
+  let mgf = match mgf {
+    Some(m) => m
+    None => digest
+  }
+  let l_hash = digest_of(digest, label)
+  let hlen = l_hash.length()
+  let k = self.size
+  let most = k - 2 * hlen - 2
+  guard most >= 0 && plain.length() <= most else {
+    raise @spec.Size(want=if most < 0 { 0 } else { most }, got=plain.length())
+  }
+  guard seed.length() == hlen else {
+    raise @spec.Size(want=hlen, got=seed.length())
+  }
+  // DB = lHash || PS || 0x01 || M, padded to k - hLen - 1 octets.
+  let db : Array[Byte] = []
+  for b in l_hash {
+    db.push(b)
+  }
+  for _ in 0..<(most - plain.length()) {
+    db.push(0)
+  }
+  db.push(1)
+  for b in plain {
+    db.push(b)
+  }
+  let masked_db = xor(db, mgf1(mgf, seed, k - hlen - 1))
+  let masked_seed = xor(
+    seed.to_owned().to_array(),
+    mgf1(mgf, Bytes::from_array(masked_db)[:], hlen),
+  )
+  // EM = 0x00 || maskedSeed || maskedDB
+  let em : Array[Byte] = [0]
+  for b in masked_seed {
+    em.push(b)
+  }
+  for b in masked_db {
+    em.push(b)
+  }
+  BigInt::from_octets(Bytes::from_array(em)[:])
+  .pow(self.e, modulus=self.n)
+  .to_octets(length=k)
+}
+
+///|
+/// Decrypt an RSAES-OAEP block (RFC 8017 §7.1.2).
+///
+/// Every way the block can be wrong reports the same [`@spec.Tag`], and the
+/// checks all run before any of them is acted on: which check failed is exactly
+/// what Manger's 2001 attack reads off, so it is not told apart here.
+///
+/// `digest`, `mgf` and `label` mean what they do in [`PublicKey::encrypt`] and
+/// must match what encrypted the block.
+pub fn PrivateKey::decrypt(
+  self : PrivateKey,
+  cipher : BytesView,
+  digest? : Digest = Sha1,
+  mgf? : Digest,
+  label? : BytesView = b""[:],
+) -> Bytes raise @spec.Broken {
+  let mgf = match mgf {
+    Some(m) => m
+    None => digest
+  }
+  let l_hash = digest_of(digest, label)
+  let hlen = l_hash.length()
+  let k = self.size
+  guard cipher.length() == k && k >= 2 * hlen + 2 else {
+    raise @spec.Size(want=k, got=cipher.length())
+  }
+  let c = BigInt::from_octets(cipher)
+  guard c < self.n else { raise @spec.Tag }
+  let em = c.pow(self.d, modulus=self.n).to_octets(length=k)
+  let masked_seed = em[1:1 + hlen].to_owned().to_array()
+  let masked_db = em[1 + hlen:k].to_owned().to_array()
+  let seed = xor(masked_seed, mgf1(mgf, Bytes::from_array(masked_db)[:], hlen))
+  let db = xor(masked_db, mgf1(mgf, Bytes::from_array(seed)[:], k - hlen - 1))
+  // DB = lHash' || PS || 0x01 || M: the leading octet must be zero, the hash
+  // must match, and the padding must end in a single 0x01.
+  let mut bad = em[0] != (0 : Byte)
+  if !@spec.eq(l_hash[:], Bytes::from_array(db[0:hlen].to_owned())[:]) {
+    bad = true
+  }
+  let mut at = -1
+  for i in hlen..<db.length() {
+    if db[i] == (1 : Byte) && at < 0 {
+      at = i
+    } else if db[i] != (0 : Byte) && at < 0 {
+      bad = true
+    }
+  }
+  if at < 0 {
+    bad = true
+  }
+  guard !bad else { raise @spec.Tag }
+  Bytes::from_array(db[at + 1:].to_owned())
+}
+
+///|
+/// The digest of one message, for the label hash both directions need.
+fn digest_of(d : Digest, msg : BytesView) -> Bytes {
+  let h = hasher(d)
+  h.write(msg)
+  h.finish()
+}
+
+///|
+/// `a` masked with `b`, which must be at least as long.
+fn xor(a : Array[Byte], b : Bytes) -> Array[Byte] {
+  let out : Array[Byte] = []
+  for i in 0..<a.length() {
+    out.push((a[i].to_int() ^ b[i].to_int()).to_byte())
+  }
+  out
+}

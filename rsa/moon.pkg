@@ -1,0 +1,19 @@
+// RSA, RFC 8017 (PKCS #1 v2.2): https://www.rfc-editor.org/rfc/rfc8017
+//
+// Signatures — PKCS#1 v1.5 (§9.2), what JOSE calls RS256 and what certificates
+// carry, and PSS (§9.1), what JOSE calls PS256 and what new designs should use
+// — and encryption, RSAES-OAEP (§7.1).
+//
+// It sits at the top rather than under `sign/` because RSA is one primitive
+// doing two jobs over one key type, and a method must live in its type's
+// package: splitting it would put decryption where the private key is not.
+import {
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/mooncrypt/hash/sha1",
+  "moonbitstack/mooncrypt/hash/sha2",
+  "moonbitstack/mooncrypt/mac/hmac",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "test"

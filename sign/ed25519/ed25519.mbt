@@ -49,11 +49,32 @@ pub fn PrivateKey::new(seed : BytesView) -> PrivateKey raise @spec.Broken {
   guard seed.length() == key_size else {
     raise @spec.Size(want=key_size, got=seed.length())
   }
-  // The seed's digest splits in two: the low half is clamped into the scalar,
-  // the high half is the prefix that makes signing deterministic (RFC 8032
-  // §5.1.5). Clamping clears the three low bits to kill the cofactor and pins
-  // bit 254 so every scalar has the same length.
-  let h = @sha2.hash(seed, kind=Sha512)
+  expand(seed)
+}
+
+///|
+/// A signing key from a secret of any length.
+///
+/// [`PrivateKey::new`] takes the 32-byte seed the key format stores. The
+/// expansion itself — SHA-512 over the secret, then clamping — is defined for
+/// an input of any length; RFC 8032 fixes the seed at 32 octets so that keys
+/// have one written form, not because the arithmetic needs it. MariaDB's
+/// `client_ed25519` keys a connection with the password directly, which is the
+/// protocol this entry point exists for.
+///
+/// Anything that holds a real seed wants `new`: it is the one that refuses a
+/// secret of the wrong length, and a length check is worth having.
+pub fn PrivateKey::of_secret(secret : BytesView) -> PrivateKey {
+  expand(secret)
+}
+
+///|
+/// RFC 8032 §5.1.5: the secret's digest splits in two — the low half is clamped
+/// into the scalar, the high half is the prefix that makes signing
+/// deterministic. Clamping clears the three low bits to kill the cofactor and
+/// pins bit 254 so every scalar has the same length.
+fn expand(secret : BytesView) -> PrivateKey {
+  let h = @sha2.hash(secret, kind=Sha512)
   let clamped : Array[Byte] = []
   clamped.push((h[0].to_int() & 0xF8).to_byte())
   for i in 1..<31 {
@@ -61,14 +82,16 @@ pub fn PrivateKey::new(seed : BytesView) -> PrivateKey raise @spec.Broken {
   }
   clamped.push(((h[31].to_int() & 0x7F) | 0x40).to_byte())
   {
-    seed: seed.to_owned(),
+    seed: secret.to_owned(),
     scalar: le_int(Bytes::from_array(clamped)[:]),
     prefix: h[32:64].to_owned(),
   }
 }
 
 ///|
-/// The 32-byte seed this key is written as.
+/// The secret this key was built from — the 32-byte seed for a key from
+/// [`PrivateKey::new`], and whatever was handed to [`PrivateKey::of_secret`]
+/// otherwise.
 pub fn PrivateKey::bytes(self : PrivateKey) -> Bytes {
   self.seed
 }

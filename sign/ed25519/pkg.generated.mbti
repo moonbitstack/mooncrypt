@@ -16,6 +16,7 @@ pub let sig_size : Int
 type PrivateKey
 pub fn PrivateKey::bytes(Self) -> Bytes
 pub fn PrivateKey::new(BytesView) -> Self raise @spec.Broken
+pub fn PrivateKey::of_secret(BytesView) -> Self
 pub fn PrivateKey::public(Self) -> PublicKey
 pub fn PrivateKey::sign(Self, BytesView) -> Bytes
 pub impl @spec.Signer for PrivateKey

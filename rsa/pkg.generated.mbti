@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "moonbitstack/mooncrypt/sign/rsa"
+package "moonbitstack/mooncrypt/rsa"
 
 import {
   "moonbitlang/core/debug",
@@ -23,6 +23,7 @@ pub fn Digest::not_equal(Self, Self) -> Bool
 pub fn Digest::to_repr(Self) -> @debug.Repr
 
 type PrivateKey
+pub fn PrivateKey::decrypt(Self, BytesView, digest? : Digest, mgf? : Digest, label? : BytesView) -> Bytes raise @spec.Broken
 pub fn PrivateKey::new(BytesView, BytesView, BytesView, digest? : Digest, scheme? : Scheme) -> Self raise @spec.Broken
 pub fn PrivateKey::public(Self) -> PublicKey
 pub fn PrivateKey::sign(Self, BytesView) -> Bytes
@@ -30,6 +31,7 @@ pub fn PrivateKey::size(Self) -> Int
 pub impl @spec.Signer for PrivateKey
 
 type PublicKey
+pub fn PublicKey::encrypt(Self, BytesView, seed~ : BytesView, digest? : Digest, mgf? : Digest, label? : BytesView) -> Bytes raise @spec.Broken
 pub fn PublicKey::exponent(Self) -> Bytes
 pub fn PublicKey::modulus(Self) -> Bytes
 pub fn PublicKey::new(BytesView, BytesView, digest? : Digest, scheme? : Scheme) -> Self raise @spec.Broken
