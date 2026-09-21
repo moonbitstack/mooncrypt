@@ -179,7 +179,7 @@ pub impl Show for Refused with fn output(self, logger) {
 ///|
 /// One decoded element: the tag byte, the contents, and `raw` — tag, length and contents
 /// together. `raw` is what a signature covers and how far to step to reach the next element.
-pub struct Tlv {
+pub(all) struct Tlv {
   tag : Int
   value : BytesView
   raw : BytesView
@@ -187,7 +187,7 @@ pub struct Tlv {
 
 ///|
 /// A decoded BIT STRING: the content bytes and how many low bits of the last byte are padding.
-pub struct Bits {
+pub(all) struct Bits {
   bytes : Bytes
   unused : Int
 } derive(Eq, Debug)

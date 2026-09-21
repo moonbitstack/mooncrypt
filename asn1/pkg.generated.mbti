@@ -51,7 +51,7 @@ pub fn Refused::to_string(Self) -> String
 pub impl Show for Refused
 
 // Types and methods
-pub struct Bits {
+pub(all) struct Bits {
   bytes : Bytes
   unused : Int
 } derive(Eq, @debug.Debug)
@@ -60,7 +60,7 @@ pub fn Bits::get(Self, Int) -> Bool
 pub fn Bits::not_equal(Self, Self) -> Bool
 pub fn Bits::to_repr(Self) -> @debug.Repr
 
-pub struct Tlv {
+pub(all) struct Tlv {
   tag : Int
   value : BytesView
   raw : BytesView
