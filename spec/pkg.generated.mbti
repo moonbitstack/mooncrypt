@@ -16,6 +16,7 @@ pub fn wipe(FixedArray[Byte]) -> Unit
 pub(all) suberror Broken {
   Tag
   Size(want~ : Int, got~ : Int)
+  Weak
 } derive(Eq, @debug.Debug)
 pub fn Broken::equal(Self, Self) -> Bool
 pub fn Broken::not_equal(Self, Self) -> Bool
@@ -29,6 +30,12 @@ pub fn Broken::to_repr(Self) -> @debug.Repr
 pub(open) trait Aead {
   fn seal(Self, nonce~ : BytesView, plain~ : BytesView, aad~ : BytesView) -> Bytes
   fn open(Self, nonce~ : BytesView, cipher~ : BytesView, aad~ : BytesView) -> Bytes raise Broken
+}
+
+pub(open) trait Block {
+  fn block(Self) -> Int
+  fn encrypt(Self, BytesView) -> Bytes
+  fn decrypt(Self, BytesView) -> Bytes
 }
 
 pub(open) trait Hash {

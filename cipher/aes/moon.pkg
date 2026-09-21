@@ -1,0 +1,12 @@
+// AES, FIPS 197: https://doi.org/10.6028/NIST.FIPS.197-upd1
+//
+// All three key lengths. The key is the only thing that varies, so there is no
+// variant to name: the length says which one it is.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/mooncrypt/cipher/aes",
+  "moonbitstack/moonbase/base16",
+} for "test"

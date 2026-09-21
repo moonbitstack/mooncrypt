@@ -1,0 +1,12 @@
+// X25519, RFC 7748: https://www.rfc-editor.org/rfc/rfc7748
+//
+// The Curve25519 Diffie-Hellman, over the field mod 2^255-19. A low-order point
+// is refused rather than returned as an all-zero secret.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/mooncrypt/kex/x25519",
+  "moonbitstack/moonbase/base16",
+} for "test"

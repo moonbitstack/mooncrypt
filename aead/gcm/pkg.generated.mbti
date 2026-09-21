@@ -1,0 +1,27 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/aead/gcm"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub let tag : Int
+
+// Errors
+
+// Types and methods
+pub struct Gcm {
+  cipher : &@spec.Block
+  subkey : FixedArray[Int]
+  tag : Int
+}
+pub fn Gcm::new(&@spec.Block, tag? : Int) -> Self raise @spec.Broken
+pub fn Gcm::open(Self, nonce~ : BytesView, cipher~ : BytesView, aad? : BytesView) -> Bytes raise @spec.Broken
+pub fn Gcm::seal(Self, nonce~ : BytesView, plain~ : BytesView, aad? : BytesView) -> Bytes
+pub fn Gcm::size(Self) -> Int
+pub impl @spec.Aead for Gcm
+
+// Type aliases
+
+// Traits

@@ -38,6 +38,26 @@ pub(open) trait Mac {
 }
 
 ///|
+/// A block cipher: a keyed permutation of a fixed-size block.
+///
+/// It is the thing a mode of operation is built on, which is why it is a
+/// contract rather than a concrete type — GCM is defined for any 128-bit block
+/// cipher, so it takes one of these and SM4-GCM costs nothing more than an SM4
+/// that implements it.
+///
+/// Both directions are here although a counter mode needs only [`encrypt`]: a
+/// permutation that cannot be inverted is not a block cipher, and a mode such as
+/// CBC needs the inverse.
+pub(open) trait Block {
+  /// The block length in bytes.
+  fn block(Self) -> Int
+  /// Encrypt one block. The input must be exactly [`block`] bytes.
+  fn encrypt(Self, BytesView) -> Bytes
+  /// Decrypt one block. The input must be exactly [`block`] bytes.
+  fn decrypt(Self, BytesView) -> Bytes
+}
+
+///|
 /// Authenticated encryption with associated data.
 ///
 /// [`open`] raises rather than returning an option, because "the tag did not
@@ -73,6 +93,10 @@ pub(all) suberror Broken {
   Tag
   /// A nonce, key or ciphertext of the wrong length, with what was expected.
   Size(want~ : Int, got~ : Int)
+  /// The right number of bytes, but a value the algorithm must refuse: a
+  /// low-order Curve25519 point, whose shared secret is all zeroes and so was
+  /// chosen by the peer rather than agreed with it.
+  Weak
 } derive(Eq, Debug)
 
 ///|

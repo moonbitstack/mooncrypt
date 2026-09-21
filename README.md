@@ -27,7 +27,7 @@ Import the ones you use. A package nothing imports is not linked, which is what
 
 | Package | What | Specification |
 |:--:|:--|:--|
-| `spec` | The `Hash`, `Mac`, `Aead`, `Signer` and `Verifier` traits, constant-time comparison, erasure | — |
+| `spec` | The `Hash`, `Mac`, `Block`, `Aead`, `Signer` and `Verifier` traits, constant-time comparison, erasure | — |
 | `hash/sha2` | SHA-224, SHA-256, SHA-384, SHA-512, SHA-512/224, SHA-512/256 | FIPS 180-4 |
 | `hash/sha1` | SHA-1 | FIPS 180-4 |
 | `hash/md5` | MD5 | RFC 1321 |
@@ -37,6 +37,10 @@ Import the ones you use. A package nothing imports is not linked, which is what
 | `sign/ed25519` | Ed25519 | RFC 8032 |
 | `sign/ecdsa` | ECDSA over P-256, P-384, P-521 and secp256k1, with RFC 6979 nonces | FIPS 186-4, RFC 6979 |
 | `sign/rsa` | RSA PKCS#1 v1.5 and PSS signatures | RFC 8017 |
+| `cipher/aes` | AES-128, AES-192 and AES-256, both directions | FIPS 197 |
+| `aead/gcm` | GCM over any 128-bit block cipher, any nonce length, the seven tag lengths | SP 800-38D |
+| `kex/x25519` | X25519, with a low-order point refused | RFC 7748 |
+| `asn1` | ASN.1 DER, read and write — the layer a key file and a certificate are built on | ITU-T X.690 |
 
 Each package's `moon.pkg` names the specification it implements and links to it.
 
@@ -74,6 +78,14 @@ Two things have deliberately **no** default:
 |:--:|:--|
 | `pbkdf2.key(rounds~)` | The iteration count is the whole security argument and goes out of date silently. Python's `hashlib.pbkdf2_hmac`, Go's `pbkdf2.Key` and Node's `crypto.pbkdf2` all require it, so requiring it *is* the mainstream default |
 | `len~` on both KDFs | How many bytes of key are wanted is a property of what the key is for |
+| `gcm.Gcm::new(tag~)` | 16 | The full 128-bit tag, the only length SP 800-38D appendix C leaves unqualified. The shorter ones it defines are there, and each costs forgery resistance the appendix works out |
+
+Two things are deliberately **not** knobs. `aes.Cipher::new` reads the variant off
+the key length rather than taking one, because the length is what distinguishes
+the three and a key that disagrees with a named variant would be a second way to
+be wrong. `x25519.shared` always refuses a low-order point: the check is a MAY in
+RFC 7748 §6.1 and a MUST in TLS 1.3, every implementation in use makes it, and a
+switch to turn it off would only make the dangerous call the short one.
 
 The aborts in this library are programming errors rather than runtime
 conditions: fewer than one PBKDF2 round, a negative key length, more than 255

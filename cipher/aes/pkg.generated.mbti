@@ -1,0 +1,28 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/cipher/aes"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub let block : Int
+
+// Errors
+
+// Types and methods
+pub struct Cipher {
+  schedule : FixedArray[Byte]
+  rounds : Int
+}
+pub fn Cipher::block(Self) -> Int
+pub fn Cipher::decrypt(Self, BytesView) -> Bytes
+pub fn Cipher::encrypt(Self, BytesView) -> Bytes
+pub fn Cipher::new(BytesView) -> Self raise @spec.Broken
+pub fn Cipher::size(Self) -> Int
+pub fn Cipher::wipe(Self) -> Unit
+pub impl @spec.Block for Cipher
+
+// Type aliases
+
+// Traits

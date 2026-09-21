@@ -1,0 +1,14 @@
+// Galois/Counter Mode, NIST SP 800-38D:
+// https://doi.org/10.6028/NIST.SP.800-38D
+//
+// Over any 128-bit block cipher, because the mode is defined that way. Nonces of
+// any length, and the tag lengths SP 800-38D names.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/mooncrypt/aead/gcm",
+  "moonbitstack/mooncrypt/cipher/aes",
+  "moonbitstack/moonbase/base16",
+} for "test"
