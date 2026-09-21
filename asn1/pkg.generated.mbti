@@ -40,7 +40,7 @@ pub fn utc_time(String) -> Bytes
 pub fn utf8_string(String) -> Bytes
 
 // Errors
-pub suberror Refused {
+pub(all) suberror Refused {
   Malformed(String)
   Unsupported(String)
 } derive(Eq)

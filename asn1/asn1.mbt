@@ -162,7 +162,7 @@ pub fn explicit(tag_num : Int, content : Bytes) -> Bytes {
 /// A refused encoding. `Malformed` is a hostile or corrupt certificate; `Unsupported` is
 /// well-formed DER this parser deliberately does not read, and the two are separated so a
 /// caller can log an interop gap without calling it an attack.
-pub suberror Refused {
+pub(all) suberror Refused {
   Malformed(String)
   Unsupported(String)
 } derive(Eq)
