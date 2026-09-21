@@ -399,7 +399,7 @@ pub fn Tlv::oid(self : Tlv) -> String raise Refused {
 /// Octets of one of the ASCII string types as text. Taken on its own because a subjectAltName
 /// tags its entries with the field number, not the string type, so the octets arrive with nothing
 /// left to dispatch on.
-fn ascii(v : BytesView) -> String raise Refused {
+pub fn ascii(v : BytesView) -> String raise Refused {
   for i in 0..<v.length() {
     if v[i].to_int() >= 0x80 {
       raise Malformed("non-ASCII octet in an ASCII string type")

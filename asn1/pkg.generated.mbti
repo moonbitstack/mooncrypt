@@ -7,6 +7,8 @@ import {
 }
 
 // Values
+pub fn ascii(BytesView) -> String raise Refused
+
 pub fn bit_string(Bytes) -> Bytes
 
 pub fn context(Int, Int) -> Bool
