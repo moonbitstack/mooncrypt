@@ -10,6 +10,14 @@
 /// can afford today, not from a number copied out of an old document — SCRAM
 /// servers name their own count on the wire, and for password storage the
 /// memory-hard KDFs are the better answer where they are available.
+///
+/// `rounds` and `len` have no defaults, which is itself the mainstream choice:
+/// Python's `hashlib.pbkdf2_hmac`, Go's `pbkdf2.Key` and Node's `crypto.pbkdf2`
+/// all require both. A default iteration count is a number that goes out of date
+/// silently, and this is the one place where being made to type it is the point.
+///
+/// A count below one and a negative length abort rather than raise. Neither can
+/// come from input: they are the calling code saying something it cannot mean.
 pub fn key(
   password : BytesView,
   salt : BytesView,

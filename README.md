@@ -55,6 +55,32 @@ outcome, not an exceptional one.
 Secrets are compared with `@spec.eq`, which reads both inputs to the end. It is
 the only comparison the library offers, so there is no wrong one to reach for.
 
+## Configuration
+
+Everything a caller chooses is already an argument: `kind` picks the SHA-2
+variant, `curve` the ECDSA curve, `digest` and `scheme` the RSA padding and its
+hash, `salt` and `info` the HKDF inputs, and `Pss(salt=32)` carries its own salt
+length rather than assuming one.
+
+What is not an argument is what a specification fixes: HMAC's inner and outer
+pads, MD5's constants, SHA-2's round constants and initial values, the curve
+parameters, Ed25519's field constants. Those are not configuration, and making
+them settable would only let a caller compute something that is not the
+algorithm.
+
+Two things have deliberately **no** default:
+
+| Setting | Why there is no default |
+|:--:|:--|
+| `pbkdf2.key(rounds~)` | The iteration count is the whole security argument and goes out of date silently. Python's `hashlib.pbkdf2_hmac`, Go's `pbkdf2.Key` and Node's `crypto.pbkdf2` all require it, so requiring it *is* the mainstream default |
+| `len~` on both KDFs | How many bytes of key are wanted is a property of what the key is for |
+
+The aborts in this library are programming errors rather than runtime
+conditions: fewer than one PBKDF2 round, a negative key length, more than 255
+HKDF digests from one key, a modulus too small for the digest it must carry.
+None of them can arise from input, so none of them is a `raise` a caller could
+usefully catch.
+
 ## What is checked
 
 Every algorithm is tested against the vectors its specification publishes —
