@@ -1,0 +1,12 @@
+// MD5, RFC 1321: https://www.rfc-editor.org/rfc/rfc1321
+//
+// Kept for PostgreSQL's `md5` authentication and the long tail of legacy
+// checksums, not because it is fit for new work.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase",
+  "moonbitstack/moonbase/base16",
+} for "test"

@@ -1,0 +1,14 @@
+// SHA-2, FIPS 180-4: https://doi.org/10.6028/NIST.FIPS.180-4
+//
+// All six members: SHA-224 and SHA-256 over 32-bit words, SHA-384, SHA-512,
+// SHA-512/224 and SHA-512/256 over 64-bit words. They differ only in word
+// width, initial vector and how much of the final state is published, so the
+// two compression functions are written once and the family is a `Kind`.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase",
+  "moonbitstack/moonbase/base16",
+} for "test"

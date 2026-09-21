@@ -1,0 +1,13 @@
+// SHA-1, FIPS 180-4 §6.1: https://doi.org/10.6028/NIST.FIPS.180-4
+//
+// Kept for the protocols that still mandate it — the WebSocket handshake
+// (RFC 6455 §4.2.2), MySQL's native password, Git object names — not because it
+// is fit for new work.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase",
+  "moonbitstack/moonbase/base16",
+} for "test"

@@ -1,0 +1,16 @@
+// RSA signatures, RFC 8017 (PKCS #1 v2.2):
+// https://www.rfc-editor.org/rfc/rfc8017
+//
+// PKCS#1 v1.5 (§9.2) is what JOSE calls RS256 and what certificates carry; PSS
+// (§9.1) is what JOSE calls PS256 and what new designs should use. Encryption —
+// OAEP and the v1.5 padding — is a separate concern and is not here.
+import {
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/mooncrypt/hash/sha1",
+  "moonbitstack/mooncrypt/hash/sha2",
+  "moonbitstack/mooncrypt/mac/hmac",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "test"

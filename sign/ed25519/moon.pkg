@@ -1,0 +1,13 @@
+// Ed25519, RFC 8032: https://www.rfc-editor.org/rfc/rfc8032
+//
+// Signatures are deterministic — the nonce comes out of the key and the message
+// — so there is no entropy source to get wrong, which is the whole reason this
+// scheme replaced ECDSA wherever it could.
+import {
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/mooncrypt/hash/sha2",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "test"

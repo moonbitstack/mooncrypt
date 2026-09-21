@@ -1,0 +1,5 @@
+// The contracts every other package in mooncrypt is written against, plus the two
+// operations that must not be written casually: comparing secrets and erasing them.
+//
+// Constant-time comparison, NIST SP 800-57 Part 1 §8 (key destruction):
+// https://doi.org/10.6028/NIST.SP.800-57pt1r5

@@ -1,0 +1,14 @@
+// PBKDF2, RFC 8018 §5.2: https://www.rfc-editor.org/rfc/rfc8018#section-5.2
+//
+// The work factor is the caller's: this only counts iterations. SCRAM
+// authentication and password storage are the two callers that matter.
+import {
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/mooncrypt/mac/hmac",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+  "moonbitstack/mooncrypt/hash/sha1",
+  "moonbitstack/mooncrypt/hash/sha2",
+} for "test"

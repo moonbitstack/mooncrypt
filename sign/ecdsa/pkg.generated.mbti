@@ -1,0 +1,46 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/sign/ecdsa"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) enum Curve {
+  P256
+  P384
+  P521
+  Secp256k1
+} derive(Eq, @debug.Debug)
+pub fn Curve::equal(Self, Self) -> Bool
+pub fn Curve::not_equal(Self, Self) -> Bool
+pub fn Curve::size(Self) -> Int
+pub fn Curve::to_repr(Self) -> @debug.Repr
+
+type PrivateKey
+pub fn PrivateKey::bytes(Self) -> Bytes
+pub fn PrivateKey::curve(Self) -> Curve
+pub fn PrivateKey::new(BytesView, curve? : Curve) -> Self raise @spec.Broken
+pub fn PrivateKey::public(Self) -> PublicKey
+pub fn PrivateKey::sign(Self, BytesView) -> Bytes
+pub fn PrivateKey::with_hash(BytesView, () -> &@spec.Hash, curve? : Curve) -> Self raise @spec.Broken
+pub impl @spec.Signer for PrivateKey
+
+type PublicKey
+pub fn PublicKey::bytes(Self) -> Bytes
+pub fn PublicKey::curve(Self) -> Curve
+pub fn PublicKey::new(BytesView, curve? : Curve) -> Self raise @spec.Broken
+pub fn PublicKey::of_xy(BytesView, BytesView, curve? : Curve) -> Self raise @spec.Broken
+pub fn PublicKey::verify(Self, BytesView, BytesView) -> Bool
+pub fn PublicKey::with_hash(BytesView, () -> &@spec.Hash, curve? : Curve) -> Self raise @spec.Broken
+pub fn PublicKey::xy(Self) -> (Bytes, Bytes)
+pub impl @spec.Verifier for PublicKey
+
+// Type aliases
+
+// Traits

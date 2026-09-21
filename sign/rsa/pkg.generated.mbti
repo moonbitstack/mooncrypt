@@ -1,0 +1,50 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/sign/rsa"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) enum Digest {
+  Sha1
+  Sha224
+  Sha256
+  Sha384
+  Sha512
+} derive(Eq, @debug.Debug)
+pub fn Digest::equal(Self, Self) -> Bool
+pub fn Digest::not_equal(Self, Self) -> Bool
+pub fn Digest::to_repr(Self) -> @debug.Repr
+
+type PrivateKey
+pub fn PrivateKey::new(BytesView, BytesView, BytesView, digest? : Digest, scheme? : Scheme) -> Self raise @spec.Broken
+pub fn PrivateKey::public(Self) -> PublicKey
+pub fn PrivateKey::sign(Self, BytesView) -> Bytes
+pub fn PrivateKey::size(Self) -> Int
+pub impl @spec.Signer for PrivateKey
+
+type PublicKey
+pub fn PublicKey::exponent(Self) -> Bytes
+pub fn PublicKey::modulus(Self) -> Bytes
+pub fn PublicKey::new(BytesView, BytesView, digest? : Digest, scheme? : Scheme) -> Self raise @spec.Broken
+pub fn PublicKey::size(Self) -> Int
+pub fn PublicKey::verify(Self, BytesView, BytesView) -> Bool
+pub impl @spec.Verifier for PublicKey
+
+pub(all) enum Scheme {
+  Pkcs1
+  Pss(salt~ : Int)
+} derive(Eq, @debug.Debug)
+pub fn Scheme::equal(Self, Self) -> Bool
+pub fn Scheme::not_equal(Self, Self) -> Bool
+pub fn Scheme::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

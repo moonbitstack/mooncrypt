@@ -1,0 +1,13 @@
+// A tour of what mooncrypt does, runnable: `moon run examples/tour`.
+pkgtype(kind: "executable")
+
+import {
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/mooncrypt/hash/sha2",
+  "moonbitstack/mooncrypt/mac/hmac",
+  "moonbitstack/mooncrypt/kdf/hkdf",
+  "moonbitstack/mooncrypt/kdf/pbkdf2",
+  "moonbitstack/mooncrypt/sign/ed25519",
+  "moonbitstack/mooncrypt/sign/ecdsa",
+  "moonbitstack/moonbase/base16",
+}

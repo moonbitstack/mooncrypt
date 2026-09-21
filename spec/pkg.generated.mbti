@@ -1,0 +1,54 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/spec"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn digest(&Hash, BytesView) -> Bytes
+
+pub fn eq(BytesView, BytesView) -> Bool
+
+pub fn wipe(FixedArray[Byte]) -> Unit
+
+// Errors
+pub(all) suberror Broken {
+  Tag
+  Size(want~ : Int, got~ : Int)
+} derive(Eq, @debug.Debug)
+pub fn Broken::equal(Self, Self) -> Bool
+pub fn Broken::not_equal(Self, Self) -> Bool
+pub fn Broken::to_repr(Self) -> @debug.Repr
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+pub(open) trait Aead {
+  fn seal(Self, nonce~ : BytesView, plain~ : BytesView, aad~ : BytesView) -> Bytes
+  fn open(Self, nonce~ : BytesView, cipher~ : BytesView, aad~ : BytesView) -> Bytes raise Broken
+}
+
+pub(open) trait Hash {
+  fn write(Self, BytesView) -> Unit
+  fn finish(Self) -> Bytes
+  fn reset(Self) -> Unit
+  fn size(Self) -> Int
+  fn block(Self) -> Int
+}
+
+pub(open) trait Mac {
+  fn write(Self, BytesView) -> Unit
+  fn finish(Self) -> Bytes
+  fn size(Self) -> Int
+}
+
+pub(open) trait Signer {
+  fn sign(Self, BytesView) -> Bytes
+}
+
+pub(open) trait Verifier {
+  fn verify(Self, BytesView, BytesView) -> Bool
+}

@@ -1,0 +1,24 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/mac/hmac"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub fn mac(BytesView, BytesView, () -> &@spec.Hash) -> Bytes
+
+// Errors
+
+// Types and methods
+type Hmac
+pub fn Hmac::finish(Self) -> Bytes
+pub fn Hmac::new(BytesView, () -> &@spec.Hash) -> Self
+pub fn Hmac::reset(Self) -> Unit
+pub fn Hmac::size(Self) -> Int
+pub fn Hmac::write(Self, BytesView) -> Unit
+pub impl @spec.Mac for Hmac
+
+// Type aliases
+
+// Traits

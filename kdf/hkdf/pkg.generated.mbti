@@ -1,0 +1,21 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/kdf/hkdf"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub fn expand(BytesView, () -> &@spec.Hash, info? : BytesView, len~ : Int) -> Bytes
+
+pub fn extract(BytesView, () -> &@spec.Hash, salt? : BytesView) -> Bytes
+
+pub fn key(BytesView, () -> &@spec.Hash, salt? : BytesView, info? : BytesView, len~ : Int) -> Bytes
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

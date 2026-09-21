@@ -1,0 +1,31 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/sign/ed25519"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub let key_size : Int
+
+pub let sig_size : Int
+
+// Errors
+
+// Types and methods
+type PrivateKey
+pub fn PrivateKey::bytes(Self) -> Bytes
+pub fn PrivateKey::new(BytesView) -> Self raise @spec.Broken
+pub fn PrivateKey::public(Self) -> PublicKey
+pub fn PrivateKey::sign(Self, BytesView) -> Bytes
+pub impl @spec.Signer for PrivateKey
+
+type PublicKey
+pub fn PublicKey::bytes(Self) -> Bytes
+pub fn PublicKey::new(BytesView) -> Self raise @spec.Broken
+pub fn PublicKey::verify(Self, BytesView, BytesView) -> Bool
+pub impl @spec.Verifier for PublicKey
+
+// Type aliases
+
+// Traits

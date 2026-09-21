@@ -1,0 +1,15 @@
+// ECDSA, FIPS 186-4: https://doi.org/10.6028/NIST.FIPS.186-4
+// Deterministic nonces, RFC 6979: https://www.rfc-editor.org/rfc/rfc6979
+// Curve parameters, SEC 2 v2: https://www.secg.org/sec2-v2.pdf
+//
+// Signatures are `r ∥ s`, fixed-width, which is what JOSE and most wire formats
+// carry; the ASN.1 DER wrapper OpenSSL writes belongs with the other DER.
+import {
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/mooncrypt/hash/sha2",
+  "moonbitstack/mooncrypt/mac/hmac",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "test"

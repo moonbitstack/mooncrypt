@@ -1,0 +1,40 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/hash/sha2"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub fn hash(BytesView, kind? : Kind) -> Bytes
+
+// Errors
+
+// Types and methods
+type Hasher
+pub fn Hasher::block(Self) -> Int
+pub fn Hasher::finish(Self) -> Bytes
+pub fn Hasher::new(kind? : Kind) -> Self
+pub fn Hasher::reset(Self) -> Unit
+pub fn Hasher::size(Self) -> Int
+pub fn Hasher::write(Self, BytesView) -> Unit
+pub impl @spec.Hash for Hasher
+
+pub(all) enum Kind {
+  Sha224
+  Sha256
+  Sha384
+  Sha512
+  Sha512_224
+  Sha512_256
+} derive(Eq, @debug.Debug)
+pub fn Kind::block(Self) -> Int
+pub fn Kind::equal(Self, Self) -> Bool
+pub fn Kind::not_equal(Self, Self) -> Bool
+pub fn Kind::size(Self) -> Int
+pub fn Kind::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

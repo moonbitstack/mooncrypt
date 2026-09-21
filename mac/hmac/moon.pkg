@@ -1,0 +1,15 @@
+// HMAC, RFC 2104: https://www.rfc-editor.org/rfc/rfc2104
+// and FIPS 198-1: https://doi.org/10.6028/NIST.FIPS.198-1
+//
+// Written once over the `Hash` contract rather than once per digest: the
+// construction only ever needs a block size and a way to start a fresh hash.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+  "moonbitstack/mooncrypt/hash/sha1",
+  "moonbitstack/mooncrypt/hash/sha2",
+  "moonbitstack/mooncrypt/hash/md5",
+} for "test"

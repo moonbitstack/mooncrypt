@@ -1,0 +1,17 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/kdf/pbkdf2"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub fn key(BytesView, BytesView, () -> &@spec.Hash, rounds~ : Int, len~ : Int) -> Bytes
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

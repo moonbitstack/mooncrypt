@@ -1,0 +1,25 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/hash/sha1"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub fn hash(BytesView) -> Bytes
+
+// Errors
+
+// Types and methods
+type Hasher
+pub fn Hasher::block(Self) -> Int
+pub fn Hasher::finish(Self) -> Bytes
+pub fn Hasher::new() -> Self
+pub fn Hasher::reset(Self) -> Unit
+pub fn Hasher::size(Self) -> Int
+pub fn Hasher::write(Self, BytesView) -> Unit
+pub impl @spec.Hash for Hasher
+
+// Type aliases
+
+// Traits
