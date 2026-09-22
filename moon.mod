@@ -1,6 +1,6 @@
 name = "moonbitstack/mooncrypt"
 
-version = "0.3.0"
+version = "0.3.1"
 
 readme = "README.md"
 
@@ -27,4 +27,5 @@ preferred_target = "wasm-gc"
 
 import {
   "moonbitstack/moonbase@0.4.0",
+  "moonbitstack/moondate@0.1.0",
 }

@@ -5,6 +5,7 @@
 // Nothing here is cryptography; it is here because everything cryptographic that
 // has a file format needs it.
 import {
+  "moonbitstack/moondate",
   "moonbitlang/core/encoding/utf8",
 }
 

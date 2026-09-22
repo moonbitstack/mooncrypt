@@ -460,28 +460,6 @@ fn digits(v : BytesView, off : Int, n : Int) -> Int raise Refused {
 }
 
 ///|
-/// Days from 1970-01-01 to a proleptic Gregorian date, by the shift-the-year-to-March identity
-/// that makes the leap day the last of the year.
-fn days(y : Int, m : Int, d : Int) -> Int64 {
-  let y = if m <= 2 { y - 1 } else { y }
-  let era = (if y >= 0 { y } else { y - 399 }) / 400
-  let yoe = y - era * 400
-  let doy = (153 * (if m > 2 { m - 3 } else { m + 9 }) + 2) / 5 + d - 1
-  let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy
-  era.to_int64() * 146097L + (doe - 719468).to_int64()
-}
-
-///|
-/// Days in a month of a proleptic Gregorian year.
-fn month_days(y : Int, m : Int) -> Int {
-  match m {
-    1 | 3 | 5 | 7 | 8 | 10 | 12 => 31
-    4 | 6 | 9 | 11 => 30
-    _ => if y % 4 == 0 && (y % 100 != 0 || y % 400 == 0) { 29 } else { 28 }
-  }
-}
-
-///|
 /// A UTCTime or GeneralizedTime as seconds since the Unix epoch. RFC 5280 §4.1.2.5 pins both to
 /// the seconds-and-`Z` form, and a two-digit year to 1950..2049, so the other shapes X.690
 /// allows are refused rather than guessed at.
@@ -511,16 +489,19 @@ pub fn Tlv::time(self : Tlv) -> Int64 raise Refused {
   let hour = digits(v, off + 4, 2)
   let minute = digits(v, off + 6, 2)
   let second = digits(v, off + 8, 2)
-  if month < 1 ||
-    month > 12 ||
-    day < 1 ||
-    day > month_days(year, month) ||
-    hour > 23 ||
-    minute > 59 ||
-    second > 59 {
+  // The shape above is DER's; whether the day exists and how far it lies from 1970
+  // is the calendar's. A second of 60 is refused even though a calendar allows it,
+  // because RFC 5280 pins validity to 00..59.
+  let date = @moondate.Date::new(year, month, day) catch {
+    _ => raise Malformed("time out of range")
+  }
+  let _ = @moondate.Time::new(hour, minute, second~) catch {
+    _ => raise Malformed("time out of range")
+  }
+  if second > 59 {
     raise Malformed("time out of range")
   }
-  days(year, month, day) * 86400L +
+  date.days().to_int64() * 86400L +
   (hour * 3600 + minute * 60 + second).to_int64()
 }
 
