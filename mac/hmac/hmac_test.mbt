@@ -2,11 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 ///|
-fn hex(b : Bytes) -> String {
-  @base16.encode(b[:])
-}
-
-///|
 fn raw(s : String) -> Bytes {
   @base16.decode_lossy(s)
 }
@@ -65,7 +60,7 @@ test "HMAC-SHA256 matches RFC 4231" {
   ]
   for case in cases {
     let (key, msg, want) = case
-    assert_eq(hex(@hmac.mac(raw(key)[:], raw(msg)[:], sha256)), want)
+    assert_eq(@base16.encode(@hmac.mac(raw(key)[:], raw(msg)[:], sha256)), want)
   }
 }
 
@@ -102,7 +97,7 @@ test "HMAC-SHA512 matches RFC 4231" {
   ]
   for case in cases {
     let (key, msg, want) = case
-    assert_eq(hex(@hmac.mac(raw(key)[:], raw(msg)[:], sha512)), want)
+    assert_eq(@base16.encode(@hmac.mac(raw(key)[:], raw(msg)[:], sha512)), want)
   }
 }
 
@@ -138,7 +133,7 @@ test "HMAC-SHA1 and HMAC-MD5 match RFC 2202" {
   ]
   for case in over_sha1 {
     let (key, msg, want) = case
-    assert_eq(hex(@hmac.mac(raw(key)[:], raw(msg)[:], sha1)), want)
+    assert_eq(@base16.encode(@hmac.mac(raw(key)[:], raw(msg)[:], sha1)), want)
   }
   let over_md5 = [
     (
@@ -169,7 +164,7 @@ test "HMAC-SHA1 and HMAC-MD5 match RFC 2202" {
   ]
   for case in over_md5 {
     let (key, msg, want) = case
-    assert_eq(hex(@hmac.mac(raw(key)[:], raw(msg)[:], md5)), want)
+    assert_eq(@base16.encode(@hmac.mac(raw(key)[:], raw(msg)[:], md5)), want)
   }
 }
 

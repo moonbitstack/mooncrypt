@@ -2,11 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 ///|
-fn hex(b : Bytes) -> String {
-  @base16.encode(b[:])
-}
-
-///|
 fn raw(s : String) -> Bytes {
   @base16.decode_lossy(s)
 }
@@ -137,8 +132,8 @@ test "ECDSA signs and verifies the RFC 6979 vectors" {
     let (name, scalar, point, msg, want) = case
     let curve = curve_of(name)
     let sk = @ecdsa.PrivateKey::new(raw(scalar)[:], curve~)
-    assert_eq(hex(sk.public().bytes()), point)
-    assert_eq(hex(sk.sign(raw(msg)[:])), want)
+    assert_eq(@base16.encode(sk.public().bytes()), point)
+    assert_eq(@base16.encode(sk.sign(raw(msg)[:])), want)
     let pk = @ecdsa.PublicKey::new(raw(point)[:], curve~)
     assert_true(pk.verify(raw(msg)[:], raw(want)[:]))
   }
@@ -192,7 +187,7 @@ test "point encodings agree" {
     assert_eq(back.bytes(), pk.bytes())
     assert_eq(back.curve(), curve)
     assert_eq(sk.curve(), curve)
-    assert_eq(hex(sk.bytes()), scalar)
+    assert_eq(@base16.encode(sk.bytes()), scalar)
   }
 }
 

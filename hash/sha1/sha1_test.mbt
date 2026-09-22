@@ -2,11 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 ///|
-fn hex(b : Bytes) -> String {
-  @base16.encode(b[:])
-}
-
-///|
 fn ascii(s : String) -> Bytes {
   @moonbase.ascii(s)
 }
@@ -32,7 +27,7 @@ test "SHA-1 matches the published vectors" {
   ]
   for case in cases {
     let (msg, want) = case
-    assert_eq(hex(@sha1.hash(ascii(msg)[:])), want)
+    assert_eq(@base16.encode(@sha1.hash(ascii(msg)[:])), want)
   }
 }
 
@@ -67,5 +62,8 @@ test "a digest is twenty bytes over a sixty-four byte block" {
   assert_eq(h.block(), 64)
   h.write(ascii("abc")[:])
   h.reset()
-  assert_eq(hex(h.finish()), "da39a3ee5e6b4b0d3255bfef95601890afd80709")
+  assert_eq(
+    @base16.encode(h.finish()),
+    "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+  )
 }

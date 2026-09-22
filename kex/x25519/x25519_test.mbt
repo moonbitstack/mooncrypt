@@ -7,11 +7,6 @@ fn raw(s : String) -> Bytes {
 }
 
 ///|
-fn hex(b : Bytes) -> String {
-  @base16.encode(b[:])
-}
-
-///|
 /// The two scalar-multiplication vectors of RFC 7748 §5.2.
 test "the scalar multiplication vectors of RFC 7748" {
   let cases = [
@@ -26,7 +21,10 @@ test "the scalar multiplication vectors of RFC 7748" {
   ]
   for case in cases {
     let (scalar, point, want) = case
-    assert_eq(hex(@x25519.shared(raw(scalar)[:], raw(point)[:])), want)
+    assert_eq(
+      @base16.encode(@x25519.shared(raw(scalar)[:], raw(point)[:])),
+      want,
+    )
   }
 }
 
@@ -41,18 +39,24 @@ test "the exchange of RFC 7748 section 6.1" {
     "5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb",
   )
   assert_eq(
-    hex(@x25519.public(alice[:])),
+    @base16.encode(@x25519.public(alice[:])),
     "8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a",
   )
   assert_eq(
-    hex(@x25519.public(bob[:])),
+    @base16.encode(@x25519.public(bob[:])),
     "de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f",
   )
   let want = "4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742"
   // Each side computes it from its own private key and the other's public one,
   // and they must agree — that is the whole point of the exercise.
-  assert_eq(hex(@x25519.shared(alice[:], @x25519.public(bob[:])[:])), want)
-  assert_eq(hex(@x25519.shared(bob[:], @x25519.public(alice[:])[:])), want)
+  assert_eq(
+    @base16.encode(@x25519.shared(alice[:], @x25519.public(bob[:])[:])),
+    want,
+  )
+  assert_eq(
+    @base16.encode(@x25519.shared(bob[:], @x25519.public(alice[:])[:])),
+    want,
+  )
 }
 
 ///|

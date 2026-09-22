@@ -7,11 +7,6 @@ fn raw(s : String) -> Bytes {
 }
 
 ///|
-fn hex(b : Bytes) -> String {
-  @base16.encode(b[:])
-}
-
-///|
 fn aes_gcm(key : String, tag? : Int = 16) -> @gcm.Gcm raise {
   @gcm.Gcm::new(@aes.Cipher::new(raw(key)[:]), tag~)
 }
@@ -26,7 +21,7 @@ test "the GCM specification's own test cases" {
   let zero = aes_gcm("00000000000000000000000000000000")
   let nonce = raw("000000000000000000000000")
   assert_eq(
-    hex(zero.seal(nonce=nonce[:], plain=b""[:])),
+    @base16.encode(zero.seal(nonce=nonce[:], plain=b""[:])),
     "58e2fccefa7e3061367f1d57a4e7455a",
   )
   assert_eq(
@@ -35,7 +30,7 @@ test "the GCM specification's own test cases" {
   )
   // Case 2: one block of zeroes.
   assert_eq(
-    hex(
+    @base16.encode(
       zero.seal(
         nonce=nonce[:],
         plain=raw("00000000000000000000000000000000")[:],
@@ -57,7 +52,7 @@ test "the GCM specification's own test cases" {
     "1ba30b396a0aac973d58e091473f5985" +
     "4d5c2af327cd64a62cf35abd2ba6fab4"
   let made = mode.seal(nonce=raw("cafebabefacedbaddecaf888")[:], plain=plain[:])
-  assert_eq(hex(made), want)
+  assert_eq(@base16.encode(made), want)
   assert_eq(
     mode.open(nonce=raw("cafebabefacedbaddecaf888")[:], cipher=made[:]),
     plain,
@@ -106,7 +101,7 @@ test "a partial block with associated data, at all three key lengths" {
     let (key, want) = case
     let mode = aes_gcm(key)
     let made = mode.seal(nonce=nonce[:], plain=plain[:], aad=aad[:])
-    assert_eq(hex(made), want)
+    assert_eq(@base16.encode(made), want)
     // And back out again, which is the half a vector table cannot check on its
     // own: sealing the right bytes is no use if opening them does not return.
     assert_eq(mode.open(nonce=nonce[:], cipher=made[:], aad=aad[:]), plain)
@@ -129,7 +124,7 @@ test "a nonce of any length" {
   // Case 5: a 64-bit nonce.
   let short = raw("cafebabefacedbad")
   assert_eq(
-    hex(mode.seal(nonce=short[:], plain=plain[:], aad=aad[:])),
+    @base16.encode(mode.seal(nonce=short[:], plain=plain[:], aad=aad[:])),
     "61353b4c2806934a777ff51fa22a4755" +
     "699b2a714fcdc6f83766e5f97b6c7423" +
     "73806900e49f24b22b097544d4896b42" +
@@ -144,7 +139,7 @@ test "a nonce of any length" {
     "16aedbf5a0de6a57a637b39b",
   )
   assert_eq(
-    hex(mode.seal(nonce=long[:], plain=plain[:], aad=aad[:])),
+    @base16.encode(mode.seal(nonce=long[:], plain=plain[:], aad=aad[:])),
     "8ce24998625615b603a033aca13fb894" +
     "be9112a5c3a211a8ba262a3cca7e2ca7" +
     "01e4a9a4fba43c90ccdcb281d48c7c6f" +

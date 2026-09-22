@@ -2,11 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 ///|
-fn hex(b : Bytes) -> String {
-  @base16.encode(b[:])
-}
-
-///|
 fn raw(s : String) -> Bytes {
   @base16.decode_lossy(s)
 }
@@ -48,7 +43,9 @@ test "PBKDF2-HMAC-SHA1 matches RFC 6070" {
   for case in cases {
     let (password, salt, rounds, len, want) = case
     assert_eq(
-      hex(@pbkdf2.key(raw(password)[:], raw(salt)[:], sha1, rounds~, len~)),
+      @base16.encode(
+        @pbkdf2.key(raw(password)[:], raw(salt)[:], sha1, rounds~, len~),
+      ),
       want,
     )
   }
@@ -74,7 +71,9 @@ test "PBKDF2-HMAC-SHA256 matches the published vectors" {
   for case in cases {
     let (password, salt, rounds, len, want) = case
     assert_eq(
-      hex(@pbkdf2.key(raw(password)[:], raw(salt)[:], sha256, rounds~, len~)),
+      @base16.encode(
+        @pbkdf2.key(raw(password)[:], raw(salt)[:], sha256, rounds~, len~),
+      ),
       want,
     )
   }

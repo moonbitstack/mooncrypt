@@ -7,11 +7,6 @@ fn raw(s : String) -> Bytes {
 }
 
 ///|
-fn hex(b : Bytes) -> String {
-  @base16.encode(b[:])
-}
-
-///|
 /// FIPS 197 appendix C: one plaintext under all three key lengths, which is the
 /// vector every AES implementation is first measured against.
 test "the three key lengths, against FIPS 197 appendix C" {
@@ -28,7 +23,7 @@ test "the three key lengths, against FIPS 197 appendix C" {
   for case in cases {
     let (key, want) = case
     let cipher = @aes.Cipher::new(raw(key)[:])
-    assert_eq(hex(cipher.encrypt(plain[:])), want)
+    assert_eq(@base16.encode(cipher.encrypt(plain[:])), want)
     // And back, which is what makes it a permutation rather than a hash.
     assert_eq(cipher.decrypt(raw(want)[:]), plain)
     assert_eq(cipher.size(), raw(key).length())
@@ -49,22 +44,22 @@ test "the ECB vectors from SP 800-38A" {
   ]
   for case in cases {
     let (plain, want) = case
-    assert_eq(hex(cipher.encrypt(raw(plain)[:])), want)
-    assert_eq(hex(cipher.decrypt(raw(want)[:])), plain)
+    assert_eq(@base16.encode(cipher.encrypt(raw(plain)[:])), want)
+    assert_eq(@base16.encode(cipher.decrypt(raw(want)[:])), plain)
   }
   // AES-192 and AES-256 over the same four blocks.
   let k192 = @aes.Cipher::new(
     raw("8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b")[:],
   )
   assert_eq(
-    hex(k192.encrypt(raw("6bc1bee22e409f96e93d7e117393172a")[:])),
+    @base16.encode(k192.encrypt(raw("6bc1bee22e409f96e93d7e117393172a")[:])),
     "bd334f1d6e45f25ff712a214571fa5cc",
   )
   let k256 = @aes.Cipher::new(
     raw("603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4")[:],
   )
   assert_eq(
-    hex(k256.encrypt(raw("6bc1bee22e409f96e93d7e117393172a")[:])),
+    @base16.encode(k256.encrypt(raw("6bc1bee22e409f96e93d7e117393172a")[:])),
     "f3eed1bdb5d2a03c064b5a7e3db181f8",
   )
 }
@@ -117,7 +112,10 @@ test "it satisfies the block-cipher contract" {
   )
   assert_eq(cipher.block(), 16)
   let plain = raw("00112233445566778899aabbccddeeff")
-  assert_eq(hex(cipher.encrypt(plain[:])), "69c4e0d86a7b0430d8cdb78070b4c55a")
+  assert_eq(
+    @base16.encode(cipher.encrypt(plain[:])),
+    "69c4e0d86a7b0430d8cdb78070b4c55a",
+  )
   assert_eq(cipher.decrypt(cipher.encrypt(plain[:])[:]), plain)
 }
 
@@ -126,7 +124,7 @@ test "it satisfies the block-cipher contract" {
 test "a key can be forgotten" {
   let cipher = @aes.Cipher::new(raw("000102030405060708090a0b0c0d0e0f")[:])
   let before = cipher.encrypt(raw("00112233445566778899aabbccddeeff")[:])
-  assert_eq(hex(before), "69c4e0d86a7b0430d8cdb78070b4c55a")
+  assert_eq(@base16.encode(before), "69c4e0d86a7b0430d8cdb78070b4c55a")
   cipher.wipe()
   // An all-zero schedule is not the key any more; what it computes is whatever
   // an all-zero schedule computes, and the point is only that the key is gone.

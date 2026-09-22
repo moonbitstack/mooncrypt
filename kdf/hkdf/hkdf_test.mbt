@@ -2,11 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 ///|
-fn hex(b : Bytes) -> String {
-  @base16.encode(b[:])
-}
-
-///|
 fn raw(s : String) -> Bytes {
   @base16.decode_lossy(s)
 }
@@ -45,13 +40,16 @@ test "HKDF-SHA256 matches RFC 5869" {
   ]
   for case in cases {
     let (ikm, salt, info, len, prk, okm) = case
-    assert_eq(hex(@hkdf.extract(raw(ikm)[:], sha256, salt=raw(salt)[:])), prk)
     assert_eq(
-      hex(@hkdf.expand(raw(prk)[:], sha256, info=raw(info)[:], len~)),
+      @base16.encode(@hkdf.extract(raw(ikm)[:], sha256, salt=raw(salt)[:])),
+      prk,
+    )
+    assert_eq(
+      @base16.encode(@hkdf.expand(raw(prk)[:], sha256, info=raw(info)[:], len~)),
       okm,
     )
     assert_eq(
-      hex(
+      @base16.encode(
         @hkdf.key(
           raw(ikm)[:],
           sha256,
@@ -89,9 +87,12 @@ test "HKDF-SHA1 matches RFC 5869" {
   ]
   for case in cases {
     let (ikm, salt, info, len, prk, okm) = case
-    assert_eq(hex(@hkdf.extract(raw(ikm)[:], sha1, salt=raw(salt)[:])), prk)
     assert_eq(
-      hex(@hkdf.expand(raw(prk)[:], sha1, info=raw(info)[:], len~)),
+      @base16.encode(@hkdf.extract(raw(ikm)[:], sha1, salt=raw(salt)[:])),
+      prk,
+    )
+    assert_eq(
+      @base16.encode(@hkdf.expand(raw(prk)[:], sha1, info=raw(info)[:], len~)),
       okm,
     )
   }

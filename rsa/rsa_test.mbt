@@ -2,11 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 ///|
-fn hex(b : Bytes) -> String {
-  @base16.encode(b[:])
-}
-
-///|
 fn raw(s : String) -> Bytes {
   @base16.decode_lossy(s)
 }
@@ -190,7 +185,7 @@ test "RSA PKCS#1 v1.5 matches a third-party signer" {
     let (n, d) = modulus(bits)
     let digest = digest_of(name)
     let sk = @rsa.PrivateKey::new(raw(n)[:], raw(e)[:], raw(d)[:], digest~)
-    assert_eq(hex(sk.sign(raw(msg)[:])), want)
+    assert_eq(@base16.encode(sk.sign(raw(msg)[:])), want)
     let pk = @rsa.PublicKey::new(raw(n)[:], raw(e)[:], digest~)
     assert_true(pk.verify(raw(msg)[:], raw(want)[:]))
     assert_eq(pk.size(), bits / 8)
@@ -374,5 +369,5 @@ test "a bad RSA signature is refused" {
   let other = @rsa.PublicKey::new(raw(n2048)[:], raw(e)[:], digest=Sha512)
   assert_false(other.verify(b"hello"[:], sig[:]))
   assert_eq(pk.exponent(), raw(e))
-  assert_eq(hex(pk.modulus()), n2048)
+  assert_eq(@base16.encode(pk.modulus()), n2048)
 }

@@ -2,11 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 ///|
-fn hex(b : Bytes) -> String {
-  @base16.encode(b[:])
-}
-
-///|
 fn ascii(s : String) -> Bytes {
   @moonbase.ascii(s)
 }
@@ -31,7 +26,7 @@ test "MD5 matches the RFC 1321 test suite" {
   ]
   for case in cases {
     let (msg, want) = case
-    assert_eq(hex(@md5.hash(ascii(msg)[:])), want)
+    assert_eq(@base16.encode(@md5.hash(ascii(msg)[:])), want)
   }
 }
 
@@ -66,5 +61,5 @@ test "a digest is sixteen bytes over a sixty-four byte block" {
   assert_eq(h.block(), 64)
   h.write(ascii("abc")[:])
   h.reset()
-  assert_eq(hex(h.finish()), "d41d8cd98f00b204e9800998ecf8427e")
+  assert_eq(@base16.encode(h.finish()), "d41d8cd98f00b204e9800998ecf8427e")
 }

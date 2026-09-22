@@ -2,11 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 ///|
-fn hex(b : Bytes) -> String {
-  @base16.encode(b[:])
-}
-
-///|
 fn raw(s : String) -> Bytes {
   @base16.decode_lossy(s)
 }
@@ -43,8 +38,8 @@ test "Ed25519 matches RFC 8032" {
   for case in cases {
     let (seed, want_pub, msg, want_sig) = case
     let sk = @ed25519.PrivateKey::new(raw(seed)[:])
-    assert_eq(hex(sk.public().bytes()), want_pub)
-    assert_eq(hex(sk.sign(raw(msg)[:])), want_sig)
+    assert_eq(@base16.encode(sk.public().bytes()), want_pub)
+    assert_eq(@base16.encode(sk.sign(raw(msg)[:])), want_sig)
     let pk = @ed25519.PublicKey::new(raw(want_pub)[:])
     assert_true(pk.verify(raw(msg)[:], raw(want_sig)[:]))
   }
