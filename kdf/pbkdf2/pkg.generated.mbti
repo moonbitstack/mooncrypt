@@ -6,7 +6,7 @@ import {
 }
 
 // Values
-pub fn key(BytesView, BytesView, () -> &@spec.Hash, rounds~ : Int, len~ : Int) -> Bytes
+pub fn key(BytesView, BytesView, () -> &@spec.Hash, rounds~ : Int32, len~ : Int32) -> Bytes
 
 // Errors
 

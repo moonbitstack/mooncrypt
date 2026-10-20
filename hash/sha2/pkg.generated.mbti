@@ -13,11 +13,11 @@ pub fn hash(BytesView, kind? : Kind) -> Bytes
 
 // Types and methods
 type Hasher
-pub fn Hasher::block(Self) -> Int
+pub fn Hasher::block(Self) -> Int32
 pub fn Hasher::finish(Self) -> Bytes
 pub fn Hasher::new(kind? : Kind) -> Self
 pub fn Hasher::reset(Self) -> Unit
-pub fn Hasher::size(Self) -> Int
+pub fn Hasher::size(Self) -> Int32
 pub fn Hasher::write(Self, BytesView) -> Unit
 pub impl @spec.Hash for Hasher
 
@@ -29,10 +29,10 @@ pub(all) enum Kind {
   Sha512_224
   Sha512_256
 } derive(Eq, @debug.Debug)
-pub fn Kind::block(Self) -> Int
+pub fn Kind::block(Self) -> Int32
 pub fn Kind::equal(Self, Self) -> Bool
 pub fn Kind::not_equal(Self, Self) -> Bool
-pub fn Kind::size(Self) -> Int
+pub fn Kind::size(Self) -> Int32
 pub fn Kind::to_repr(Self) -> @debug.Repr
 
 // Type aliases

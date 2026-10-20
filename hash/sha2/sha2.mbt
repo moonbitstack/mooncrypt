@@ -25,7 +25,7 @@ pub extend Kind with Debug::{to_repr}
 
 ///|
 /// The digest length in bytes.
-pub fn Kind::size(self : Kind) -> Int {
+pub fn Kind::size(self : Kind) -> Int32 {
   match self {
     Sha224 => 28
     Sha256 => 32
@@ -38,7 +38,7 @@ pub fn Kind::size(self : Kind) -> Int {
 
 ///|
 /// The compression block length in bytes.
-pub fn Kind::block(self : Kind) -> Int {
+pub fn Kind::block(self : Kind) -> Int32 {
   match self {
     Sha224 | Sha256 => 64
     _ => 128
@@ -63,9 +63,9 @@ priv enum Core {
 
 ///|
 priv struct Narrow {
-  h : FixedArray[UInt]
+  h : FixedArray[UInt32]
   buf : FixedArray[Byte]
-  mut used : Int
+  mut used : Int32
   mut n : UInt64
 }
 
@@ -73,14 +73,14 @@ priv struct Narrow {
 priv struct Wide {
   h : FixedArray[UInt64]
   buf : FixedArray[Byte]
-  mut used : Int
+  mut used : Int32
   mut lo : UInt64
   mut hi : UInt64
 }
 
 ///|
 /// A fresh hasher, SHA-256 unless another member is named.
-pub fn Hasher::new(kind? : Kind = Sha256) -> Hasher {
+pub fn Hasher::new(kind~ : Kind = Sha256) -> Hasher {
   let core = match kind {
     Sha224 | Sha256 =>
       Narrow({
@@ -105,7 +105,7 @@ pub fn Hasher::new(kind? : Kind = Sha256) -> Hasher {
 
 ///|
 /// Hash one whole message.
-pub fn hash(msg : BytesView, kind? : Kind = Sha256) -> Bytes {
+pub fn hash(msg : BytesView, kind~ : Kind = Sha256) -> Bytes {
   let h = Hasher::new(kind~)
   h.write(msg)
   h.finish()
@@ -159,12 +159,12 @@ pub impl @spec.Hash for Hasher with fn reset(self : Hasher) -> Unit {
 }
 
 ///|
-pub impl @spec.Hash for Hasher with fn size(self : Hasher) -> Int {
+pub impl @spec.Hash for Hasher with fn size(self : Hasher) -> Int32 {
   self.kind.size()
 }
 
 ///|
-pub impl @spec.Hash for Hasher with fn block(self : Hasher) -> Int {
+pub impl @spec.Hash for Hasher with fn block(self : Hasher) -> Int32 {
   self.kind.block()
 }
 
@@ -173,7 +173,7 @@ pub impl @spec.Hash for Hasher with fn block(self : Hasher) -> Int {
 ///|
 /// The 64 round constants: the first 32 bits of the fractional parts of the cube
 /// roots of the first 64 primes (FIPS 180-4 §4.2.2).
-let k32 : FixedArray[UInt] = [
+let k32 : FixedArray[UInt32] = [
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4,
   0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe,
   0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f,
@@ -187,29 +187,29 @@ let k32 : FixedArray[UInt] = [
 ]
 
 ///|
-let iv256 : FixedArray[UInt] = [
+let iv256 : FixedArray[UInt32] = [
   0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab,
   0x5be0cd19,
 ]
 
 ///|
-let iv224 : FixedArray[UInt] = [
+let iv224 : FixedArray[UInt32] = [
   0xc1059ed8, 0x367cd507, 0x3070dd17, 0xf70e5939, 0xffc00b31, 0x68581511, 0x64f98fa7,
   0xbefa4fa4,
 ]
 
 ///|
-fn rotr32(x : UInt, n : Int) -> UInt {
+fn rotr32(x : UInt32, n : Int32) -> UInt32 {
   (x >> n) | (x << (32 - n))
 }
 
 ///|
 fn narrow_block(
-  h : FixedArray[UInt],
+  h : FixedArray[UInt32],
   data : FixedArray[Byte],
-  off : Int,
+  off : Int32,
 ) -> Unit {
-  let w : FixedArray[UInt] = FixedArray::make(64, 0U)
+  let w : FixedArray[UInt32] = FixedArray::make(64, 0U)
   for i in 0..<16 {
     let j = off + i * 4
     w[i] = (data[j].to_int().reinterpret_as_uint() << 24) |
@@ -279,8 +279,8 @@ fn narrow_write(s : Narrow, msg : BytesView) -> Unit {
 ///|
 /// Pad and read, on a copy: a caller may keep writing after reading a digest,
 /// which is what makes a hasher usable as a running checksum.
-fn narrow_finish(s : Narrow, out : Int) -> Bytes {
-  let h : FixedArray[UInt] = FixedArray::make(8, 0U)
+fn narrow_finish(s : Narrow, out : Int32) -> Bytes {
+  let h : FixedArray[UInt32] = FixedArray::make(8, 0U)
   for i in 0..<8 {
     h[i] = s.h[i]
   }
@@ -361,7 +361,7 @@ let iv512_256 : FixedArray[UInt64] = [
 ]
 
 ///|
-fn rotr64(x : UInt64, n : Int) -> UInt64 {
+fn rotr64(x : UInt64, n : Int32) -> UInt64 {
   (x >> n) | (x << (64 - n))
 }
 
@@ -369,7 +369,7 @@ fn rotr64(x : UInt64, n : Int) -> UInt64 {
 fn wide_block(
   h : FixedArray[UInt64],
   data : FixedArray[Byte],
-  off : Int,
+  off : Int32,
 ) -> Unit {
   let w : FixedArray[UInt64] = FixedArray::make(80, 0UL)
   for i in 0..<16 {
@@ -444,7 +444,7 @@ fn wide_write(s : Wide, msg : BytesView) -> Unit {
 }
 
 ///|
-fn wide_finish(s : Wide, out : Int) -> Bytes {
+fn wide_finish(s : Wide, out : Int32) -> Bytes {
   let h : FixedArray[UInt64] = FixedArray::make(8, 0UL)
   for i in 0..<8 {
     h[i] = s.h[i]

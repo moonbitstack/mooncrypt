@@ -9,7 +9,7 @@
 /// the field's own convention and the reason this looks reversed next to an
 /// ordinary bignum multiply. The loop is the plain shift-and-reduce: no table,
 /// so no table lookup indexed by key material.
-fn gf_mul(x : FixedArray[Int], y : FixedArray[Int]) -> FixedArray[Int] {
+fn gf_mul(x : FixedArray[Int32], y : FixedArray[Int32]) -> FixedArray[Int32] {
   let z = FixedArray::make(16, 0)
   let v = FixedArray::make(16, 0)
   for i in 0..<16 {
@@ -36,7 +36,7 @@ fn gf_mul(x : FixedArray[Int], y : FixedArray[Int]) -> FixedArray[Int] {
 ///|
 /// GHASH over block-aligned `data` (SP 800-38D §6.4): fold each block in with XOR
 /// and multiply by the hash subkey.
-fn ghash(h : FixedArray[Int], data : BytesView) -> FixedArray[Int] {
+fn ghash(h : FixedArray[Int32], data : BytesView) -> FixedArray[Int32] {
   let y = FixedArray::make(16, 0)
   for blk in 0..<(data.length() / 16) {
     for j in 0..<16 {
@@ -52,7 +52,7 @@ fn ghash(h : FixedArray[Int], data : BytesView) -> FixedArray[Int] {
 
 ///|
 /// Increment the low 32 bits of a counter block, big-endian, modulo 2^32.
-fn inc32(ctr : FixedArray[Int]) -> Unit {
+fn inc32(ctr : FixedArray[Int32]) -> Unit {
   for i = 15; i >= 12; i = i - 1 {
     ctr[i] = (ctr[i] + 1) & 0xff
     if ctr[i] != 0 {
@@ -63,7 +63,7 @@ fn inc32(ctr : FixedArray[Int]) -> Unit {
 
 ///|
 /// The bytes of a block as ints, for the field work.
-fn ints(b : BytesView) -> FixedArray[Int] {
+fn ints(b : BytesView) -> FixedArray[Int32] {
   let a = FixedArray::make(16, 0)
   for i in 0..<16 {
     a[i] = b[i].to_int()
@@ -73,7 +73,7 @@ fn ints(b : BytesView) -> FixedArray[Int] {
 
 ///|
 /// A block of ints back as bytes, for the cipher.
-fn block(a : FixedArray[Int]) -> Bytes {
+fn block(a : FixedArray[Int32]) -> Bytes {
   let out = Array::make(16, b'\x00')
   for i in 0..<16 {
     out[i] = a[i].to_byte()
@@ -92,7 +92,7 @@ fn put64(buf : Buffer, v : Int64) -> Unit {
 ///|
 /// The tag length every implementation writes unless told otherwise: the full
 /// 128 bits, which is the only length SP 800-38D appendix C leaves unqualified.
-pub let tag : Int = 16
+pub let tag : Int32 = 16
 
 ///|
 /// Galois/Counter Mode over a block cipher (NIST SP 800-38D).
@@ -102,8 +102,8 @@ pub let tag : Int = 16
 /// and an SM4 that satisfies [`@spec.Block`] is SM4-GCM with no further code.
 pub struct Gcm {
   cipher : &@spec.Block
-  subkey : FixedArray[Int]
-  tag : Int
+  subkey : FixedArray[Int32]
+  tag : Int32
 }
 
 ///|
@@ -118,7 +118,7 @@ pub struct Gcm {
 /// The cipher must have a 16-byte block; GCM is not defined for any other.
 pub fn Gcm::new(
   cipher : &@spec.Block,
-  tag? : Int = tag,
+  tag~ : Int32 = tag,
 ) -> Gcm raise @spec.Broken {
   guard cipher.block() == 16 else {
     raise @spec.Size(want=16, got=cipher.block())
@@ -138,7 +138,7 @@ pub fn Gcm::new(
 
 ///|
 /// The tag length in bytes this instance writes and checks.
-pub fn Gcm::size(self : Gcm) -> Int {
+pub fn Gcm::size(self : Gcm) -> Int32 {
   self.tag
 }
 
@@ -148,7 +148,7 @@ pub fn Gcm::size(self : Gcm) -> Int {
 /// A 96-bit nonce is the common case and gets the cheap construction; any other
 /// length goes through GHASH, which is what makes a nonce of any length legal
 /// and also why 96 bits is what everyone uses.
-fn Gcm::start(self : Gcm, nonce : BytesView) -> FixedArray[Int] {
+fn Gcm::start(self : Gcm, nonce : BytesView) -> FixedArray[Int32] {
   if nonce.length() == 12 {
     let j0 = FixedArray::make(16, 0)
     for i in 0..<12 {
@@ -170,7 +170,7 @@ fn Gcm::start(self : Gcm, nonce : BytesView) -> FixedArray[Int] {
 ///|
 /// CTR-mode keystream XOR, starting from J0 incremented once — the data counter
 /// begins at J0+1 (SP 800-38D §7.1 step 3).
-fn Gcm::gctr(self : Gcm, j0 : FixedArray[Int], input : BytesView) -> Bytes {
+fn Gcm::gctr(self : Gcm, j0 : FixedArray[Int32], input : BytesView) -> Bytes {
   let counter = FixedArray::make(16, 0)
   for i in 0..<16 {
     counter[i] = j0[i]
@@ -195,7 +195,7 @@ fn Gcm::gctr(self : Gcm, j0 : FixedArray[Int], input : BytesView) -> Bytes {
 /// (SP 800-38D §7.1 steps 5 and 6).
 fn Gcm::seal_tag(
   self : Gcm,
-  j0 : FixedArray[Int],
+  j0 : FixedArray[Int32],
   aad : BytesView,
   cipher : BytesView,
 ) -> Bytes {
@@ -231,7 +231,7 @@ pub fn Gcm::seal(
   self : Gcm,
   nonce~ : BytesView,
   plain~ : BytesView,
-  aad? : BytesView = b""[:],
+  aad~ : BytesView = b""[:],
 ) -> Bytes {
   let j0 = self.start(nonce)
   let body = self.gctr(j0, plain)
@@ -252,7 +252,7 @@ pub fn Gcm::open(
   self : Gcm,
   nonce~ : BytesView,
   cipher~ : BytesView,
-  aad? : BytesView = b""[:],
+  aad~ : BytesView = b""[:],
 ) -> Bytes raise @spec.Broken {
   guard cipher.length() >= self.tag else {
     raise @spec.Size(want=self.tag, got=cipher.length())

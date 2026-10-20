@@ -6,9 +6,9 @@ import {
 }
 
 // Values
-pub let key_size : Int
+pub let key_size : Int32
 
-pub let sig_size : Int
+pub let sig_size : Int32
 
 // Errors
 

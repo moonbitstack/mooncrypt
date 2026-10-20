@@ -15,7 +15,7 @@ type Hmac
 pub fn Hmac::finish(Self) -> Bytes
 pub fn Hmac::new(BytesView, () -> &@spec.Hash) -> Self
 pub fn Hmac::reset(Self) -> Unit
-pub fn Hmac::size(Self) -> Int
+pub fn Hmac::size(Self) -> Int32
 pub fn Hmac::write(Self, BytesView) -> Unit
 pub impl @spec.Mac for Hmac
 

@@ -33,7 +33,7 @@ pub(all) enum Scheme {
   Pkcs1
   /// The salt length in bytes. RFC 8017 recommends the digest's own length;
   /// zero is permitted and makes the signature deterministic.
-  Pss(salt~ : Int)
+  Pss(salt~ : Int32)
 } derive(Eq, Debug)
 
 ///|
@@ -47,7 +47,7 @@ pub extend Scheme with Debug::{to_repr}
 struct PublicKey {
   n : BigInt
   e : BigInt
-  size : Int
+  size : Int32
   digest : Digest
   scheme : Scheme
 }
@@ -63,7 +63,7 @@ struct PrivateKey {
   n : BigInt
   e : BigInt
   d : BigInt
-  size : Int
+  size : Int32
   digest : Digest
   scheme : Scheme
 }
@@ -73,8 +73,8 @@ struct PrivateKey {
 pub fn PublicKey::new(
   modulus : BytesView,
   exponent : BytesView,
-  digest? : Digest = Sha256,
-  scheme? : Scheme = Pkcs1,
+  digest~ : Digest = Sha256,
+  scheme~ : Scheme = Pkcs1,
 ) -> PublicKey raise @spec.Broken {
   let n = BigInt::from_octets(modulus)
   guard n > (0 : BigInt) else { raise @spec.Size(want=1, got=0) }
@@ -87,8 +87,8 @@ pub fn PrivateKey::new(
   modulus : BytesView,
   exponent : BytesView,
   private_exponent : BytesView,
-  digest? : Digest = Sha256,
-  scheme? : Scheme = Pkcs1,
+  digest~ : Digest = Sha256,
+  scheme~ : Scheme = Pkcs1,
 ) -> PrivateKey raise @spec.Broken {
   let n = BigInt::from_octets(modulus)
   guard n > (0 : BigInt) else { raise @spec.Size(want=1, got=0) }
@@ -116,13 +116,13 @@ pub fn PrivateKey::public(self : PrivateKey) -> PublicKey {
 
 ///|
 /// The modulus width in bytes, which is also the signature width.
-pub fn PublicKey::size(self : PublicKey) -> Int {
+pub fn PublicKey::size(self : PublicKey) -> Int32 {
   self.size
 }
 
 ///|
 /// The modulus width in bytes, which is also the signature width.
-pub fn PrivateKey::size(self : PrivateKey) -> Int {
+pub fn PrivateKey::size(self : PrivateKey) -> Int32 {
   self.size
 }
 
@@ -189,7 +189,7 @@ pub impl @spec.Verifier for PublicKey with fn verify(
 
 ///|
 /// How many octets the modulus occupies — the width of every signature under it.
-fn octets(n : BigInt) -> Int {
+fn octets(n : BigInt) -> Int32 {
   let mut bits = 0
   let mut rest = n
   while rest > (0 : BigInt) {
@@ -229,7 +229,7 @@ fn prefix(d : Digest) -> Bytes {
 
 ///|
 /// EMSA-PKCS1-v1_5 (RFC 8017 §9.2): `00 01 FF…FF 00 ∥ DigestInfo(H(m))`.
-fn pkcs1_encode(d : Digest, msg : BytesView, size : Int) -> Bytes {
+fn pkcs1_encode(d : Digest, msg : BytesView, size : Int32) -> Bytes {
   let tail = prefix(d)
   let h = @spec.digest(hasher(d), msg)
   let fill = size - tail.length() - h.length() - 3
@@ -252,7 +252,7 @@ fn pkcs1_encode(d : Digest, msg : BytesView, size : Int) -> Bytes {
 
 ///|
 /// MGF1 (RFC 8017 §B.2.1): a digest run as a counter mode to any length.
-fn mgf1(d : Digest, seed : BytesView, len : Int) -> Bytes {
+fn mgf1(d : Digest, seed : BytesView, len : Int32) -> Bytes {
   let out : Array[Byte] = []
   let h = hasher(d)
   let mut counter = 0
@@ -285,8 +285,8 @@ fn mgf1(d : Digest, seed : BytesView, len : Int) -> Bytes {
 fn pss_encode(
   d : Digest,
   msg : BytesView,
-  size : Int,
-  salt_len : Int,
+  size : Int32,
+  salt_len : Int32,
   secret : BigInt,
 ) -> Bytes {
   let h = hasher(d)
@@ -342,7 +342,12 @@ fn pss_encode(
 /// The salt length is read back out of the block rather than assumed, so a
 /// signature made with any salt length verifies — which is what interoperating
 /// with other implementations requires.
-fn pss_check(d : Digest, msg : BytesView, em : Bytes, _salt_len : Int) -> Bool {
+fn pss_check(
+  d : Digest,
+  msg : BytesView,
+  em : Bytes,
+  _salt_len : Int32,
+) -> Bool {
   let hlen = hasher(d).size()
   let size = em.length()
   if size < hlen + 2 || em[size - 1] != b'\xBC' {
@@ -410,9 +415,9 @@ pub fn PublicKey::encrypt(
   self : PublicKey,
   plain : BytesView,
   seed~ : BytesView,
-  digest? : Digest = Sha1,
+  digest~ : Digest = Sha1,
   mgf? : Digest,
-  label? : BytesView = b""[:],
+  label~ : BytesView = b""[:],
 ) -> Bytes raise @spec.Broken {
   let mgf = match mgf {
     Some(m) => m
@@ -470,9 +475,9 @@ pub fn PublicKey::encrypt(
 pub fn PrivateKey::decrypt(
   self : PrivateKey,
   cipher : BytesView,
-  digest? : Digest = Sha1,
+  digest~ : Digest = Sha1,
   mgf? : Digest,
-  label? : BytesView = b""[:],
+  label~ : BytesView = b""[:],
 ) -> Bytes raise @spec.Broken {
   let mgf = match mgf {
     Some(m) => m

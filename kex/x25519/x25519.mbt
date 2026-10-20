@@ -4,7 +4,7 @@
 ///|
 /// The length of a scalar, a u-coordinate and a shared secret, in bytes. All
 /// three are 32; X25519 has no other size.
-pub let size : Int = 32
+pub let size : Int32 = 32
 
 ///|
 /// The field prime, `2^255 - 19` (RFC 7748 §4.1).
@@ -24,7 +24,7 @@ pub let base : Bytes = {
 
 ///|
 /// Little-endian bytes as a field integer.
-fn decode(b : FixedArray[Int]) -> BigInt {
+fn decode(b : FixedArray[Int32]) -> BigInt {
   let mut acc = 0N
   for i = b.length() - 1; i >= 0; i = i - 1 {
     acc = acc * 256N + BigInt::from_int(b[i])
@@ -50,7 +50,7 @@ fn encode(v : BigInt) -> Bytes {
 /// Subtractions add the prime first rather than assume a Euclidean remainder,
 /// and the conditional swap is driven by the scalar's clamped bits, so no
 /// bignum bit operations are needed.
-fn ladder(scalar : FixedArray[Int], u : BigInt) -> BigInt {
+fn ladder(scalar : FixedArray[Int32], u : BigInt) -> BigInt {
   let p = prime
   let x1 = u
   let mut x2 = 1N

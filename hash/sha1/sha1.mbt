@@ -10,9 +10,9 @@
 /// MySQL's `mysql_native_password`, and Git's object names. Reach for
 /// `mooncrypt/hash/sha2` for anything new.
 struct Hasher {
-  h : FixedArray[UInt]
+  h : FixedArray[UInt32]
   buf : FixedArray[Byte]
-  mut used : Int
+  mut used : Int32
   mut n : UInt64
 }
 
@@ -40,12 +40,12 @@ pub fn hash(msg : BytesView) -> Bytes {
 pub extend Hasher with @spec.Hash::{block, finish, reset, size, write}
 
 ///|
-pub impl @spec.Hash for Hasher with fn size(_ : Hasher) -> Int {
+pub impl @spec.Hash for Hasher with fn size(_ : Hasher) -> Int32 {
   20
 }
 
 ///|
-pub impl @spec.Hash for Hasher with fn block(_ : Hasher) -> Int {
+pub impl @spec.Hash for Hasher with fn block(_ : Hasher) -> Int32 {
   64
 }
 
@@ -82,7 +82,7 @@ pub impl @spec.Hash for Hasher with fn write(self : Hasher, msg : BytesView) -> 
 
 ///|
 pub impl @spec.Hash for Hasher with fn finish(self : Hasher) -> Bytes {
-  let h : FixedArray[UInt] = FixedArray::make(5, 0U)
+  let h : FixedArray[UInt32] = FixedArray::make(5, 0U)
   for i in 0..<5 {
     h[i] = self.h[i]
   }
@@ -109,15 +109,15 @@ pub impl @spec.Hash for Hasher with fn finish(self : Hasher) -> Bytes {
 }
 
 ///|
-fn rotl(x : UInt, n : Int) -> UInt {
+fn rotl(x : UInt32, n : Int32) -> UInt32 {
   (x << n) | (x >> (32 - n))
 }
 
 ///|
 /// The 80-round compression of FIPS 180-4 §6.1.2, with the four round functions
 /// and their constants inline.
-fn block(h : FixedArray[UInt], data : FixedArray[Byte], off : Int) -> Unit {
-  let w : FixedArray[UInt] = FixedArray::make(80, 0U)
+fn block(h : FixedArray[UInt32], data : FixedArray[Byte], off : Int32) -> Unit {
+  let w : FixedArray[UInt32] = FixedArray::make(80, 0U)
   for i in 0..<16 {
     let j = off + i * 4
     w[i] = (data[j].to_int().reinterpret_as_uint() << 24) |

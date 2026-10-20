@@ -22,11 +22,11 @@ struct PrivateKey {
 
 ///|
 /// The length of a seed, a public key and half a signature.
-pub let key_size : Int = 32
+pub let key_size : Int32 = 32
 
 ///|
 /// The length of a signature: `R ∥ S`.
-pub let sig_size : Int = 64
+pub let sig_size : Int32 = 64
 
 ///|
 /// Read a public key from its 32 compressed bytes.
@@ -289,7 +289,7 @@ fn le_int(b : BytesView) -> BigInt {
 }
 
 ///|
-fn le_bytes(n : BigInt, length : Int) -> Bytes {
+fn le_bytes(n : BigInt, length : Int32) -> Bytes {
   let be = n.to_octets(length~)
   let le : Array[Byte] = []
   for i = length - 1; i >= 0; i = i - 1 {

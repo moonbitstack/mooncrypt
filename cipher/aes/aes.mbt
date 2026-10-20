@@ -4,7 +4,7 @@
 ///|
 /// The block length, in bytes. AES is defined for one block size only; the key
 /// is what varies.
-pub let block : Int = 16
+pub let block : Int32 = 16
 
 ///|
 /// The S-box (FIPS 197 §5.1.1): the multiplicative inverse in GF(2^8) followed
@@ -52,7 +52,7 @@ let rcon : FixedArray[Byte] = [
 
 ///|
 /// Multiply by x in GF(2^8) with the AES reduction polynomial (FIPS 197 §4.2).
-fn xtime(b : Int) -> Int {
+fn xtime(b : Int32) -> Int32 {
   let s = (b << 1) & 0xff
   if (b & 0x80) != 0 {
     s ^ 0x1b
@@ -64,7 +64,7 @@ fn xtime(b : Int) -> Int {
 ///|
 /// Multiply in GF(2^8). Only the inverse cipher needs the general form; the
 /// forward direction gets by on [`xtime`] alone.
-fn gmul(a : Int, b : Int) -> Int {
+fn gmul(a : Int32, b : Int32) -> Int32 {
   let mut x = a
   let mut y = b
   let mut out = 0
@@ -85,7 +85,7 @@ fn gmul(a : Int, b : Int) -> Int {
 /// [`@spec.wipe`] for why that matters and what it does not promise.
 pub struct Cipher {
   schedule : FixedArray[Byte]
-  rounds : Int
+  rounds : Int32
 }
 
 ///|
@@ -142,13 +142,13 @@ pub fn Cipher::new(key : BytesView) -> Cipher raise @spec.Broken {
 
 ///|
 /// The key length in bytes: 16, 24 or 32.
-pub fn Cipher::size(self : Cipher) -> Int {
+pub fn Cipher::size(self : Cipher) -> Int32 {
   (self.rounds - 6) * 4
 }
 
 ///|
 /// The block length in bytes, which is 16 whatever the key.
-pub fn Cipher::block(self : Cipher) -> Int {
+pub fn Cipher::block(self : Cipher) -> Int32 {
   ignore(self)
   block
 }

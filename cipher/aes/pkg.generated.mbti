@@ -6,20 +6,20 @@ import {
 }
 
 // Values
-pub let block : Int
+pub let block : Int32
 
 // Errors
 
 // Types and methods
 pub struct Cipher {
   schedule : FixedArray[Byte]
-  rounds : Int
+  rounds : Int32
 }
-pub fn Cipher::block(Self) -> Int
+pub fn Cipher::block(Self) -> Int32
 pub fn Cipher::decrypt(Self, BytesView) -> Bytes
 pub fn Cipher::encrypt(Self, BytesView) -> Bytes
 pub fn Cipher::new(BytesView) -> Self raise @spec.Broken
-pub fn Cipher::size(Self) -> Int
+pub fn Cipher::size(Self) -> Int32
 pub fn Cipher::wipe(Self) -> Unit
 pub impl @spec.Block for Cipher
 

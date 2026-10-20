@@ -21,9 +21,9 @@ pub(open) trait Hash {
   /// Forget everything written, as if newly constructed.
   fn reset(Self) -> Unit
   /// The digest length in bytes.
-  fn size(Self) -> Int
+  fn size(Self) -> Int32
   /// The compression block length in bytes — what HMAC pads its key to.
-  fn block(Self) -> Int
+  fn block(Self) -> Int32
 }
 
 ///|
@@ -34,7 +34,7 @@ pub(open) trait Hash {
 pub(open) trait Mac {
   fn write(Self, BytesView) -> Unit
   fn finish(Self) -> Bytes
-  fn size(Self) -> Int
+  fn size(Self) -> Int32
 }
 
 ///|
@@ -50,7 +50,7 @@ pub(open) trait Mac {
 /// CBC needs the inverse.
 pub(open) trait Block {
   /// The block length in bytes.
-  fn block(Self) -> Int
+  fn block(Self) -> Int32
   /// Encrypt one block. The input must be exactly [`block`] bytes.
   fn encrypt(Self, BytesView) -> Bytes
   /// Decrypt one block. The input must be exactly [`block`] bytes.
@@ -92,7 +92,7 @@ pub(all) suberror Broken {
   /// data, the key or the nonce is not what sealed it.
   Tag
   /// A nonce, key or ciphertext of the wrong length, with what was expected.
-  Size(want~ : Int, got~ : Int)
+  Size(want~ : Int32, got~ : Int32)
   /// The right number of bytes, but a value the algorithm must refuse: a
   /// low-order Curve25519 point, whose shared secret is all zeroes and so was
   /// chosen by the peer rather than agreed with it.

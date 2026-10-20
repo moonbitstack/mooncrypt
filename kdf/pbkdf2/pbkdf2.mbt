@@ -22,8 +22,8 @@ pub fn key(
   password : BytesView,
   salt : BytesView,
   hash : () -> &@spec.Hash,
-  rounds~ : Int,
-  len~ : Int,
+  rounds~ : Int32,
+  len~ : Int32,
 ) -> Bytes {
   guard rounds >= 1 else {
     abort("pbkdf2: \{rounds} rounds is not a derivation")

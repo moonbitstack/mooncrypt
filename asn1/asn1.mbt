@@ -8,7 +8,7 @@
 ///|
 /// Encode a definite length (X.690 §8.1.3): the short form is the single byte for lengths under
 /// 128; the long form is `0x80 | n` followed by the length in `n` big-endian bytes.
-pub fn length_of(n : Int) -> Bytes {
+pub fn length_of(n : Int32) -> Bytes {
   if n < 128 {
     let b = Buffer()
     b.write_byte(n.to_byte())
@@ -32,7 +32,7 @@ pub fn length_of(n : Int) -> Bytes {
 
 ///|
 /// A tag-length-value: the `tag` byte, the definite length of `value`, then `value`.
-pub fn tlv(tag : Int, value : Bytes) -> Bytes {
+pub fn tlv(tag : Int32, value : Bytes) -> Bytes {
   let buf = Buffer()
   buf.write_byte(tag.to_byte())
   buf.write_bytes(length_of(value.length())[:])
@@ -67,7 +67,7 @@ pub fn integer(magnitude : Bytes) -> Bytes {
 /// A DER OBJECT IDENTIFIER (tag 0x06) from its arcs (X.690 §8.19): the first byte encodes
 /// `40·arc1 + arc2`, and each later arc is base-128 big-endian with the high bit set on every
 /// byte but the last.
-pub fn oid(arcs : Array[Int]) -> Bytes {
+pub fn oid(arcs : Array[Int32]) -> Bytes {
   let body = Buffer()
   body.write_byte((40 * arcs[0] + arcs[1]).to_byte())
   for i = 2; i < arcs.length(); i = i + 1 {
@@ -146,7 +146,7 @@ pub fn utc_time(s : String) -> Bytes {
 ///|
 /// A context-specific constructed value `[tag_num]` wrapping `content` (tag `0xA0 | tag_num`) —
 /// the EXPLICIT tagging X.509 uses for the certificate version and extensions.
-pub fn explicit(tag_num : Int, content : Bytes) -> Bytes {
+pub fn explicit(tag_num : Int32, content : Bytes) -> Bytes {
   tlv(0xa0 | tag_num, content)
 }
 
@@ -180,7 +180,7 @@ pub impl Show for Refused with fn output(self, logger) {
 /// One decoded element: the tag byte, the contents, and `raw` — tag, length and contents
 /// together. `raw` is what a signature covers and how far to step to reach the next element.
 pub(all) struct Tlv {
-  tag : Int
+  tag : Int32
   value : BytesView
   raw : BytesView
 }
@@ -189,13 +189,13 @@ pub(all) struct Tlv {
 /// A decoded BIT STRING: the content bytes and how many low bits of the last byte are padding.
 pub(all) struct Bits {
   bytes : Bytes
-  unused : Int
+  unused : Int32
 } derive(Eq, Debug)
 
 ///|
 /// Whether bit `i` is set, counting from the most significant bit of the first byte — the
 /// numbering X.509 uses for keyUsage. Bits inside the padding, or past the end, read as unset.
-pub fn Bits::get(self : Bits, i : Int) -> Bool {
+pub fn Bits::get(self : Bits, i : Int32) -> Bool {
   if i < 0 || i >= self.bytes.length() * 8 - self.unused {
     return false
   }
@@ -262,7 +262,7 @@ pub fn only(input : BytesView) -> Tlv raise Refused {
 
 ///|
 /// Whether `tag` is the context-specific `[n]` of an IMPLICIT or EXPLICIT field.
-pub fn context(tag : Int, n : Int) -> Bool {
+pub fn context(tag : Int32, n : Int32) -> Bool {
   (tag & 0xc0) == 0x80 && (tag & 0x1f) == n
 }
 
@@ -447,7 +447,7 @@ pub fn Tlv::text(self : Tlv) -> String raise Refused {
 
 ///|
 /// Read `n` ASCII digits at `off`.
-fn digits(v : BytesView, off : Int, n : Int) -> Int raise Refused {
+fn digits(v : BytesView, off : Int32, n : Int32) -> Int32 raise Refused {
   let mut acc = 0
   for i in 0..<n {
     let c = v[off + i].to_int()

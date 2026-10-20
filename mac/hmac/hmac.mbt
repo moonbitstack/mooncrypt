@@ -81,6 +81,6 @@ pub impl @spec.Mac for Hmac with fn finish(self : Hmac) -> Bytes {
 }
 
 ///|
-pub impl @spec.Mac for Hmac with fn size(self : Hmac) -> Int {
+pub impl @spec.Mac for Hmac with fn size(self : Hmac) -> Int32 {
   self.inner.size()
 }

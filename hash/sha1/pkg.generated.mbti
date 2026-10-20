@@ -12,11 +12,11 @@ pub fn hash(BytesView) -> Bytes
 
 // Types and methods
 type Hasher
-pub fn Hasher::block(Self) -> Int
+pub fn Hasher::block(Self) -> Int32
 pub fn Hasher::finish(Self) -> Bytes
 pub fn Hasher::new() -> Self
 pub fn Hasher::reset(Self) -> Unit
-pub fn Hasher::size(Self) -> Int
+pub fn Hasher::size(Self) -> Int32
 pub fn Hasher::write(Self, BytesView) -> Unit
 pub impl @spec.Hash for Hasher
 

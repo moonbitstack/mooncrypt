@@ -9,9 +9,9 @@
 /// checksums and legacy file formats still speak it. Never use it to
 /// authenticate anything new — `mooncrypt/hash/sha2` is the replacement.
 struct Hasher {
-  h : FixedArray[UInt]
+  h : FixedArray[UInt32]
   buf : FixedArray[Byte]
-  mut used : Int
+  mut used : Int32
   mut n : UInt64
 }
 
@@ -39,12 +39,12 @@ pub fn hash(msg : BytesView) -> Bytes {
 pub extend Hasher with @spec.Hash::{block, finish, reset, size, write}
 
 ///|
-pub impl @spec.Hash for Hasher with fn size(_ : Hasher) -> Int {
+pub impl @spec.Hash for Hasher with fn size(_ : Hasher) -> Int32 {
   16
 }
 
 ///|
-pub impl @spec.Hash for Hasher with fn block(_ : Hasher) -> Int {
+pub impl @spec.Hash for Hasher with fn block(_ : Hasher) -> Int32 {
   64
 }
 
@@ -82,7 +82,7 @@ pub impl @spec.Hash for Hasher with fn write(self : Hasher, msg : BytesView) -> 
 /// MD5 counts and emits little-endian, where SHA-1 and SHA-2 are big-endian —
 /// the one place the two designs part company in the padding.
 pub impl @spec.Hash for Hasher with fn finish(self : Hasher) -> Bytes {
-  let h : FixedArray[UInt] = FixedArray::make(4, 0U)
+  let h : FixedArray[UInt32] = FixedArray::make(4, 0U)
   for i in 0..<4 {
     h[i] = self.h[i]
   }
@@ -111,7 +111,7 @@ pub impl @spec.Hash for Hasher with fn finish(self : Hasher) -> Bytes {
 ///|
 /// The per-round constants: the integer part of `2^32 · |sin(i + 1)|` with `i`
 /// in radians (RFC 1321 §3.4).
-let k : FixedArray[UInt] = [
+let k : FixedArray[UInt32] = [
   0xD76AA478U, 0xE8C7B756U, 0x242070DBU, 0xC1BDCEEEU, 0xF57C0FAFU, 0x4787C62AU, 0xA8304613U,
   0xFD469501U, 0x698098D8U, 0x8B44F7AFU, 0xFFFF5BB1U, 0x895CD7BEU, 0x6B901122U, 0xFD987193U,
   0xA679438EU, 0x49B40821U, 0xF61E2562U, 0xC040B340U, 0x265E5A51U, 0xE9B6C7AAU, 0xD62F105DU,
@@ -127,20 +127,20 @@ let k : FixedArray[UInt] = [
 ///|
 /// How far each round rotates left, four values repeated across each group of
 /// sixteen (RFC 1321 §3.4).
-let shifts : FixedArray[Int] = [
+let shifts : FixedArray[Int32] = [
   7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 5, 9, 14, 20, 5, 9,
   14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
   4, 11, 16, 23, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21,
 ]
 
 ///|
-fn rotl(x : UInt, n : Int) -> UInt {
+fn rotl(x : UInt32, n : Int32) -> UInt32 {
   (x << n) | (x >> (32 - n))
 }
 
 ///|
-fn block(h : FixedArray[UInt], data : FixedArray[Byte], off : Int) -> Unit {
-  let m : FixedArray[UInt] = FixedArray::make(16, 0U)
+fn block(h : FixedArray[UInt32], data : FixedArray[Byte], off : Int32) -> Unit {
+  let m : FixedArray[UInt32] = FixedArray::make(16, 0U)
   for i in 0..<16 {
     let j = off + i * 4
     m[i] = data[j].to_int().reinterpret_as_uint() |

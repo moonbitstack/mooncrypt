@@ -23,7 +23,7 @@ pub extend Curve with Debug::{to_repr}
 
 ///|
 /// The width in bytes of a coordinate, a scalar, and each half of a signature.
-pub fn Curve::size(self : Curve) -> Int {
+pub fn Curve::size(self : Curve) -> Int32 {
   match self {
     P256 | Secp256k1 => 32
     P384 => 48
@@ -60,7 +60,7 @@ struct PrivateKey {
 /// ES384 and ES512 mean. Use [`PublicKey::with_hash`] for any other pairing.
 pub fn PublicKey::new(
   point : BytesView,
-  curve? : Curve = P256,
+  curve~ : Curve = P256,
 ) -> PublicKey raise @spec.Broken {
   PublicKey::with_hash(point, paired(curve), curve~)
 }
@@ -70,7 +70,7 @@ pub fn PublicKey::new(
 pub fn PublicKey::with_hash(
   point : BytesView,
   hash : () -> &@spec.Hash,
-  curve? : Curve = P256,
+  curve~ : Curve = P256,
 ) -> PublicKey raise @spec.Broken {
   let size = curve.size()
   let (x, y) = if point.length() == 1 + 2 * size && point[0] == b'\x04' {
@@ -94,7 +94,7 @@ pub fn PublicKey::with_hash(
 pub fn PublicKey::of_xy(
   x : BytesView,
   y : BytesView,
-  curve? : Curve = P256,
+  curve~ : Curve = P256,
 ) -> PublicKey raise @spec.Broken {
   let size = curve.size()
   guard x.length() == size && y.length() == size else {
@@ -137,7 +137,7 @@ pub fn PublicKey::curve(self : PublicKey) -> Curve {
 /// Read a signing key from its scalar, big-endian and fixed-width.
 pub fn PrivateKey::new(
   scalar : BytesView,
-  curve? : Curve = P256,
+  curve~ : Curve = P256,
 ) -> PrivateKey raise @spec.Broken {
   PrivateKey::with_hash(scalar, paired(curve), curve~)
 }
@@ -147,7 +147,7 @@ pub fn PrivateKey::new(
 pub fn PrivateKey::with_hash(
   scalar : BytesView,
   hash : () -> &@spec.Hash,
-  curve? : Curve = P256,
+  curve~ : Curve = P256,
 ) -> PrivateKey raise @spec.Broken {
   let size = curve.size()
   guard scalar.length() == size else {
@@ -485,7 +485,7 @@ fn truncate(h : BytesView, order : BigInt) -> BigInt {
 }
 
 ///|
-fn bits(n : BigInt) -> Int {
+fn bits(n : BigInt) -> Int32 {
   let mut count = 0
   let mut rest = n
   while rest > (0 : BigInt) {

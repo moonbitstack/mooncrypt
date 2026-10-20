@@ -12,9 +12,9 @@
 pub fn key(
   ikm : BytesView,
   hash : () -> &@spec.Hash,
-  salt? : BytesView = b""[:],
-  info? : BytesView = b""[:],
-  len~ : Int,
+  salt~ : BytesView = b""[:],
+  info~ : BytesView = b""[:],
+  len~ : Int32,
 ) -> Bytes {
   expand(extract(ikm, hash, salt~)[:], hash, info~, len~)
 }
@@ -28,7 +28,7 @@ pub fn key(
 pub fn extract(
   ikm : BytesView,
   hash : () -> &@spec.Hash,
-  salt? : BytesView = b""[:],
+  salt~ : BytesView = b""[:],
 ) -> Bytes {
   let key = if salt.length() == 0 {
     Bytes::from_array(Array::make(hash().size(), b'\x00'))
@@ -46,8 +46,8 @@ pub fn extract(
 pub fn expand(
   prk : BytesView,
   hash : () -> &@spec.Hash,
-  info? : BytesView = b""[:],
-  len~ : Int,
+  info~ : BytesView = b""[:],
+  len~ : Int32,
 ) -> Bytes {
   let size = hash().size()
   let rounds = (len + size - 1) / size

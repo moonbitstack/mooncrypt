@@ -12,7 +12,7 @@ pub fn public(BytesView) -> Bytes raise @spec.Broken
 
 pub fn shared(BytesView, BytesView) -> Bytes raise @spec.Broken
 
-pub let size : Int
+pub let size : Int32
 
 // Errors
 

@@ -36,7 +36,7 @@ fn digest_of(name : String) -> @rsa.Digest {
 }
 
 ///|
-fn modulus(bits : Int) -> (String, String) {
+fn modulus(bits : Int32) -> (String, String) {
   if bits == 1024 {
     (n1024, d1024)
   } else {

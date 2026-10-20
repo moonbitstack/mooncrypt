@@ -11,19 +11,19 @@ pub fn ascii(BytesView) -> String raise Refused
 
 pub fn bit_string(Bytes) -> Bytes
 
-pub fn context(Int, Int) -> Bool
+pub fn context(Int32, Int32) -> Bool
 
-pub fn explicit(Int, Bytes) -> Bytes
+pub fn explicit(Int32, Bytes) -> Bytes
 
 pub fn integer(Bytes) -> Bytes
 
-pub fn length_of(Int) -> Bytes
+pub fn length_of(Int32) -> Bytes
 
 pub fn null() -> Bytes
 
 pub fn octet_string(Bytes) -> Bytes
 
-pub fn oid(Array[Int]) -> Bytes
+pub fn oid(Array[Int32]) -> Bytes
 
 pub fn only(BytesView) -> Tlv raise Refused
 
@@ -33,7 +33,7 @@ pub fn sequence(Array[Bytes]) -> Bytes
 
 pub fn set_of(Array[Bytes]) -> Bytes
 
-pub fn tlv(Int, Bytes) -> Bytes
+pub fn tlv(Int32, Bytes) -> Bytes
 
 pub fn utc_time(String) -> Bytes
 
@@ -53,15 +53,15 @@ pub impl Show for Refused
 // Types and methods
 pub(all) struct Bits {
   bytes : Bytes
-  unused : Int
+  unused : Int32
 } derive(Eq, @debug.Debug)
 pub fn Bits::equal(Self, Self) -> Bool
-pub fn Bits::get(Self, Int) -> Bool
+pub fn Bits::get(Self, Int32) -> Bool
 pub fn Bits::not_equal(Self, Self) -> Bool
 pub fn Bits::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Tlv {
-  tag : Int
+  tag : Int32
   value : BytesView
   raw : BytesView
 }

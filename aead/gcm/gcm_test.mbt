@@ -7,7 +7,7 @@ fn raw(s : String) -> Bytes {
 }
 
 ///|
-fn aes_gcm(key : String, tag? : Int = 16) -> @gcm.Gcm raise {
+fn aes_gcm(key : String, tag~ : Int32 = 16) -> @gcm.Gcm raise {
   @gcm.Gcm::new(@aes.Cipher::new(raw(key)[:]), tag~)
 }
 

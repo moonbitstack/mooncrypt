@@ -193,7 +193,7 @@ test "padding boundaries" {
 ///|
 /// What HMAC and the KDFs read off a hash before they start.
 test "sizes and block lengths" {
-  let want : Array[(@sha2.Kind, Int, Int)] = [
+  let want : Array[(@sha2.Kind, Int32, Int32)] = [
     (Sha224, 28, 64),
     (Sha256, 32, 64),
     (Sha384, 48, 128),
