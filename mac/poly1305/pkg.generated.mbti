@@ -1,0 +1,27 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/mac/poly1305"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub fn mac(BytesView, BytesView) -> Bytes raise @spec.Broken
+
+pub let tag : Int32
+
+// Errors
+
+// Types and methods
+pub struct Poly1305 {
+  // private fields
+}
+pub fn Poly1305::finish(Self) -> Bytes
+pub fn Poly1305::new(BytesView) -> Self raise @spec.Broken
+pub fn Poly1305::size(Self) -> Int32
+pub fn Poly1305::write(Self, BytesView) -> Unit
+pub impl @spec.Mac for Poly1305
+
+// Type aliases
+
+// Traits

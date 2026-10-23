@@ -32,14 +32,18 @@ Import the ones you use. A package nothing imports is not linked, which is what
 | `hash/sha1` | SHA-1 | FIPS 180-4 |
 | `hash/md5` | MD5 | RFC 1321 |
 | `mac/hmac` | HMAC over any `Hash` | RFC 2104, FIPS 198-1 |
+| `mac/poly1305` | Poly1305, the one-time authenticator | RFC 8439 §2.5 |
 | `kdf/hkdf` | HKDF, extract and expand separately | RFC 5869 |
 | `kdf/pbkdf2` | PBKDF2 | RFC 8018 §5.2 |
 | `sign/ed25519` | Ed25519 | RFC 8032 |
 | `sign/ecdsa` | ECDSA over P-256, P-384, P-521 and secp256k1, with RFC 6979 nonces | FIPS 186-4, RFC 6979 |
-| `sign/rsa` | RSA PKCS#1 v1.5 and PSS signatures | RFC 8017 |
+| `rsa` | RSA PKCS#1 v1.5 and PSS signatures, OAEP encryption | RFC 8017 |
 | `cipher/aes` | AES-128, AES-192 and AES-256, both directions | FIPS 197 |
+| `cipher/chacha20` | ChaCha20 with the 96-bit nonce, and one block on its own for QUIC's header protection | RFC 8439 §2.3–2.4 |
 | `aead/gcm` | GCM over any 128-bit block cipher, any nonce length, the seven tag lengths | SP 800-38D |
+| `aead/chachapoly` | ChaCha20-Poly1305 | RFC 8439 §2.8 |
 | `kex/x25519` | X25519, with a low-order point refused | RFC 7748 |
+| `kex/ecdh` | ECDH over P-256, P-384, P-521 and secp256k1, with an off-curve point refused | SEC 1 §3.3.1 |
 | `asn1` | ASN.1 DER, read and write — the layer a key file and a certificate are built on | ITU-T X.690 |
 
 Each package's `moon.pkg` names the specification it implements and links to it.

@@ -1,0 +1,25 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/aead/chachapoly"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub let tag : Int32
+
+// Errors
+
+// Types and methods
+pub struct ChaChaPoly {
+  // private fields
+}
+pub fn ChaChaPoly::new(BytesView) -> Self raise @spec.Broken
+pub fn ChaChaPoly::open(Self, nonce~ : BytesView, cipher~ : BytesView, aad? : BytesView) -> Bytes raise @spec.Broken
+pub fn ChaChaPoly::seal(Self, nonce~ : BytesView, plain~ : BytesView, aad? : BytesView) -> Bytes
+pub fn ChaChaPoly::size(Self) -> Int32
+pub impl @spec.Aead for ChaChaPoly
+
+// Type aliases
+
+// Traits

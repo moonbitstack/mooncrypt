@@ -1,0 +1,72 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/internal/ec"
+
+import {
+  "moonbitlang/core/bigint",
+  "moonbitlang/core/debug",
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub fn add(Curve, Point, Point) -> Point
+
+pub fn big(String) -> @bigint.BigInt
+
+pub fn bits(@bigint.BigInt) -> Int32
+
+pub fn decode(Curve, BytesView) -> Point raise @spec.Broken
+
+pub fn double(Curve, Point) -> Point
+
+pub fn encode(Curve, Point) -> Bytes
+
+pub fn generator(Curve) -> Point
+
+pub fn inv(@bigint.BigInt, @bigint.BigInt) -> @bigint.BigInt
+
+pub fn mod_n(Curve, @bigint.BigInt) -> @bigint.BigInt
+
+pub fn mod_p(Curve, @bigint.BigInt) -> @bigint.BigInt
+
+pub fn mul(Curve, @bigint.BigInt, Point) -> Point
+
+pub fn on_curve(Curve, @bigint.BigInt, @bigint.BigInt) -> Bool
+
+pub fn params(Curve) -> Params
+
+pub fn scalar(Curve, BytesView) -> @bigint.BigInt raise @spec.Broken
+
+pub fn y_of(Curve, @bigint.BigInt, Bool) -> @bigint.BigInt
+
+// Errors
+
+// Types and methods
+pub(all) enum Curve {
+  P256
+  P384
+  P521
+  Secp256k1
+} derive(Eq, @debug.Debug)
+pub fn Curve::equal(Self, Self) -> Bool
+pub fn Curve::not_equal(Self, Self) -> Bool
+pub fn Curve::size(Self) -> Int32
+pub fn Curve::to_repr(Self) -> @debug.Repr
+
+pub(all) struct Params {
+  p : @bigint.BigInt
+  a : @bigint.BigInt
+  b : @bigint.BigInt
+  n : @bigint.BigInt
+  gx : @bigint.BigInt
+  gy : @bigint.BigInt
+}
+
+pub(all) struct Point {
+  x : @bigint.BigInt
+  y : @bigint.BigInt
+  zero : Bool
+}
+
+// Type aliases
+
+// Traits

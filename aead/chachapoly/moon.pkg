@@ -1,0 +1,15 @@
+// AEAD_CHACHA20_POLY1305, RFC 8439 §2.8: https://www.rfc-editor.org/rfc/rfc8439#section-2.8
+//
+// The AEAD TLS 1.3 and QUIC name second, and the one to prefer where AES has no
+// hardware: it is constant-time by construction, not by careful table avoidance.
+import {
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/mooncrypt/cipher/chacha20",
+  "moonbitstack/mooncrypt/mac/poly1305",
+}
+
+import {
+  "moonbitstack/mooncrypt/aead/chachapoly",
+  "moonbitstack/mooncrypt/cipher/chacha20",
+  "moonbitstack/moonbase/base16",
+} for "test"

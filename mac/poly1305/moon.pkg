@@ -1,0 +1,12 @@
+// Poly1305, RFC 8439 §2.5: https://www.rfc-editor.org/rfc/rfc8439#section-2.5
+//
+// A one-time authenticator: a key must never sign two messages. AEAD use derives
+// a fresh key per nonce; see `aead/chachapoly`.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/mooncrypt/mac/poly1305",
+  "moonbitstack/moonbase/base16",
+} for "test"

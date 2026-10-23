@@ -63,4 +63,19 @@ fn main raise {
   println(
     "ecdsa bent  -> \{ec.public().verify(b"the quick brown fix"[:], ec_sig[:])}",
   )
+
+  // Two parties agree on a secret over P-256, then seal a message under it.
+  let alice = Bytes::make(32, b'\x11')
+  let bob = Bytes::make(32, b'\x22')
+  let secret = @ecdh.shared(alice[:], @ecdh.public(bob[:])[:])
+  let agreed = @spec.eq(
+    secret[:],
+    @ecdh.shared(bob[:], @ecdh.public(alice[:])[:])[:],
+  )
+  println("ecdh agreed -> \{agreed}")
+  let aead = @chachapoly.ChaChaPoly::new(secret[:])
+  let nonce = Bytes::make(12, b'\x00')
+  let boxed = aead.seal(nonce=nonce[:], plain=msg[:])
+  println("chacha20-poly1305 -> \{@base16.encode(boxed[:])[0:32]}…")
+  println("opened      -> \{aead.open(nonce=nonce[:], cipher=boxed[:]) == msg}")
 }

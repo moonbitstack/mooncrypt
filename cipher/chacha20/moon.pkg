@@ -1,0 +1,12 @@
+// ChaCha20, RFC 8439 §2.3–2.4: https://www.rfc-editor.org/rfc/rfc8439#section-2.3
+//
+// The 96-bit nonce and 32-bit counter of the IETF variant. `block` is exposed on
+// its own because QUIC's header protection uses one block as a mask.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/mooncrypt/cipher/chacha20",
+  "moonbitstack/moonbase/base16",
+} for "test"

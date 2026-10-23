@@ -1,0 +1,15 @@
+// Elliptic-curve Diffie-Hellman over the NIST primes, SEC 1 §3.3.1:
+// https://www.secg.org/sec1-v2.pdf
+//
+// The shape of `kex/x25519`: a public value from a scalar, a shared secret from a
+// scalar and the peer's value. TLS 1.3 names secp256r1 and secp384r1
+// (RFC 8446 §4.2.7); the secret is the X coordinate (§7.4.2).
+import {
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/mooncrypt/internal/ec",
+}
+
+import {
+  "moonbitstack/mooncrypt/kex/ecdh",
+  "moonbitstack/moonbase/base16",
+} for "test"
