@@ -35,6 +35,7 @@ Import the ones you use. A package nothing imports is not linked, which is what
 | `mac/poly1305` | Poly1305, the one-time authenticator | RFC 8439 §2.5 |
 | `kdf/hkdf` | HKDF, extract and expand separately | RFC 5869 |
 | `kdf/pbkdf2` | PBKDF2 | RFC 8018 §5.2 |
+| `curve` | The curves an EC key can live on — P-256, P-384, P-521, secp256k1 — and their coordinate width; `sign/ecdsa` and `kex/ecdh` re-export it, import it to name a curve | FIPS 186-4, SEC 2 |
 | `sign/ed25519` | Ed25519 | RFC 8032 |
 | `sign/ecdsa` | ECDSA over P-256, P-384, P-521 and secp256k1, with RFC 6979 nonces | FIPS 186-4, RFC 6979 |
 | `rsa` | RSA PKCS#1 v1.5 and PSS signatures, OAEP encryption | RFC 8017 |

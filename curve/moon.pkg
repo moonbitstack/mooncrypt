@@ -1,0 +1,10 @@
+// The elliptic curves a key can live on, by name: FIPS 186-4 §D.1.2 for the NIST primes,
+// SEC 2 v2 §2.4.1 for secp256k1 (https://www.secg.org/sec2-v2.pdf).
+//
+// A public package of its own because the name is vocabulary every caller needs — to build a
+// key, to read one out of a certificate — while the arithmetic behind it stays internal.
+
+import {
+  "moonbitstack/mooncrypt/curve",
+  "moonbitstack/mooncrypt/sign/ecdsa",
+} for "test"

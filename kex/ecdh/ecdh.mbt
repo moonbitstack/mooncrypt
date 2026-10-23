@@ -4,7 +4,7 @@
 ///|
 /// The curve an exchange runs on. P-256 is the default because RFC 8446 §9.1
 /// makes it the one every TLS 1.3 implementation has.
-pub using @ec {type Curve}
+pub using @curve {type Curve}
 
 ///|
 /// The public value for the private `scalar` (big-endian, `curve.size()` bytes,

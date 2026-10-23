@@ -2,20 +2,20 @@
 package "moonbitstack/mooncrypt/kex/ecdh"
 
 import {
-  "moonbitstack/mooncrypt/internal/ec",
+  "moonbitstack/mooncrypt/curve",
   "moonbitstack/mooncrypt/spec",
 }
 
 // Values
-pub fn public(BytesView, curve? : @ec.Curve) -> Bytes raise @spec.Broken
+pub fn public(BytesView, curve? : @curve.Curve) -> Bytes raise @spec.Broken
 
-pub fn shared(BytesView, BytesView, curve? : @ec.Curve) -> Bytes raise @spec.Broken
+pub fn shared(BytesView, BytesView, curve? : @curve.Curve) -> Bytes raise @spec.Broken
 
 // Errors
 
 // Types and methods
 
 // Type aliases
-pub using @ec {type Curve}
+pub using @curve {type Curve}
 
 // Traits

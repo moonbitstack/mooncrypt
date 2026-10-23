@@ -1,5 +1,6 @@
 // Short-Weierstrass curve arithmetic shared by `sign/ecdsa` and `kex/ecdh`.
 // Internal: raw point operations are not something a caller should build on.
 import {
+  "moonbitstack/mooncrypt/curve",
   "moonbitstack/mooncrypt/spec",
 }

@@ -4,7 +4,7 @@
 ///|
 /// Which curve a key lives on: the three NIST primes TLS and JOSE speak, and
 /// secp256k1, which Bitcoin and Ethereum speak.
-pub using @ec {type Curve}
+pub using @curve {type Curve}
 
 ///|
 /// An ECDSA verification key: a point on the curve.
