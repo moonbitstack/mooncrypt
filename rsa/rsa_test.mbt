@@ -371,3 +371,17 @@ test "a bad RSA signature is refused" {
   assert_eq(pk.exponent(), raw(e))
   assert_eq(@base16.encode(pk.modulus()), n2048)
 }
+
+///|
+test "with_scheme: a PKCS#1 key re-read for PSS signs what a PSS verifier accepts" {
+  let sk = @rsa.PrivateKey::new(raw(n2048)[:], raw(e)[:], raw(d2048)[:])
+  let pss = sk.with_scheme(digest=Sha384, scheme=Pss(salt=48))
+  let sig = pss.sign(b"message"[:])
+  let pk = sk.public()
+  assert_true(
+    pk
+    .with_scheme(digest=Sha384, scheme=Pss(salt=48))
+    .verify(b"message"[:], sig[:]),
+  )
+  assert_false(pk.verify(b"message"[:], sig[:]))
+}

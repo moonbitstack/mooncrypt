@@ -115,6 +115,28 @@ pub fn PrivateKey::public(self : PrivateKey) -> PublicKey {
 }
 
 ///|
+/// The same key, signing under `digest` and `scheme` instead of the ones it was built with —
+/// TLS 1.3 negotiates the PSS digest per handshake, an X.509 issuer names its own per
+/// certificate.
+pub fn PrivateKey::with_scheme(
+  self : PrivateKey,
+  digest~ : Digest,
+  scheme~ : Scheme,
+) -> PrivateKey {
+  { ..self, digest, scheme, }
+}
+
+///|
+/// The same key, verifying under `digest` and `scheme`.
+pub fn PublicKey::with_scheme(
+  self : PublicKey,
+  digest~ : Digest,
+  scheme~ : Scheme,
+) -> PublicKey {
+  { ..self, digest, scheme, }
+}
+
+///|
 /// The modulus width in bytes, which is also the signature width.
 pub fn PublicKey::size(self : PublicKey) -> Int32 {
   self.size
