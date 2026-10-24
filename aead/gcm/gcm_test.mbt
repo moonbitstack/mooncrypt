@@ -246,3 +246,33 @@ test "it satisfies the AEAD contract" {
   let made = mode.seal(nonce=nonce[:], plain=plain[:], aad=b""[:])
   assert_eq(mode.open(nonce=nonce[:], cipher=made[:], aad=b""[:]), plain)
 }
+
+///|
+test "Wycheproof: every AES-GCM vector, the valid sealed and opened, the invalid refused" {
+  for v in vectors {
+    let (id, key, nonce, aad, plain, wire, valid) = v
+    let g = @gcm.Gcm::new(@aes.Cipher::new(@base16.decode(key)[:]))
+    let (n, a, p, c) = (
+      @base16.decode(nonce),
+      @base16.decode(aad),
+      @base16.decode(plain),
+      @base16.decode(wire),
+    )
+    let opened = Some(g.open(nonce=n[:], cipher=c[:], aad=a[:])) catch {
+      _ => None
+    }
+    if valid {
+      if g.seal(nonce=n[:], plain=p[:], aad=a[:]) != c || opened != Some(p) {
+        fail("tcId \{id}")
+      }
+    } else if opened is Some(_) {
+      fail("tcId \{id} opened")
+    }
+  }
+}
+
+///|
+test "panic sealing under an empty nonce" {
+  let g = @gcm.Gcm::new(@aes.Cipher::new(Bytes::make(16, b'\x00')[:]))
+  ignore(g.seal(nonce=b""[:], plain=b"x"[:]))
+}

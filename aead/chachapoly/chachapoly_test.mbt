@@ -105,3 +105,27 @@ test "an empty message seals to its tag alone" {
   assert_eq(wire.length(), 16)
   assert_eq(aead.open(nonce=nonce[:], cipher=wire[:]), b"")
 }
+
+///|
+test "Wycheproof: every ChaCha20-Poly1305 vector, the valid sealed and opened, the invalid refused" {
+  for v in vectors {
+    let (id, key, nonce, aad, plain, wire, valid) = v
+    let cp = @chachapoly.ChaChaPoly::new(@base16.decode(key)[:])
+    let (n, a, p, c) = (
+      @base16.decode(nonce),
+      @base16.decode(aad),
+      @base16.decode(plain),
+      @base16.decode(wire),
+    )
+    let opened = Some(cp.open(nonce=n[:], cipher=c[:], aad=a[:])) catch {
+      _ => None
+    }
+    if valid {
+      if cp.seal(nonce=n[:], plain=p[:], aad=a[:]) != c || opened != Some(p) {
+        fail("tcId \{id}")
+      }
+    } else if opened is Some(_) {
+      fail("tcId \{id} opened")
+    }
+  }
+}

@@ -11,11 +11,7 @@ pub let tag : Int32
 // Errors
 
 // Types and methods
-pub struct Gcm {
-  cipher : &@spec.Block
-  subkey : FixedArray[Int32]
-  tag : Int32
-}
+type Gcm
 pub fn Gcm::new(&@spec.Block, tag? : Int32) -> Self raise @spec.Broken
 pub fn Gcm::open(Self, nonce~ : BytesView, cipher~ : BytesView, aad? : BytesView) -> Bytes raise @spec.Broken
 pub fn Gcm::seal(Self, nonce~ : BytesView, plain~ : BytesView, aad? : BytesView) -> Bytes
