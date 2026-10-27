@@ -21,7 +21,7 @@ keywords = [
   "moonbit",
 ]
 
-description = "mooncrypt — cryptographic algorithms for MoonBit, one algorithm per package: SHA-1, SHA-2, MD5, HMAC, HKDF, PBKDF2, Ed25519, ECDSA P-256 and RSA PKCS#1 v1.5, on a small set of traits so a third algorithm drops in without touching the library."
+description = "Cryptographic algorithms for MoonBit, one per package."
 
 import {
   "moonbitstack/moonbase@0.4.0",
