@@ -18,7 +18,7 @@ let sig = sk.sign(b"the quick brown fox"[:])
 sk.public().verify(b"the quick brown fox"[:], sig[:])  // true
 ```
 
-Run `moon run examples/tour` for the whole surface in one go.
+Run `moon run src/examples/tour` for the whole surface in one go.
 
 ## Packages
 

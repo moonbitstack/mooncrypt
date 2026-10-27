@@ -9,7 +9,7 @@ import json
 import pathlib
 import sys
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent
+ROOT = pathlib.Path(__file__).resolve().parent.parent / "src"
 SOURCE = "https://github.com/C2SP/wycheproof/tree/main/testvectors_v1"
 
 TARGETS = {

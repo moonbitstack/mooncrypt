@@ -6,7 +6,7 @@
 /// key derivations, and the two signature schemes — each one reached through the
 /// same small set of traits.
 ///
-///     moon run examples/tour
+///     moon run src/examples/tour
 #coverage.skip
 fn main raise {
   let sha256 = fn() -> &@spec.Hash { @sha2.Hasher::new() }

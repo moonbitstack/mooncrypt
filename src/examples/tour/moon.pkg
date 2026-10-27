@@ -1,4 +1,4 @@
-// A tour of what mooncrypt does, runnable: `moon run examples/tour`.
+// A tour of what mooncrypt does, runnable: `moon run src/examples/tour`.
 pkgtype(kind: "executable")
 
 import {
