@@ -1,0 +1,33 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/mac/cmac"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub fn mac(&@spec.Block, BytesView, tag? : Int32) -> Bytes raise @spec.Broken
+
+// Errors
+
+// Types and methods
+pub struct Cmac {
+  cipher : &@spec.Block
+  k1 : FixedArray[Byte]
+  k2 : FixedArray[Byte]
+  chain : FixedArray[Byte]
+  pending : FixedArray[Byte]
+  mut held : Int32
+  tag : Int32
+}
+pub fn Cmac::finish(Self) -> Bytes
+pub fn Cmac::new(&@spec.Block, tag? : Int32) -> Self raise @spec.Broken
+pub fn Cmac::reset(Self) -> Unit
+pub fn Cmac::size(Self) -> Int32
+pub fn Cmac::wipe(Self) -> Unit
+pub fn Cmac::write(Self, BytesView) -> Unit
+pub impl @spec.Mac for Cmac
+
+// Type aliases
+
+// Traits

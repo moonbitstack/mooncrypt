@@ -1,0 +1,41 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/cipher/mode"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub fn pad(Int32, BytesView) -> Bytes
+
+pub fn unpad(Int32, BytesView) -> Bytes raise @spec.Broken
+
+// Errors
+
+// Types and methods
+pub struct Cbc {
+  cipher : &@spec.Block
+  start : FixedArray[Byte]
+  chain : FixedArray[Byte]
+}
+pub fn Cbc::block(Self) -> Int32
+pub fn Cbc::decrypt(Self, BytesView) -> Bytes
+pub fn Cbc::encrypt(Self, BytesView) -> Bytes
+pub fn Cbc::new(&@spec.Block, BytesView) -> Self raise @spec.Broken
+pub fn Cbc::reset(Self) -> Unit
+
+pub struct Ctr {
+  cipher : &@spec.Block
+  start : FixedArray[Byte]
+  counter : FixedArray[Byte]
+  stream : FixedArray[Byte]
+  mut used : Int32
+}
+pub fn Ctr::apply(Self, BytesView) -> Bytes
+pub fn Ctr::block(Self) -> Int32
+pub fn Ctr::new(&@spec.Block, BytesView) -> Self raise @spec.Broken
+pub fn Ctr::reset(Self) -> Unit
+
+// Type aliases
+
+// Traits

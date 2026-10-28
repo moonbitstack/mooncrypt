@@ -1,0 +1,19 @@
+// Modes of operation for a block cipher, NIST SP 800-38A:
+// https://doi.org/10.6028/NIST.SP.800-38A
+//
+// A block cipher on its own only permutes one block, which leaks every
+// repetition in the plaintext. CBC chains the blocks so each one depends on all
+// the ones before, hiding that; CTR turns the cipher into a stream, so any
+// length encrypts without padding and decryption is the same operation.
+//
+// Neither authenticates anything. A CBC or CTR ciphertext can be edited by
+// anyone who knows the format — a flipped bit flips a bit in the plaintext —
+// so anything that matters wants an AEAD or a MAC alongside.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/mooncrypt/cipher/aes",
+  "moonbitstack/moonbase/base16",
+} for "test"

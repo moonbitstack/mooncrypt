@@ -1,0 +1,30 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/mac/gmac"
+
+import {
+  "moonbitstack/mooncrypt/aead/gcm",
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub fn mac(&@spec.Block, BytesView, BytesView, tag? : Int32) -> Bytes raise @spec.Broken
+
+// Errors
+
+// Types and methods
+pub struct Gmac {
+  mode : @gcm.Gcm
+  nonce : Bytes
+  aad : Array[Byte]
+}
+pub fn Gmac::finish(Self) -> Bytes
+pub fn Gmac::new(&@spec.Block, BytesView, tag? : Int32) -> Self raise @spec.Broken
+pub fn Gmac::reset(Self) -> Unit
+pub fn Gmac::size(Self) -> Int32
+pub fn Gmac::verify(Self, BytesView) -> Bool
+pub fn Gmac::write(Self, BytesView) -> Unit
+pub impl @spec.Mac for Gmac
+
+// Type aliases
+
+// Traits

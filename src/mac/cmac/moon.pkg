@@ -1,0 +1,17 @@
+// CMAC, NIST SP 800-38B:
+// https://doi.org/10.6028/NIST.SP.800-38B
+//
+// CBC-MAC was already known to be broken for messages of different lengths: the
+// tag of one message is the tag of a longer one that continues it. CMAC fixes
+// that by deriving two subkeys from the cipher and mixing a different one into
+// the last block depending on whether the message ended on a block boundary. The
+// result is a MAC that works for any length and over any block cipher.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/mooncrypt/cipher/aes",
+  "moonbitstack/mooncrypt/cipher/blowfish",
+  "moonbitstack/moonbase/base16",
+} for "test"

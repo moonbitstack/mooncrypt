@@ -1,0 +1,17 @@
+// GMAC, NIST SP 800-38D:
+// https://doi.org/10.6028/NIST.SP.800-38D
+//
+// What GCM reduces to when there is no plaintext: GHASH over the associated
+// data and the length block, encrypted with the counter. In other words the tag
+// half of GCM on its own, which is worth having for a message that is
+// authenticated but not encrypted — a session token, a configuration blob, a
+// signed header.
+import {
+  "moonbitstack/mooncrypt/aead/gcm",
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/mooncrypt/cipher/aes",
+  "moonbitstack/moonbase/base16",
+} for "test"
