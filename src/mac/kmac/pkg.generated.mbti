@@ -1,0 +1,41 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/mac/kmac"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub fn mac(BytesView, BytesView, kind? : Kind, len~ : Int32, custom? : BytesView) -> Bytes
+
+pub fn xof(BytesView, BytesView, len~ : Int32, kind? : Kind, custom? : BytesView) -> Bytes
+
+// Errors
+
+// Types and methods
+pub(all) enum Kind {
+  Kmac128
+  Kmac256
+} derive(Eq, @debug.Debug)
+pub fn Kind::block(Self) -> Int32
+pub fn Kind::equal(Self, Self) -> Bool
+pub fn Kind::not_equal(Self, Self) -> Bool
+pub fn Kind::size(Self) -> Int32
+pub fn Kind::to_repr(Self) -> @debug.Repr
+
+type Kmac
+pub fn Kmac::finish(Self) -> Bytes
+pub fn Kmac::new(BytesView, kind? : Kind, custom? : BytesView) -> Self
+pub fn Kmac::size(Self) -> Int32
+pub fn Kmac::write(Self, BytesView) -> Unit
+pub impl @spec.Mac for Kmac
+
+type KmacXof
+pub fn KmacXof::new(BytesView, kind? : Kind, custom? : BytesView) -> Self
+pub fn KmacXof::squeeze(Self, Int32) -> Bytes
+pub fn KmacXof::write(Self, BytesView) -> Unit
+
+// Type aliases
+
+// Traits

@@ -1,0 +1,62 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/hash/sha3"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub fn bytepad(BytesView, Int32) -> Bytes
+
+pub fn cshake128(BytesView, Int32, custom? : BytesView, name? : BytesView) -> Bytes
+
+pub fn cshake256(BytesView, Int32, custom? : BytesView, name? : BytesView) -> Bytes
+
+pub fn encode_string(BytesView) -> Bytes
+
+pub fn hash(BytesView, kind? : Kind) -> Bytes
+
+pub fn left_encode(UInt64) -> Bytes
+
+pub fn right_encode(UInt64) -> Bytes
+
+pub fn shake128(BytesView, Int32) -> Bytes
+
+pub fn shake256(BytesView, Int32) -> Bytes
+
+// Errors
+
+// Types and methods
+type Hasher
+pub fn Hasher::block(Self) -> Int32
+pub fn Hasher::finish(Self) -> Bytes
+pub fn Hasher::new(kind? : Kind) -> Self
+pub fn Hasher::reset(Self) -> Unit
+pub fn Hasher::size(Self) -> Int32
+pub fn Hasher::write(Self, BytesView) -> Unit
+pub impl @spec.Hash for Hasher
+
+pub(all) enum Kind {
+  Sha3_224
+  Sha3_256
+  Sha3_384
+  Sha3_512
+  Shake128
+  Shake256
+} derive(Eq, @debug.Debug)
+pub fn Kind::block(Self) -> Int32
+pub fn Kind::equal(Self, Self) -> Bool
+pub fn Kind::not_equal(Self, Self) -> Bool
+pub fn Kind::size(Self) -> Int32
+pub fn Kind::to_repr(Self) -> @debug.Repr
+
+type Xof
+pub fn Xof::absorb(Self, BytesView) -> Unit
+pub fn Xof::new(kind? : Kind, name? : BytesView, custom? : BytesView) -> Self
+pub fn Xof::reset(Self) -> Unit
+pub fn Xof::squeeze(Self, Int32) -> Bytes
+
+// Type aliases
+
+// Traits

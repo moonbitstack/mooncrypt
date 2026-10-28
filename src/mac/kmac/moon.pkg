@@ -1,0 +1,14 @@
+// KMAC, NIST SP 800-185 §4: https://doi.org/10.6028/NIST.SP.800-185
+//
+// A keyed cSHAKE, and the only MAC here that is defined for an output of any
+// length. KMAC128 is cSHAKE128 under the name "KMAC"; the number is the
+// security level, not the tag size.
+import {
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/mooncrypt/hash/sha3",
+}
+
+import {
+  "moonbitstack/moonbase",
+  "moonbitstack/moonbase/base16",
+} for "test"

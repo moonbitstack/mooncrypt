@@ -1,0 +1,15 @@
+// SHA-3 and SHAKE, FIPS 202: https://doi.org/10.6028/NIST.FIPS.202
+// cSHAKE and the encoding rules it is built from, NIST SP 800-185:
+// https://doi.org/10.6028/NIST.SP.800-185
+//
+// One sponge, four fixed output lengths and two extendable ones. Keccak-f[1600]
+// is the same permutation throughout; what separates the members is the rate and
+// the domain-separation suffix, so they are a `Kind` over one state.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase",
+  "moonbitstack/moonbase/base16",
+} for "test"
