@@ -1,0 +1,23 @@
+// XChaCha20, draft-irtf-cfrg-xchacha-03:
+// https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-xchacha-03
+//
+// ChaCha20 with a twenty-four byte nonce, which it gets by deriving a fresh key
+// from the first sixteen bytes of that nonce and then running ordinary ChaCha20
+// under it with the remaining eight. The derivation is HChaCha20, the same
+// twenty rounds stopped before the feed-forward, so the output looks like a key
+// rather than keystream.
+//
+// The point is not more security per block but a nonce large enough to pick at
+// random: twenty-four bytes means a system can generate a nonce per message from
+// a good random source and never coordinate, where eight or twelve bytes forces
+// a counter and therefore state.
+import {
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/mooncrypt/cipher/chacha20",
+}
+
+import {
+  "moonbitstack/mooncrypt/cipher/chacha20",
+  "moonbitstack/mooncrypt/cipher/xchacha20",
+  "moonbitstack/moonbase/base16",
+} for "test"

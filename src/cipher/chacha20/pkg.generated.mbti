@@ -6,6 +6,8 @@ import {
 }
 
 // Values
+pub fn hchacha20(BytesView, BytesView) -> Bytes raise @spec.Broken
+
 pub let key_size : Int32
 
 pub let nonce_size : Int32

@@ -109,3 +109,39 @@ test "a key or nonce of the wrong length is refused" {
   }
   assert_eq(refused, (12, 8))
 }
+
+///|
+/// HChaCha20 from draft-irtf-cfrg-xchacha §2.2.1, plus the property that makes
+/// it HChaCha20 rather than ChaCha20: the feed-forward of the input state is
+/// left out, so the output is not keystream.
+test "draft-irtf-cfrg-xchacha §2.2.1: HChaCha20" {
+  let key = raw(
+    "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  )
+  let nonce = raw("000000090000004a0000000031415927")
+  assert_eq(
+    @base16.encode(@chacha20.hchacha20(key[:], nonce[:])),
+    "82413b4227b27bfed30e42508a877d73a0f9e4d58a74a853c12ec41326d3ecdc",
+  )
+  // Sixteen bytes is what it takes; the twelve-byte ChaCha20 nonce is not
+  // enough, and a longer one is not silently cut.
+  for size in [0, 12, 15, 17, 24] {
+    let wrong = Bytes::make(size, b'\x00')
+    let got = try @chacha20.hchacha20(key[:], wrong[:]) catch {
+      Size(want~, got~) => (want, got)
+      _ => (0, 0)
+    } noraise {
+      _ => (0, 0)
+    }
+    assert_eq(got, (16, size))
+  }
+  let got = try
+    @chacha20.hchacha20(Bytes::make(31, b'\x00')[:], nonce[:])
+  catch {
+    Size(want~, got~) => (want, got)
+    _ => (0, 0)
+  } noraise {
+    _ => (0, 0)
+  }
+  assert_eq(got, (32, 31))
+}

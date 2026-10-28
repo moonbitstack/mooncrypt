@@ -142,3 +142,55 @@ pub fn Cipher::xor(
   }
   Bytes::from_array(out)
 }
+
+///|
+/// HChaCha20, draft-irtf-cfrg-xchacha §2.2.
+///
+/// The same twenty rounds as [`Cipher::block`], with two changes: the nonce is
+/// sixteen bytes and takes the whole fourth row, and the feed-forward addition
+/// of the input state is left out. What comes back is therefore not keystream
+/// but a value that looks like a key — which is exactly how XChaCha20 turns a
+/// twenty-four byte nonce into the twelve-byte nonce ChaCha20 has room for.
+///
+/// The halves of the output that are kept are the first and last rows, the two
+/// the nonce did not touch, so the derived key depends on the whole key and the
+/// whole nonce.
+pub fn hchacha20(
+  key : BytesView,
+  nonce : BytesView,
+) -> Bytes raise @spec.Broken {
+  guard key.length() == key_size else {
+    raise Size(want=key_size, got=key.length())
+  }
+  guard nonce.length() == 16 else { raise Size(want=16, got=nonce.length()) }
+  let s : FixedArray[UInt32] = FixedArray::make(16, 0)
+  let constants : FixedArray[UInt32] = [
+    0x61707865, 0x3320646e, 0x79622d32, 0x6b206574,
+  ]
+  for i in 0..<16 {
+    if i < 4 {
+      s[i] = constants[i]
+    } else if i < 12 {
+      s[i] = le32(key, 4 * (i - 4))
+    } else {
+      s[i] = le32(nonce, 4 * (i - 12))
+    }
+  }
+  for _ in 0..<10 {
+    quarter(s, 0, 4, 8, 12)
+    quarter(s, 1, 5, 9, 13)
+    quarter(s, 2, 6, 10, 14)
+    quarter(s, 3, 7, 11, 15)
+    quarter(s, 0, 5, 10, 15)
+    quarter(s, 1, 6, 11, 12)
+    quarter(s, 2, 7, 8, 13)
+    quarter(s, 3, 4, 9, 14)
+  }
+  let out : Array[Byte] = []
+  for i in [0, 1, 2, 3, 12, 13, 14, 15] {
+    for b in 0..<4 {
+      out.push((s[i] >> (8 * b)).to_byte())
+    }
+  }
+  Bytes::from_array(out)
+}

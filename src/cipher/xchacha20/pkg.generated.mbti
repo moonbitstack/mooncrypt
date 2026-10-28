@@ -1,0 +1,27 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/cipher/xchacha20"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub let key_size : Int32
+
+pub let nonce_size : Int32
+
+pub fn subkey(BytesView, BytesView) -> Bytes raise @spec.Broken
+
+// Errors
+
+// Types and methods
+pub struct Cipher {
+  // private fields
+}
+pub fn Cipher::block(Self, UInt32, BytesView) -> Bytes raise @spec.Broken
+pub fn Cipher::new(BytesView) -> Self raise @spec.Broken
+pub fn Cipher::xor(Self, nonce~ : BytesView, BytesView, counter? : UInt32) -> Bytes raise @spec.Broken
+
+// Type aliases
+
+// Traits
