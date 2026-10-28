@@ -1,0 +1,18 @@
+// X448, RFC 7748: https://www.rfc-editor.org/rfc/rfc7748
+//
+// The Curve448 Diffie-Hellman, over the field mod 2^448 - 2^224 - 1. The same
+// ladder as X25519 with a wider field, which buys a larger security margin than
+// the 128 bits Curve25519 offers — and costs about three times the work per
+// operation.
+//
+// Unlike X25519 there is no high bit to mask off the u-coordinate: 448 bits is
+// exactly 56 bytes, so every bit of the input is part of the value. A low-order
+// point is refused rather than returned as an all-zero secret.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/mooncrypt/kex/x448",
+  "moonbitstack/moonbase/base16",
+} for "test"

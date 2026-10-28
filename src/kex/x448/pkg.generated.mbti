@@ -1,0 +1,23 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/kex/x448"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub let base : Bytes
+
+pub fn public(BytesView) -> Bytes raise @spec.Broken
+
+pub fn shared(BytesView, BytesView) -> Bytes raise @spec.Broken
+
+pub let size : Int32
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

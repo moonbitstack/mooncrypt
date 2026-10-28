@@ -93,9 +93,10 @@ pub(all) suberror Broken {
   Tag
   /// A nonce, key or ciphertext of the wrong length, with what was expected.
   Size(want~ : Int32, got~ : Int32)
-  /// The right number of bytes, but a value the algorithm must refuse: a
-  /// low-order Curve25519 point, whose shared secret is all zeroes and so was
-  /// chosen by the peer rather than agreed with it.
+  /// The right number of bytes, but a value the algorithm must refuse: an
+  /// encoding that is not a point on the curve, or a low-order Curve25519 or
+  /// Curve448 point, whose shared secret is all zeroes and so was chosen by the
+  /// peer rather than agreed with it.
   Weak
 } derive(Eq, Debug)
 

@@ -1,0 +1,24 @@
+// Ed448, RFC 8032: https://www.rfc-editor.org/rfc/rfc8032
+//
+// The same scheme as Ed25519 over a wider curve, with three things different
+// enough that the code cannot be shared:
+//
+//   * the curve is untwisted (`a = 1`, not `a = -1`), so the addition law has a
+//     different shape;
+//   * the hash is SHAKE256 at 114 bytes rather than SHA-512 at 64, because 114
+//     bytes covers two 456-bit scalars;
+//   * every scalar and coordinate is 57 bytes, not 32.
+//
+// The context string is supported, since the domain separator `dom4` is what
+// makes a signature unusable in a protocol that did not ask for it. Both Ed448
+// and the prehashed Ed448ph are offered, because Ed448ph is the variant for
+// messages that do not fit in memory.
+import {
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/mooncrypt/hash/sha3",
+  "moonbitlang/core/encoding/utf8",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "test"
