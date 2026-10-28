@@ -1,0 +1,14 @@
+// scrypt, RFC 7914: https://www.rfc-editor.org/rfc/rfc7914
+//
+// Memory-hard by construction: the inner loop fills a buffer of `128 * r * n`
+// bytes and reads it back in an order the password decides, so an attacker
+// cannot trade memory for time the way PBKDF2 lets them.
+import {
+  "moonbitstack/mooncrypt/hash/sha2",
+  "moonbitstack/mooncrypt/kdf/pbkdf2",
+}
+
+import {
+  "moonbitstack/moonbase",
+  "moonbitstack/moonbase/base16",
+} for "test"

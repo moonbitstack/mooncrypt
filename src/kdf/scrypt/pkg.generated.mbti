@@ -1,0 +1,32 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/kdf/scrypt"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub let interactive : Params
+
+pub fn key(BytesView, BytesView, params? : Params, len? : Int32) -> Bytes
+
+pub let min_n : Int32
+
+pub let sensitive : Params
+
+// Errors
+
+// Types and methods
+pub(all) struct Params {
+  n : Int32
+  r : Int32
+  p : Int32
+} derive(Eq, @debug.Debug)
+pub fn Params::equal(Self, Self) -> Bool
+pub fn Params::new(n? : Int32, r? : Int32, p? : Int32) -> Self
+pub fn Params::not_equal(Self, Self) -> Bool
+pub fn Params::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits
