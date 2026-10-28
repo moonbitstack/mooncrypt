@@ -1,0 +1,46 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/sum/murmur3"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub fn murmur3(BytesView, kind? : Kind, seed? : UInt64) -> (UInt64, UInt64)
+
+// Errors
+
+// Types and methods
+pub(all) enum Kind {
+  X86_32
+  X64_128
+} derive(Eq, @debug.Debug)
+pub fn Kind::block(Self) -> Int32
+pub fn Kind::equal(Self, Self) -> Bool
+pub fn Kind::not_equal(Self, Self) -> Bool
+pub fn Kind::size(Self) -> Int32
+pub fn Kind::to_repr(Self) -> @debug.Repr
+
+pub struct Murmur3 {
+  kind : Kind
+  seed : UInt64
+  mut h1 : UInt64
+  mut h2 : UInt64
+  buf : FixedArray[Byte]
+  mut held : Int32
+  mut total : UInt64
+}
+pub fn Murmur3::block(Self) -> Int32
+pub fn Murmur3::finish(Self) -> Bytes
+pub fn Murmur3::new(kind? : Kind, seed? : UInt64) -> Self
+pub fn Murmur3::reset(Self) -> Unit
+pub fn Murmur3::size(Self) -> Int32
+pub fn Murmur3::update(Self, BytesView) -> Unit
+pub fn Murmur3::value(Self) -> (UInt64, UInt64)
+pub fn Murmur3::write(Self, BytesView) -> Unit
+pub impl @spec.Hash for Murmur3
+
+// Type aliases
+
+// Traits

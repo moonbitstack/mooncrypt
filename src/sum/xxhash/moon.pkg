@@ -1,0 +1,21 @@
+// xxHash, XXH32 and XXH64: https://github.com/Cyan4973/xxHash/blob/dev/doc/xxhash_spec.md
+//
+// Four lanes fed interleaved 4-byte (XXH32) or 8-byte (XXH64) words, then merged
+// with a final avalanche. It is the fastest of the non-cryptographic hashes here
+// and the one hash tables and file-integrity tools reach for when CRC-32 is too
+// weak and SHA-256 too slow.
+//
+// A checksum, not a hash: it resists accidental corruption and nothing else. The
+// seed is part of the contract — two seeds give unrelated digests — which is what
+// makes it usable for hash tables that need to re-key an existing table.
+//
+// XXH3 is a different algorithm with its own secret and is not here yet; XXH32
+// and XXH64 are what "xxHash" meant for the decade before XXH3 arrived, and they
+// are what the formats on disk still store.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "test"

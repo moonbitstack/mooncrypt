@@ -1,0 +1,36 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/mac/siphash"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub let key_size : Int32
+
+pub fn siphash(BytesView, BytesView) -> Bytes raise @spec.Broken
+
+pub let tag_size : Int32
+
+// Errors
+
+// Types and methods
+type Lanes
+
+pub struct SipHash {
+  lanes : Lanes
+  buf : FixedArray[Byte]
+  mut held : Int32
+  mut total : UInt64
+}
+pub fn SipHash::finish(Self) -> Bytes
+pub fn SipHash::new(BytesView) -> Self raise @spec.Broken
+pub fn SipHash::size(Self) -> Int32
+pub fn SipHash::update(Self, BytesView) -> Unit
+pub fn SipHash::value(Self) -> UInt64
+pub fn SipHash::write(Self, BytesView) -> Unit
+pub impl @spec.Mac for SipHash
+
+// Type aliases
+
+// Traits

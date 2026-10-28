@@ -1,0 +1,18 @@
+// MurmurHash3: https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp
+//
+// Two finalisers, two block sizes, one idea: mix each word into an accumulator
+// with a multiply and two rotations, then avalanche the result so that every bit
+// of the input affects every bit of the digest. It is the hash Redis and Guava
+// use for their maps, and the default `hash` in several language runtimes.
+//
+// A checksum, not a hash: it is fast, it distributes well, and it resists
+// nothing. The 128-bit form is not "wider and therefore stronger" — it is the
+// variant that keeps two lanes partially coupled, which gives a better
+// distribution for a longer digest at twice the work per block.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "test"

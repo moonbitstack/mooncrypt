@@ -1,0 +1,18 @@
+// SipHash-2-4: https://131002.net/siphash/siphash.pdf
+// and the reference implementation: https://github.com/veorq/SipHash
+//
+// A 64-bit keyed MAC that costs a handful of instructions per byte, built to
+// defend a hash table against collision-flooding attacks. It is a MAC, not a
+// hash: the key is what stops an attacker from producing inputs that all land in
+// one bucket, and an unkeyed SipHash is not a thing.
+//
+// The round function is the same as ChaCha's quarter round with different
+// constants, and the whole state is 256 bits — small enough to keep in registers,
+// which is the entire point of it.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "test"
