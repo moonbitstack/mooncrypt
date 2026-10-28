@@ -169,9 +169,13 @@ svg {
   max-width: 100%;
 }
 
+/* Selection is a wash of brass, not a block of it. A solid block inverts the
+   paragraph to enamel-on-brass, which reads as a different page printed on
+   different stock; the point of highlighting is that the sentence is still the
+   sentence you are reading. */
 ::selection {
-  background: var(--brass);
-  color: var(--ground);
+  background: color-mix(in oklab, var(--brass) 26%, transparent);
+  color: inherit;
 }
 
 /* The plates, the tape, the rotor and the navigation are surfaces of a machine,
