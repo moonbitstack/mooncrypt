@@ -1,0 +1,29 @@
+// Schnorr signatures over secp256k1, as BIP 340 defines them (2020).
+//
+// The scheme signs with a key whose public point has an even y coordinate, and
+// verifies by lifting the 32-byte x coordinate back to that same point. That is
+// the whole trick of the x-only public key: a point and its negation share an x,
+// so half of each key pair is discarded, and a signature that would only hold for
+// one of the two is what makes the encoding unambiguous again.
+//
+// Three tagged hashes in one signature, each with its own tag so that a value
+// hashed for one purpose can never be reinterpreted as another:
+//
+//     aux       the optional randomness mixed into the nonce
+//     nonce     r = H(aux-mixed secret || P || m)
+//     challenge e = H(R || P || m)
+//
+// The nonce is derived rather than random. BIP 340 takes 32 bytes of auxiliary
+// randomness so that a compromised entropy source cannot leak the key, while the
+// derivation still makes a signature reproducible when that input is fixed.
+import {
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/mooncrypt/hash/sha2",
+  "moonbitstack/mooncrypt/curve",
+  "moonbitstack/mooncrypt/internal/ec",
+  "moonbitlang/core/encoding/utf8",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "test"
