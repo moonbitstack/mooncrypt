@@ -1,0 +1,33 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/kdf/bcrypt"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub let default_cost : Int32
+
+pub fn encode(BytesView, BytesView, cost? : Int32) -> String raise @spec.Broken
+
+pub fn hash(BytesView, BytesView, cost? : Int32) -> Bytes raise @spec.Broken
+
+pub let max_cost : Int32
+
+pub let max_password : Int32
+
+pub let min_cost : Int32
+
+pub fn parse(String) -> (Int32, Bytes)?
+
+pub let salt_size : Int32
+
+pub fn verify(BytesView, String) -> Bool
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

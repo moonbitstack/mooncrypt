@@ -1,0 +1,34 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/cipher/blowfish"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub let block : Int32
+
+pub let eks_max_key : Int32
+
+pub let max_key : Int32
+
+pub let min_key : Int32
+
+// Errors
+
+// Types and methods
+pub struct Cipher {
+  p : FixedArray[UInt32]
+  s : FixedArray[UInt32]
+}
+pub fn Cipher::block(Self) -> Int32
+pub fn Cipher::decrypt(Self, BytesView) -> Bytes
+pub fn Cipher::encrypt(Self, BytesView) -> Bytes
+pub fn Cipher::new(BytesView) -> Self raise @spec.Broken
+pub fn Cipher::new_eks(BytesView, BytesView, Int32) -> Self
+pub fn Cipher::wipe(Self) -> Unit
+pub impl @spec.Block for Cipher
+
+// Type aliases
+
+// Traits

@@ -1,0 +1,25 @@
+// bcrypt, from Provos and Mazières, "A Future-Adaptable Password Scheme",
+// USENIX 1999: https://www.usenix.org/legacy/events/usenix99/provos.html
+//
+// A password hash whose cost is a number you choose rather than a number the
+// algorithm fixes: the same password and salt are run through 2^cost rekeyings
+// of Blowfish, so raising the cost doubles the work for everyone, attacker
+// included, and old hashes stay verifiable because the cost travels with them.
+//
+// The text format is the one crypt(3) settled on:
+//
+//     $2b$12$<22 characters of salt><31 characters of hash>
+//
+// bcrypt has two quirks worth knowing. It stops at 72 bytes of password, and it
+// appends a NUL terminator, so a password and the same password with a trailing
+// zero are the same password. Both are reproduced here rather than fixed,
+// because a hash that does not match everyone else's is not a password hash.
+import {
+  "moonbitstack/mooncrypt/cipher/blowfish",
+  "moonbitstack/mooncrypt/spec",
+  "moonbitlang/core/encoding/utf8",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "test"

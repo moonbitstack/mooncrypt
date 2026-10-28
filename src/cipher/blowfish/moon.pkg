@@ -1,0 +1,19 @@
+// Blowfish, as described by Bruce Schneier:
+// https://www.schneier.com/academic/blowfish/
+//
+// A 16-round Feistel network keyed by a deliberately expensive key schedule:
+// the subkeys start as the digits of pi and are then overwritten by encrypting
+// the subkeys themselves. That is what bcrypt leans on — it makes the schedule
+// repeat, salted, so the cost of a guess becomes the cost of a key setup rather
+// than the cost of a block.
+//
+// Deprecated as a cipher: 64-bit blocks are too small for a mode of operation
+// to be safe in general. It is here because bcrypt is defined on top of it, and
+// because the key schedule is the interesting part.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "test"
