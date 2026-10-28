@@ -39,24 +39,139 @@
 
   /* ── the rotor ────────────────────────────────────────────────────────── */
 
-  const ring = document.getElementById("rotor");
-  if (ring && !reduce) {
-    let queued = false;
-    const turn = () => {
-      queued = false;
-      ring.style.transform = `rotate(${(window.scrollY * 0.055).toFixed(2)}deg)`;
+  // Twenty-six detents, one per contact. A wheel notch carries the ring far
+  // enough to seat the next letter under the fixed index at the top, so the
+  // dial only ever rests on a letter: 360 / 26 degrees, no free spin.
+
+  const box = document.querySelector(".rotor-box");
+  const teeth = document.getElementById("rotor-teeth");
+  const ringEl = document.getElementById("rotor-ring");
+  const readout = document.getElementById("rotor-letter");
+
+  if (box && teeth && ringEl) {
+    const letters = Array.from(ringEl.querySelectorAll("text"));
+    const DETENT = 360 / 26;
+    const NOTCH = 80; // wheel pixels worth one contact; a trackpad carries over
+    const CENTRE = 200; // the plate is 400 wide; the ring turns about its middle
+
+    let turn = 0; // where the ring is, in degrees
+    let target = 0; // the detent it is settling on
+    let frame = 0;
+    let carried = 0; // wheel distance not yet worth a detent
+
+    const paint = () => {
+      const at = `rotate(${turn.toFixed(3)} ${CENTRE} ${CENTRE})`;
+      teeth.setAttribute("transform", at);
+      ringEl.setAttribute("transform", at);
     };
+
+    // A positive step walks the alphabet on: the letter that was waiting
+    // clockwise of the index is carried round to it.
+    const seated = () => ((Math.round(-target / DETENT) % 26) + 26) % 26;
+
+    const announce = () => {
+      const index = seated();
+      letters.forEach((letter, at) => letter.classList.toggle("at", at === index));
+      if (readout) readout.textContent = letters[index].textContent;
+      box.setAttribute("aria-valuenow", String(index + 1));
+      box.setAttribute("aria-valuetext", letters[index].textContent);
+    };
+
+    const settle = () => {
+      announce();
+
+      // Keep the angle small: the arithmetic stays exact however long a
+      // reader turns the dial, but nothing else should grow without bound.
+      if (Math.abs(target) >= 360) {
+        const whole = Math.trunc(target / 360) * 360;
+        target -= whole;
+        turn -= whole;
+      }
+    };
+
+    const glide = () => {
+      frame = 0;
+      const gap = target - turn;
+      if (Math.abs(gap) < 0.05) {
+        turn = target;
+        paint();
+        settle();
+        return;
+      }
+      turn += gap * 0.22;
+      paint();
+      frame = requestAnimationFrame(glide);
+    };
+
+    const step = (count) => {
+      // scrolled down, the next contact comes to the index, so the ring turns
+      // the other way — one detent, counter-clockwise
+      target -= DETENT * count;
+      // the index is named at once; the ring takes the few frames it needs
+      announce();
+      if (reduce) {
+        turn = target;
+        paint();
+        settle();
+        return;
+      }
+      if (!frame) frame = requestAnimationFrame(glide);
+    };
+
+    box.addEventListener(
+      "wheel",
+      (event) => {
+        // A sideways gesture belongs to the page, not the dial.
+        if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+
+        event.preventDefault();
+
+        const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 100 : 1;
+        carried = Math.max(-NOTCH * 3, Math.min(NOTCH * 3, carried + event.deltaY * scale));
+
+        if (Math.abs(carried) < NOTCH) return;
+
+        const way = carried > 0 ? 1 : -1;
+        carried = 0;
+        step(way);
+      },
+      { passive: false }
+    );
+
+    box.addEventListener("keydown", (event) => {
+      const span = event.shiftKey ? 3 : 1;
+      if (event.key === "ArrowDown" || event.key === "ArrowRight") step(span);
+      else if (event.key === "ArrowUp" || event.key === "ArrowLeft") step(-span);
+      else return;
+      event.preventDefault();
+    });
+
+    paint();
+    settle();
+  }
+
+  /* ── the scrollbar ────────────────────────────────────────────────────── */
+
+  // On the homepage the bar is not drawn while the page is still at the top;
+  // it appears the moment there is something to travel through.
+
+  if (root.hasAttribute("data-home")) {
+    let quiet = false;
+    const edge = () => {
+      quiet = false;
+      root.toggleAttribute("data-scrolled", window.scrollY > 0);
+    };
+    edge();
     window.addEventListener(
       "scroll",
       () => {
-        if (!queued) {
-          queued = true;
-          requestAnimationFrame(turn);
-        }
+        if (quiet) return;
+        quiet = true;
+        requestAnimationFrame(edge);
       },
       { passive: true }
     );
-    turn();
+    window.addEventListener("resize", edge, { passive: true });
   }
 
   /* ── listings ─────────────────────────────────────────────────────────── */
