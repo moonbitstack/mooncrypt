@@ -1,0 +1,35 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/aead/siv"
+
+import {
+  "moonbitstack/mooncrypt/mac/cmac",
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub fn halves(BytesView) -> (Bytes, Bytes) raise @spec.Broken
+
+pub fn open(&@spec.Block, &@spec.Block, nonce~ : BytesView, cipher~ : BytesView, aad? : BytesView) -> Bytes raise @spec.Broken
+
+pub fn seal(&@spec.Block, &@spec.Block, nonce~ : BytesView, plain~ : BytesView, aad? : BytesView) -> Bytes raise @spec.Broken
+
+pub let tag : Int32
+
+// Errors
+
+// Types and methods
+pub struct Siv {
+  mac : @cmac.Cmac
+  ctr : &@spec.Block
+}
+pub fn Siv::new(&@spec.Block, &@spec.Block) -> Self raise @spec.Broken
+pub fn Siv::open(Self, nonce~ : BytesView, cipher~ : BytesView, aad? : BytesView) -> Bytes raise @spec.Broken
+pub fn Siv::open_with(Self, BytesView, Array[BytesView], nonce? : BytesView) -> Bytes raise @spec.Broken
+pub fn Siv::seal(Self, nonce~ : BytesView, plain~ : BytesView, aad? : BytesView) -> Bytes
+pub fn Siv::seal_with(Self, BytesView, Array[BytesView], nonce? : BytesView) -> Bytes
+pub fn Siv::size(Self) -> Int32
+pub impl @spec.Aead for Siv
+
+// Type aliases
+
+// Traits

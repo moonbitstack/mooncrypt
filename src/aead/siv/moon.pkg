@@ -1,0 +1,27 @@
+// SIV, RFC 5297:
+// https://www.rfc-editor.org/rfc/rfc5297
+//
+// SIV is the one widely deployed mode that does *not* fail catastrophically when
+// a nonce is repeated. Instead of an independent random value, the nonce is just
+// the last component of a vector of associated data, and that vector is hashed
+// with CMAC to produce the synthetic IV. Repeating a nonce therefore reveals
+// only that the same message was sent twice, not the XOR of two plaintexts,
+// which is what a repeated nonce costs in CTR, GCM and CCM.
+//
+// The price is that the whole plaintext is read twice: once for the CMAC that
+// produces the IV, and once for the CTR pass. SIV is for small, high-value
+// messages — key wrapping, database fields, headers — not for bulk data.
+//
+// The key is split in half and each half drives a different cipher: one for the
+// CMAC, one for the CTR. Both are passed in, so nothing here assumes AES.
+import {
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/mooncrypt/mac/cmac",
+}
+
+import {
+  "moonbitstack/mooncrypt/aead/siv",
+  "moonbitstack/mooncrypt/cipher/aes",
+  "moonbitstack/mooncrypt/cipher/blowfish",
+  "moonbitstack/moonbase/base16",
+} for "test"
