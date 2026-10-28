@@ -1,0 +1,18 @@
+// SM2 digital signature, GB/T 32918.2-2016:
+// https://openstd.samr.gov.cn/bzgk/gb/newGbInfo?hcno=A6A3A9F0C2E4B6E9D0C4B1B0A9E1C2C1
+//
+// The curve is a 256-bit short Weierstrass curve of its own, and the digest is
+// SM3 — a signature is defined over both, so this package carries its own
+// curve arithmetic rather than borrowing another curve's.
+import {
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/mooncrypt/hash/sm3",
+  "moonbitstack/mooncrypt/mac/hmac",
+  "moonbitstack/mooncrypt/internal/ec",
+  "moonbitlang/core/bigint",
+}
+
+import {
+  "moonbitstack/moonbase",
+  "moonbitstack/moonbase/base16",
+} for "test"

@@ -1,0 +1,28 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/cipher/sm4"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub let block : Int32
+
+pub let key_size : Int32
+
+// Errors
+
+// Types and methods
+pub struct Cipher {
+  rk : FixedArray[UInt32]
+}
+pub fn Cipher::block(Self) -> Int32
+pub fn Cipher::decrypt(Self, BytesView) -> Bytes
+pub fn Cipher::encrypt(Self, BytesView) -> Bytes
+pub fn Cipher::new(BytesView) -> Self raise @spec.Broken
+pub fn Cipher::wipe(Self) -> Unit
+pub impl @spec.Block for Cipher
+
+// Type aliases
+
+// Traits

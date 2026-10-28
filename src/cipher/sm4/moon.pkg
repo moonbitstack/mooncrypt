@@ -1,0 +1,12 @@
+// SM4, GB/T 32907-2016: https://openstd.samr.gov.cn/bzgk/gb/newGbInfo?hcno=7803DE42D3BC5E80B0C3E5D8E873D56A
+//
+// A 128-bit block cipher with a 128-bit key. It is a Feistel-free design in the
+// same family as AES's round structure — four S-box lookups and a linear
+// diffusion — with a key schedule that runs the same round function backwards.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "test"

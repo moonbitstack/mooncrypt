@@ -1,0 +1,26 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/aead/sm4gcm"
+
+import {
+  "moonbitstack/mooncrypt/aead/gcm",
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub let key_size : Int32
+
+pub fn new(BytesView) -> @gcm.Gcm raise @spec.Broken
+
+pub fn open(BytesView, nonce~ : BytesView, cipher~ : BytesView, aad? : BytesView) -> Bytes raise @spec.Broken
+
+pub fn seal(BytesView, nonce~ : BytesView, plain~ : BytesView, aad? : BytesView) -> Bytes raise @spec.Broken
+
+pub let tag : Int32
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

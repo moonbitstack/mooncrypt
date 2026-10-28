@@ -1,0 +1,13 @@
+// SM3, GB/T 32905-2016: https://openstd.samr.gov.cn/bzgk/gb/newGbInfo?hcno=45B1A67F20F3BF339211C391E9278F5E
+//
+// A 256-bit digest over 512-bit blocks, built the way SHA-256 is built, with a
+// different round function and a message expansion that mixes in a second,
+// wider permutation.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase",
+  "moonbitstack/moonbase/base16",
+} for "test"

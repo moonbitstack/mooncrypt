@@ -1,0 +1,14 @@
+// SM4-GCM: SM4 under Galois/Counter Mode, NIST SP 800-38D:
+// https://doi.org/10.6028/NIST.SP.800-38D
+//
+// GCM is defined for any 128-bit block cipher, so this is SM4 plugged into the
+// mode that already exists, offered ready-made because that is how it is used.
+import {
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/mooncrypt/cipher/sm4",
+  "moonbitstack/mooncrypt/aead/gcm",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "test"
