@@ -15,7 +15,7 @@
       href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="assets/site.css" />
+    <link rel="stylesheet" href="assets/site.css?v=2" />
     <script>
       (() => {
         try {
@@ -114,14 +114,13 @@
                 tabindex="0"
                 role="slider"
                 aria-orientation="vertical"
-                aria-label="Rotor position"
+                aria-label="Rotor, 26 contacts"
                 aria-valuemin="1"
                 aria-valuemax="26"
                 aria-valuenow="1"
                 aria-valuetext="A"
               >
-                <svg viewBox="0 0 400 400" role="img" aria-labelledby="rotor-t">
-                <title id="rotor-t">A rotor drawn as an engineering plate: an outer ring of 26 teeth, an alphabet ring, 26 contacts, and a hub marked I.</title>
+                <svg viewBox="0 0 400 400" aria-hidden="true" focusable="false">
                 <g stroke="var(--brass-2)" stroke-width="1" opacity=".5">
                 <path d="M8 3 V13 M3 8 H13"/>
                 <path d="M392 3 V13 M387 8 H397"/>
@@ -257,6 +256,7 @@
                 <text x="200.0" y="279.0" text-anchor="middle" font-family="var(--mono)" font-size="8.5" letter-spacing="2.6" fill="var(--ink-3)">I</text>
                 <g stroke="var(--brass)" fill="none" stroke-width="1.1" opacity=".9">
                 <path d="M185.0 18 V12 H215.0 V18"/>
+                <path d="M185.0 48 V54 H215.0 V48"/>
                 </g>
                 </svg>
               </div>
