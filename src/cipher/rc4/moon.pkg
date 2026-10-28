@@ -1,0 +1,19 @@
+// RC4, the stream cipher from 1987 that is now a cautionary tale.
+//
+// It is here for interoperability and nothing else: WEP, WPA-TKIP, older TLS
+// suites, Kerberos' RC4-HMAC and a long tail of file formats still carry it, and
+// a library that cannot read them is a library that cannot talk to them.
+//
+// Do not reach for it. RC4's keystream is measurably biased — the second byte is
+// zero twice as often as it should be, and long keystreams correlate with keys —
+// and RFC 7465 forbids it in TLS for that reason. Its biases are a property of
+// the algorithm, not of any implementation, so nothing here can be tuned to fix
+// them.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+  "moonbitlang/core/encoding/utf8",
+} for "test"

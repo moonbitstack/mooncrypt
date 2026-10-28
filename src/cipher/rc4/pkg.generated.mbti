@@ -1,0 +1,30 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/cipher/rc4"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub fn keystream(BytesView, Int32) -> Bytes raise @spec.Broken
+
+pub let max_key_size : Int32
+
+pub fn rc4(BytesView, BytesView) -> Bytes raise @spec.Broken
+
+// Errors
+
+// Types and methods
+pub struct Cipher {
+  state : FixedArray[Byte]
+  mut i : Byte
+  mut j : Byte
+}
+pub fn Cipher::keystream(Self, Int32) -> Bytes
+pub fn Cipher::new(BytesView) -> Self raise @spec.Broken
+pub fn Cipher::next(Self) -> Byte
+pub fn Cipher::xor(Self, BytesView) -> Bytes
+
+// Type aliases
+
+// Traits

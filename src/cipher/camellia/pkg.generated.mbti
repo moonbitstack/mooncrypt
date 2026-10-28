@@ -1,0 +1,31 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/cipher/camellia"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub let block : Int32
+
+// Errors
+
+// Types and methods
+pub struct Cipher {
+  kw : FixedArray[UInt64]
+  k : FixedArray[UInt64]
+  ke : FixedArray[UInt64]
+  back_kw : FixedArray[UInt64]
+  back_k : FixedArray[UInt64]
+  back_ke : FixedArray[UInt64]
+}
+pub fn Cipher::block(Self) -> Int32
+pub fn Cipher::decrypt(Self, BytesView) -> Bytes
+pub fn Cipher::encrypt(Self, BytesView) -> Bytes
+pub fn Cipher::new(BytesView) -> Self raise @spec.Broken
+pub fn Cipher::wipe(Self) -> Unit
+pub impl @spec.Block for Cipher
+
+// Type aliases
+
+// Traits

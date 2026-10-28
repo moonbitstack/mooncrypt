@@ -1,0 +1,16 @@
+// Camellia, RFC 3713: https://www.rfc-editor.org/rfc/rfc3713
+//
+// A 128-bit block cipher with 128, 192 or 256-bit keys, designed in Japan at the
+// same time as AES and to the same strength. It is a Feistel network — so the
+// same circuit both encrypts and decrypts, with the subkeys reversed — with an
+// FL/FLINV layer every six rounds that mixes in a little key material without
+// touching the Feistel structure. That layer is what makes Camellia resistant to
+// the meet-in-the-middle and subkey-guessing attacks a plain 18-round Feistel of
+// this width would otherwise admit.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "test"

@@ -1,0 +1,17 @@
+// Salsa20, the stream cipher from 2005 that ChaCha20 replaced.
+//
+// The two are the same design with a different round function: Salsa20's quarter
+// round adds and rotates, ChaCha20's adds, rotates and permutes, so ChaCha20
+// diffuses faster without costing anything. Salsa20 is what is in older NaCl
+// boxes, and what `crypto_stream` in libsodium still means.
+//
+// It is superseded rather than broken — the family was never attacked — but there
+// is no reason to choose it today, and the reason to have it is that data written
+// with it is still data.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "test"

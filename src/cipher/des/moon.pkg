@@ -1,0 +1,17 @@
+// DES and Triple DES, the Data Encryption Standard of 1977 and its successor.
+//
+// Both are legacy. DES's 56-bit key is small enough to search exhaustively — it
+// was in 1998 and it is much cheaper now — and Triple DES exists only to stretch
+// that key by encrypting three times. NIST withdrew approval for both in 2023,
+// and every new protocol should use AES.
+//
+// They are here because a great deal of data and a great many protocols still
+// name them: EMV cards, some TLS and IPsec configurations, older Kerberos and a
+// long tail of hardware. Reading that data is the reason this package exists.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "test"

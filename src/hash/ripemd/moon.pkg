@@ -1,0 +1,21 @@
+// RIPEMD-160, from the European RIPE project (Dobbertin, Bosselaers, Preneel,
+// 1996).
+//
+// Two parallel lines of eighty rounds, mixed at the end rather than during: the
+// design is MD4's compression function run twice with different constants and
+// message orders, and the result combined across both lines. That is what makes
+// it a different hash rather than a stronger MD4, and it is why the two lines
+// cannot be computed separately.
+//
+// It is legacy. No new protocol should pick it — SHA-2 and SHA-3 are faster on
+// every target that matters and have had far more attention — but Bitcoin's
+// address format, OpenPGP fingerprints and a long tail of older systems all still
+// name it, and a library that cannot compute it cannot interoperate.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+  "moonbitlang/core/encoding/utf8",
+} for "test"

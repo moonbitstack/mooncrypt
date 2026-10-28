@@ -1,0 +1,43 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/cipher/des"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub let block : Int32
+
+pub let key_size : Int32
+
+pub let triple_key_size : Int32
+
+// Errors
+
+// Types and methods
+pub struct Cipher {
+  rk : FixedArray[UInt64]
+}
+pub fn Cipher::block(Self) -> Int32
+pub fn Cipher::decrypt(Self, BytesView) -> Bytes
+pub fn Cipher::encrypt(Self, BytesView) -> Bytes
+pub fn Cipher::new(BytesView) -> Self raise @spec.Broken
+pub fn Cipher::wipe(Self) -> Unit
+pub impl @spec.Block for Cipher
+
+pub struct TripleDes {
+  first : Cipher
+  second : Cipher
+  third : Cipher
+}
+pub fn TripleDes::block(Self) -> Int32
+pub fn TripleDes::decrypt(Self, BytesView) -> Bytes
+pub fn TripleDes::encrypt(Self, BytesView) -> Bytes
+pub fn TripleDes::from_two_keys(BytesView) -> Self raise @spec.Broken
+pub fn TripleDes::new(BytesView) -> Self raise @spec.Broken
+pub fn TripleDes::wipe(Self) -> Unit
+pub impl @spec.Block for TripleDes
+
+// Type aliases
+
+// Traits
