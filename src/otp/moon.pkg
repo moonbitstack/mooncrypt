@@ -1,0 +1,20 @@
+// One-time passwords (RFC 4226) and their time-based form (RFC 6238).
+//
+// The two standards are one algorithm with a different counter: HOTP counts
+// events, TOTP counts thirty-second steps since the Unix epoch, and both HMAC
+// that counter and read four bytes out of the digest.
+//
+// This package depends on a hash rather than on a clock. A time-based code is
+// computed from a unix time the caller passes in, which keeps the whole package
+// testable against a fixed table and leaves "what time is it" to the program
+// that already knows.
+import {
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/mooncrypt/mac/hmac",
+  "moonbitstack/mooncrypt/hash/sha1",
+  "moonbitlang/core/encoding/utf8",
+}
+
+import {
+  "moonbitstack/mooncrypt/hash/sha2",
+} for "test"

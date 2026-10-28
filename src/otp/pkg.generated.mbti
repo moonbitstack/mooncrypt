@@ -1,0 +1,40 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/otp"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub let default_step : UInt64
+
+pub fn hotp(BytesView, UInt64) -> String
+
+pub fn totp(BytesView, UInt64, step? : UInt64) -> String
+
+// Errors
+
+// Types and methods
+pub(all) enum Digits {
+  Six
+  Seven
+  Eight
+  Nine
+}
+pub fn Digits::count(Self) -> Int32
+
+pub struct Otp {
+  key : Bytes
+  digits : Digits
+}
+pub fn Otp::confirm(Self, StringView, UInt64, skew? : Int32, step? : UInt64) -> Bool
+pub fn Otp::confirm_at(Self, StringView, UInt64, ahead? : Int32) -> Bool
+pub fn Otp::hotp(Self, UInt64) -> String
+pub fn Otp::hotp_with(Self, UInt64, () -> &@spec.Hash) -> String
+pub fn Otp::new(BytesView, digits? : Digits) -> Self
+pub fn Otp::totp(Self, UInt64, step? : UInt64) -> String
+pub fn Otp::totp_with(Self, UInt64, () -> &@spec.Hash, step? : UInt64) -> String
+
+// Type aliases
+
+// Traits
