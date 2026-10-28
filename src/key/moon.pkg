@@ -1,0 +1,22 @@
+// Key files: PEM (RFC 7468) around DER (X.690), in the four shapes a key is
+// actually stored in.
+//
+// PKCS#1 (RFC 8017 appendix A) is RSA on its own: two integers for a public key,
+// nine for a private one. PKCS#8 (RFC 5958) is the generic wrapper that says
+// which algorithm the octets inside belong to, and SubjectPublicKeyInfo is the
+// same idea for the public half — those two are what a modern key file holds.
+// SEC1 (RFC 5915) is the elliptic-curve private key, with the curve name and the
+// public point beside the scalar.
+//
+// This package is an encoding layer only: it moves numbers between bytes and
+// structures and never touches an algorithm. Building a usable key from what it
+// returns is one call into `mooncrypt/rsa` or `mooncrypt/curve`.
+import {
+  "moonbitstack/mooncrypt/asn1",
+  "moonbitstack/mooncrypt/curve",
+  "moonbitstack/moonbase/base64",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "test"

@@ -1,0 +1,76 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/key"
+
+import {
+  "moonbitlang/core/bigint",
+  "moonbitstack/mooncrypt/asn1",
+  "moonbitstack/mooncrypt/curve",
+}
+
+// Values
+pub fn armor(String, BytesView) -> String
+
+pub fn curve_of_oid(StringView) -> @curve.Curve?
+
+pub fn curve_oid(@curve.Curve) -> Array[Int32]
+
+pub fn dearmor(StringView) -> (String, Bytes) raise @asn1.Refused
+
+pub let line_width : Int32
+
+pub fn parse_pkcs8(BytesView) -> Bytes raise @asn1.Refused
+
+pub fn parse_rsa_private(BytesView) -> RsaPrivate raise @asn1.Refused
+
+pub fn parse_rsa_public(BytesView) -> RsaPublic raise @asn1.Refused
+
+pub fn parse_sec1(BytesView) -> EcPrivate raise @asn1.Refused
+
+pub fn parse_spki(BytesView) -> Bytes raise @asn1.Refused
+
+pub fn parse_spki_ec(BytesView) -> (@curve.Curve, Bytes) raise @asn1.Refused
+
+pub fn pkcs8_der(BytesView) -> Bytes
+
+pub fn rsa_private_der(RsaPrivate) -> Bytes
+
+pub fn rsa_public_der(BytesView, BytesView) -> Bytes
+
+pub fn sec1_der(@curve.Curve, BytesView, public? : BytesView?) -> Bytes
+
+pub fn spki_der(BytesView) -> Bytes
+
+pub fn spki_ec_der(@curve.Curve, BytesView) -> Bytes
+
+// Errors
+
+// Types and methods
+pub(all) struct EcPrivate {
+  curve : @curve.Curve?
+  scalar : @bigint.BigInt
+  public : Bytes?
+}
+
+pub(all) struct RsaPrivate {
+  modulus : @bigint.BigInt
+  public_exponent : @bigint.BigInt
+  private_exponent : @bigint.BigInt
+  prime1 : @bigint.BigInt
+  prime2 : @bigint.BigInt
+  exponent1 : @bigint.BigInt
+  exponent2 : @bigint.BigInt
+  coefficient : @bigint.BigInt
+} derive(Eq)
+pub fn RsaPrivate::equal(Self, Self) -> Bool
+pub fn RsaPrivate::not_equal(Self, Self) -> Bool
+
+pub(all) struct RsaPublic {
+  modulus : @bigint.BigInt
+  exponent : @bigint.BigInt
+} derive(Eq)
+pub fn RsaPublic::equal(Self, Self) -> Bool
+pub fn RsaPublic::not_equal(Self, Self) -> Bool
+
+// Type aliases
+
+// Traits
