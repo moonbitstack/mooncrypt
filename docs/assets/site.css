@@ -1254,6 +1254,16 @@ p {
   color: var(--ink-2);
 }
 
+/* A specification link is one unbreakable token. Without this, a single long
+   URL in a package note scrolls the whole page sideways on a phone. */
+.prose p,
+.prose li,
+.prose dd,
+.pkg-note,
+.pkg-ref {
+  overflow-wrap: anywhere;
+}
+
 .prose ul,
 .prose ol {
   margin: 0;
