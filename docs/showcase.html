@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Showcase — mooncrypt</title>
+    <meta
+      name="description"
+      content="Three instruments running mooncrypt in the browser: the avalanche of a one-bit change, a tag that refuses a touched ciphertext, and a one-time password counting down."
+    />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/site.css" />
+    <script>
+      (() => {
+        try {
+          const saved = localStorage.getItem("mooncrypt-theme");
+          const dark = !window.matchMedia("(prefers-color-scheme: light)").matches;
+          document.documentElement.dataset.theme = saved || (dark ? "dark" : "light");
+        } catch (e) {
+          document.documentElement.dataset.theme = "dark";
+        }
+      })();
+    </script>
+  </head>
+
+  <body>
+    <header class="head">
+      <div class="wrap">
+        <a class="brand" href="index.html">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="1.5" />
+            <circle cx="12" cy="12" r="2.2" fill="currentColor" />
+            <g stroke="currentColor" stroke-width="1.7">
+              <path d="M12 3.6V1" />
+              <path d="M17.94 6.06 19.78 4.22" />
+              <path d="M20.4 12H23" />
+              <path d="M17.94 17.94 19.78 19.78" />
+              <path d="M12 20.4V23" />
+              <path d="M6.06 17.94 4.22 19.78" />
+              <path d="M3.6 12H1" />
+              <path d="M6.06 6.06 4.22 4.22" />
+            </g>
+          </svg>
+          mooncrypt
+        </a>
+
+        <span class="head-rule" aria-hidden="true"></span>
+
+        <nav class="nav" aria-label="Site">
+          <a href="guide.html"><span class="word">Guide</span></a>
+          <a href="showcase.html" aria-current="page"><span class="word">Showcase</span></a>
+          <a href="api.html"><span class="word">API</span></a>
+          <button class="lamp-sw" data-theme-toggle aria-pressed="false" title="Switch the lamp">
+            <i aria-hidden="true"></i><span class="word">lamp</span>
+          </button>
+          <a
+            class="icon-link"
+            href="https://github.com/moonbitstack/mooncrypt"
+            aria-label="Repository on GitHub"
+          >
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                fill="currentColor"
+                d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"
+              />
+            </svg>
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <div class="doc-head">
+      <div class="wrap">
+        <span class="stamp">Showcase</span>
+        <h1>Three instruments</h1>
+        <p class="lede">
+          Each one runs this library compiled to JavaScript. Nothing on this page
+          is drawn from a stored answer: move a control and the numbers are
+          computed again.
+        </p>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <div class="doc-shell">
+        <aside class="rail" aria-label="Contents">
+          <div class="rail-title">Instruments</div>
+          <ol>
+            <li><a href="#avalanche"><span class="n">01</span>Avalanche</a></li>
+            <li><a href="#tag"><span class="n">02</span>A tag that refuses</a></li>
+            <li><a href="#otp"><span class="n">03</span>Thirty seconds</a></li>
+          </ol>
+        </aside>
+
+        <div class="prose showcase">
+          <h2 id="avalanche">Avalanche</h2>
+          <p>
+            Change one bit of the message and about half the digest flips. Not
+            the corresponding bit — half of all 256 of them, with no pattern to
+            where. This is the property that makes a digest useless to predict
+            and useful to compare.
+          </p>
+
+          <div class="bench">
+            <div class="bench-top">
+              <span>Fig. 2 · avalanche</span>
+              <span class="spacer"></span>
+              <span>SHA-256 · 256 bits</span>
+            </div>
+
+            <div class="controls">
+              <label class="field" style="flex: 1 1 220px">
+                <span>message</span>
+                <input id="av-input" type="text" value="mooncrypt" spellcheck="false" />
+              </label>
+              <label class="field">
+                <span>flip bit <output id="av-bit-out">0</output></span>
+                <input id="av-bit" type="range" min="0" max="7" value="0" />
+              </label>
+            </div>
+
+            <div class="grid-bits" id="av-grid" aria-hidden="true" data-needs-lib=""></div>
+
+            <div class="bits-legend">
+              <span>one changed bit of input</span>
+              <span><b id="av-count">—</b> of 256 bits</span>
+            </div>
+
+            <div class="digests">
+              <div><span>digest of the message</span><code id="av-a">—</code></div>
+              <div><span>digest of the same message, one bit later</span><code id="av-b">—</code></div>
+            </div>
+          </div>
+
+          <h2 id="tag">A tag that refuses</h2>
+          <p>
+            AES-GCM seals a message and appends a tag. Flip one bit anywhere in
+            the ciphertext and the tag no longer matches; <code>open</code>
+            returns nothing at all rather than a damaged message.
+          </p>
+
+          <div class="bench">
+            <div class="bench-top">
+              <span>Fig. 3 · tag</span>
+              <span class="spacer"></span>
+              <span>AES-256-GCM · fixed key and nonce</span>
+            </div>
+
+            <label class="field">
+              <span>message</span>
+              <input id="tg-input" type="text" value="tamper with me" spellcheck="false" />
+            </label>
+
+            <div class="controls">
+              <button class="btn" id="tg-tamper">flip one bit</button>
+              <span class="verdict-line ok" id="tg-verdict">opened</span>
+            </div>
+
+            <div class="hexdump" id="tg-hex" data-needs-lib=""></div>
+
+            <p class="say">
+              <span id="tg-plain"></span>
+            </p>
+          </div>
+
+          <h2 id="otp">Thirty seconds</h2>
+          <p>
+            A one-time password is a MAC of the current time. The code changes
+            every thirty seconds because the time it was computed from does; no
+            state is kept between them.
+          </p>
+
+          <div class="bench">
+            <div class="bench-top">
+              <span>Fig. 4 · totp</span>
+              <span class="spacer"></span>
+              <span>RFC 6238 · SHA-1 · 6 digits</span>
+            </div>
+
+            <div class="dial-row">
+              <svg class="dial" viewBox="0 0 120 120" aria-hidden="true">
+                <circle class="track" cx="60" cy="60" r="52" />
+                <circle class="arc" id="otp-arc" cx="60" cy="60" r="52" />
+              </svg>
+              <div>
+                <div class="code-pin" id="otp-code" data-needs-lib="">———</div>
+                <div class="otp-meta">
+                  <span>next code in</span><b id="otp-left">30s</b>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p class="dim" style="font-size: 0.78rem; margin-top: 22px">
+            The key, the nonce and the password above are fixed so the page shows
+            the same thing to everyone. Nothing is sent anywhere: the arithmetic
+            happens in this tab.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <footer class="foot">
+      <div class="wrap">
+        <span>mooncrypt · Apache-2.0</span>
+        <a href="https://github.com/moonbitstack/mooncrypt">Repository</a>
+        <a href="guide.html">Guide</a>
+        <a href="api.html">API</a>
+        <span class="spacer">No trackers, no cookies, no analytics</span>
+      </div>
+    </footer>
+
+    <script src="assets/mooncrypt.js"></script>
+    <script src="assets/bench.js"></script>
+  </body>
+</html>

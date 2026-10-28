@@ -1,4 +1,17 @@
-# mooncrypt
+<h1 align="center">mooncrypt</h1>
+
+<p align="center"><strong>One algorithm to a package.</strong></p>
+
+<p align="center">
+  <a href="https://moonbitstack.github.io/mooncrypt/">Home</a> ·
+  <a href="https://moonbitstack.github.io/mooncrypt/guide.html">Guide</a> ·
+  <a href="https://moonbitstack.github.io/mooncrypt/api.html">API</a> ·
+  <a href="https://mooncakes.io/docs/moonbitstack/mooncrypt">Mooncakes</a>
+</p>
+
+<p align="center">
+  <code>moon add moonbitstack/mooncrypt</code>
+</p>
 
 Cryptographic algorithms for MoonBit, one algorithm to a package.
 

@@ -1,0 +1,25 @@
+// Browser bridge: installs this library on `globalThis` so the site's tape and
+// its showcase run the packages compiled with the JavaScript backend rather than
+// a second implementation of the same idea.
+//
+//     moon build --target js --release src/examples/browser
+//
+// Every argument and every reply is hexadecimal, so the page owns the text
+// encoding and nothing here has to guess at it. The build product is not
+// committed; the docs workflow makes it before publishing.
+pkgtype(kind: "executable")
+
+supported_targets = "js"
+
+import {
+  "moonbitstack/mooncrypt/hash/sha2",
+  "moonbitstack/mooncrypt/hash/sha3",
+  "moonbitstack/mooncrypt/hash/blake3",
+  "moonbitstack/mooncrypt/hash/sm3",
+  "moonbitstack/mooncrypt/cipher/aes",
+  "moonbitstack/mooncrypt/aead/gcm",
+  "moonbitstack/mooncrypt/aead/sm4gcm",
+  "moonbitstack/mooncrypt/aead/chachapoly",
+  "moonbitstack/mooncrypt/otp",
+  "moonbitstack/moonbase/base16",
+}

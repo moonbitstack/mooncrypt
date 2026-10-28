@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Guide — mooncrypt</title>
+    <meta
+      name="description"
+      content="A progressive guide to mooncrypt: digests, keyed hashes, key derivation, authenticated encryption, signatures, key agreement and key files."
+    />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/site.css" />
+    <script>
+      (() => {
+        try {
+          const saved = localStorage.getItem("mooncrypt-theme");
+          const dark = !window.matchMedia("(prefers-color-scheme: light)").matches;
+          document.documentElement.dataset.theme = saved || (dark ? "dark" : "light");
+        } catch (e) {
+          document.documentElement.dataset.theme = "dark";
+        }
+      })();
+    </script>
+  </head>
+
+  <body>
+    <header class="head">
+      <div class="wrap">
+        <a class="brand" href="index.html">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="1.5" />
+            <circle cx="12" cy="12" r="2.2" fill="currentColor" />
+            <g stroke="currentColor" stroke-width="1.7">
+              <path d="M12 3.6V1" />
+              <path d="M17.94 6.06 19.78 4.22" />
+              <path d="M20.4 12H23" />
+              <path d="M17.94 17.94 19.78 19.78" />
+              <path d="M12 20.4V23" />
+              <path d="M6.06 17.94 4.22 19.78" />
+              <path d="M3.6 12H1" />
+              <path d="M6.06 6.06 4.22 4.22" />
+            </g>
+          </svg>
+          mooncrypt
+        </a>
+
+        <span class="head-rule" aria-hidden="true"></span>
+
+        <nav class="nav" aria-label="Site">
+          <a href="guide.html" aria-current="page"><span class="word">Guide</span></a>
+          <a href="showcase.html"><span class="word">Showcase</span></a>
+          <a href="api.html"><span class="word">API</span></a>
+          <button class="lamp-sw" data-theme-toggle aria-pressed="false" title="Switch the lamp">
+            <i aria-hidden="true"></i><span class="word">lamp</span>
+          </button>
+          <a
+            class="icon-link"
+            href="https://github.com/moonbitstack/mooncrypt"
+            aria-label="Repository on GitHub"
+          >
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                fill="currentColor"
+                d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"
+              />
+            </svg>
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <div class="doc-head">
+      <div class="wrap">
+        <span class="stamp">Guide</span>
+        <h1>From a digest to a key file</h1>
+        <p class="lede">
+          Ten sections, each one runnable on its own. The line under every listing
+          is what that listing printed when it was run against this checkout.
+        </p>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <div class="doc-shell">
+        <aside class="rail" aria-label="Contents">
+          <div class="rail-title">Contents</div>
+          <ol>
+            <li><a href="#install"><span class="n">01</span>Install</a></li>
+            <li><a href="#digest"><span class="n">02</span>A digest</a></li>
+            <li><a href="#mac"><span class="n">03</span>A keyed digest</a></li>
+            <li><a href="#kdf"><span class="n">04</span>Deriving a key</a></li>
+            <li><a href="#aead"><span class="n">05</span>Encrypting with a tag</a></li>
+            <li><a href="#sign"><span class="n">06</span>Signing</a></li>
+            <li><a href="#kex"><span class="n">07</span>Agreeing on a secret</a></li>
+            <li><a href="#keys"><span class="n">08</span>Reading a key file</a></li>
+            <li><a href="#random"><span class="n">09</span>Where randomness comes from</a></li>
+            <li><a href="#next"><span class="n">10</span>Where to go next</a></li>
+          </ol>
+        </aside>
+
+        <article class="prose">
+          <h2 id="install">Install</h2>
+          <p>
+            The library is a set of packages, one per algorithm. Add the module
+            once, then import the packages you call. A package that is not
+            imported is not linked, so the ones you never touch cost nothing.
+          </p>
+
+          <div class="listing">
+            <div class="listing-bar"><span>shell</span><span class="spacer"></span></div>
+            <!-- nocheck -->
+            <pre><code>moon add moonbitstack/mooncrypt</code></pre>
+          </div>
+
+          <p>
+            Every listing below is a body for <code>fn main</code> in a new
+            project that has this module added. The output line underneath is the
+            printed result, not an illustration of one.
+          </p>
+
+          <h2 id="digest">A digest</h2>
+          <p>
+            <code>hash</code> takes a <code>BytesView</code>, which is a slice.
+            <code>msg[:]</code> turns a <code>Bytes</code> into one without
+            copying it.
+          </p>
+
+          <div class="listing">
+            <div class="listing-bar"><span>main.mbt</span><span class="spacer"></span><button data-copy>copy</button></div>
+            <!-- nocheck -->
+            <pre><code class="mark">let msg = b"the quick brown fox"
+let digest = @sha2.hash(msg[:])
+println(@base16.encode(digest))</code></pre>
+            <div class="out"><b>prints</b>
+9ecb36561341d18eb65484e833efea61edc74b84cf5e6ae1b81c63533e25fc8f</div>
+          </div>
+
+          <p>
+            A message that does not fit in memory is written in pieces. This is
+            the same digest, computed by SHA-512 instead, and the two halves
+            never have to meet.
+          </p>
+
+          <div class="listing">
+            <div class="listing-bar"><span>main.mbt</span><span class="spacer"></span><button data-copy>copy</button></div>
+            <!-- nocheck -->
+            <pre><code class="mark">let hasher = @sha2.Hasher::new(kind=Sha512)
+hasher.write(b"the quick "[:])
+hasher.write(b"brown fox"[:])
+println(@base16.encode(hasher.finish()))</code></pre>
+            <div class="out"><b>prints</b>
+d9d380f29b97ad6a1d92e987d83fa5a02653301e1006dd2bcd51afa59a9147e9caedaf89521abc0f0b682adcd47fb512b8343c834a32f326fe9bef00542ce887</div>
+          </div>
+
+          <p>
+            Every hash package has the same shape — <code>Hasher::new</code>,
+            <code>write</code>, <code>finish</code> — because they all answer the
+            <code>@spec.Hash</code> trait.
+          </p>
+
+          <h2 id="mac">A keyed digest</h2>
+          <p>
+            HMAC takes a factory rather than a digest, because it runs the hash
+            twice with the key folded in. The factory is what lets one HMAC serve
+            every digest in the library.
+          </p>
+
+          <div class="listing">
+            <div class="listing-bar"><span>main.mbt</span><span class="spacer"></span><button data-copy>copy</button></div>
+            <!-- nocheck -->
+            <pre><code class="mark">let sha256 = fn() -&gt; &amp;@spec.Hash { @sha2.Hasher::new() }
+let tag = @hmac.mac(b"shared secret"[:], msg[:], sha256)
+println(@base16.encode(tag))</code></pre>
+            <div class="out"><b>prints</b>
+1bc9dec719333af59c72c731bca522da4afc8e8855361ce45a307a238d7d1710</div>
+          </div>
+
+          <p>
+            KMAC is the same idea built on SHA-3's sponge, and it takes the
+            output length as an argument, so one call produces a tag of any size.
+          </p>
+
+          <div class="listing">
+            <div class="listing-bar"><span>main.mbt</span><span class="spacer"></span><button data-copy>copy</button></div>
+            <!-- nocheck -->
+            <pre><code class="mark">let kmac = @kmac.mac(b"shared secret"[:], msg[:], kind=Kmac256, len=32)
+println(@base16.encode(kmac))</code></pre>
+            <div class="out"><b>prints</b>
+e1c27b1167639bbf3f4af364f51b2ed967e5d26219e272c366f4505cb2e20d72</div>
+          </div>
+
+          <p>
+            Comparing a tag is a place where <code>==</code> is wrong: it stops at
+            the first difference, and the time it took says how much of the tag
+            was right. <code>@spec.eq</code> reads every byte.
+          </p>
+
+          <h2 id="kdf">Deriving a key</h2>
+          <p>
+            HKDF turns one shared secret into several keys. <code>info</code> is
+            what separates them: the same input under a different label is a
+            different key.
+          </p>
+
+          <div class="listing">
+            <div class="listing-bar"><span>main.mbt</span><span class="spacer"></span><button data-copy>copy</button></div>
+            <!-- nocheck -->
+            <pre><code class="mark">let key = @hkdf.key(
+  b"input keying material"[:],
+  sha256,
+  salt=b"salt"[:],
+  info=b"client write key"[:],
+  len=32,
+)
+println(@base16.encode(key))</code></pre>
+            <div class="out"><b>prints</b>
+9bf7b38cbf3c65f62e8330bf4db8e8ee97f6709d460684f8bb506a4e8ae1ef43</div>
+          </div>
+
+          <p>
+            A password is not a key. It needs a function that is deliberately slow
+            and deliberately hungry, and scrypt is one: this setting spends
+            16&nbsp;MiB, and <code>@scrypt.sensitive</code> spends 1&nbsp;GiB.
+          </p>
+
+          <div class="listing">
+            <div class="listing-bar"><span>main.mbt</span><span class="spacer"></span><button data-copy>copy</button></div>
+            <!-- nocheck -->
+            <pre><code class="mark">let stretched = @scrypt.key(
+  b"correct horse"[:],
+  b"battery staple"[:],
+  params=@scrypt.Params::new(n=1024, r=8, p=1),
+  len=32,
+)
+println(@base16.encode(stretched))</code></pre>
+            <div class="out"><b>prints</b>
+7744b8247539ed550e742991f10ca581c84d0d54af393bcbaeb3aa999d4f9cea</div>
+          </div>
+
+          <h2 id="aead">Encrypting with a tag</h2>
+          <p>
+            AEAD does encryption and authentication in one pass. <code>seal</code>
+            returns the ciphertext with the tag on the end of it, and
+            <code>open</code> returns the plaintext or raises.
+          </p>
+
+          <div class="listing">
+            <div class="listing-bar"><span>main.mbt</span><span class="spacer"></span><button data-copy>copy</button></div>
+            <!-- nocheck -->
+            <pre><code class="mark">let boxed = @chachapoly.ChaChaPoly::new(key[:])
+let nonce = Bytes::make(12, b'\x00')
+let sealed_box = boxed.seal(nonce=nonce[:], plain=msg[:])
+println(@base16.encode(sealed_box))
+println(boxed.open(nonce=nonce[:], cipher=sealed_box[:]) == msg)</code></pre>
+            <div class="out"><b>prints</b>
+96918f97f8fbe1276216d26702cb17350150ba878430aa41df60c80c46044ed01fc72f
+true</div>
+          </div>
+
+          <p>
+            A nonce is unique per key, not secret. Reusing one with the same key
+            is the mistake this construction cannot survive, which is why the
+            nonce is an argument and not something the library invents.
+          </p>
+
+          <p>
+            Take one byte off the end and the message is gone — not shortened,
+            gone.
+          </p>
+
+          <div class="listing">
+            <div class="listing-bar"><span>main.mbt</span><span class="spacer"></span><button data-copy>copy</button></div>
+            <!-- nocheck -->
+            <pre><code class="mark">let cut = sealed_box[0:sealed_box.length() - 1]
+let opened = boxed.open(nonce=nonce[:], cipher=cut) catch { _ =&gt; b"" }
+println(opened.length())</code></pre>
+            <div class="out"><b>prints</b>
+0</div>
+          </div>
+
+          <p>
+            There is no partial result and no flag to check afterwards:
+            <code>open</code> either authenticates the whole ciphertext or it
+            raises.
+          </p>
+
+          <h2 id="sign">Signing</h2>
+          <p>
+            An Ed25519 private key <em>is</em> its 32-byte seed; the public key is
+            computed from it. Signing is deterministic, so the same key and
+            message always produce the same signature.
+          </p>
+
+          <div class="listing">
+            <div class="listing-bar"><span>main.mbt</span><span class="spacer"></span><button data-copy>copy</button></div>
+            <!-- nocheck -->
+            <pre><code class="mark">let seed = @base16.decode_lossy(
+  "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+)
+let sk = @ed25519.PrivateKey::new(seed[:])
+let sig = sk.sign(msg[:])
+println(@base16.encode(sk.public().bytes()))
+println(sk.public().verify(msg[:], sig[:]))</code></pre>
+            <div class="out"><b>prints</b>
+d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a
+true</div>
+          </div>
+
+          <p>
+            ECDSA has the same shape over a different curve. Its nonce comes from
+            RFC 6979 rather than from a random source, so it is deterministic
+            too — and a repeated nonce, which is what breaks ECDSA in the field,
+            cannot happen.
+          </p>
+
+          <div class="listing">
+            <div class="listing-bar"><span>main.mbt</span><span class="spacer"></span><button data-copy>copy</button></div>
+            <!-- nocheck -->
+            <pre><code class="mark">let scalar = @base16.decode_lossy(
+  "c9afa9d845ba75166b5c215767b1d6934e50c3db36e89b127b8a622b120f6721",
+)
+let ec = @ecdsa.PrivateKey::new(scalar[:])
+let ec_sig = ec.sign(msg[:])
+println(@base16.encode(ec.public().bytes()))
+println(ec.public().verify(msg[:], ec_sig[:]))</code></pre>
+            <div class="out"><b>prints</b>
+0460fed4ba255a9d31c961eb74c6356d68c049b8923b61fa6ce669622e60f29fb67903fe1008b8bc99a41ae9e95628bc64f2f1b20c2d7e9f5177a3c294d4462299
+true</div>
+          </div>
+
+          <p>
+            Both implement <code>@spec.Verifier</code>, so a function written
+            against the trait verifies either without knowing which it has.
+          </p>
+
+          <h2 id="kex">Agreeing on a secret</h2>
+          <p>
+            Two private scalars, two public points, one shared secret. The
+            arguments are scalars here for brevity; <code>public</code> is what
+            does the multiplication.
+          </p>
+
+          <div class="listing">
+            <div class="listing-bar"><span>main.mbt</span><span class="spacer"></span><button data-copy>copy</button></div>
+            <!-- nocheck -->
+            <pre><code class="mark">let alice = Bytes::make(32, b'\x11')
+let bob = Bytes::make(32, b'\x22')
+let secret = @ecdh.shared(alice[:], @ecdh.public(bob[:])[:])
+println(@base16.encode(secret))</code></pre>
+            <div class="out"><b>prints</b>
+ccfc261f58193c98ca4ad4a53bbac6f0ee29bc4d48438090446908622ca79af6</div>
+          </div>
+
+          <p>
+            <code>shared</code> refuses a peer key that is not a point on the
+            curve, and one of low order, before any arithmetic touches it. Bob
+            calling the same function with Alice's public key gets the same
+            bytes.
+          </p>
+
+          <h2 id="keys">Reading a key file</h2>
+          <p>
+            PEM is a label, base64, and two rules around it; DER is what the
+            base64 decodes to. <code>armor</code> writes one and
+            <code>dearmor</code> reads one, refusing a body that is not base64
+            rather than skipping the damage.
+          </p>
+
+          <div class="listing">
+            <div class="listing-bar"><span>main.mbt</span><span class="spacer"></span><button data-copy>copy</button></div>
+            <!-- nocheck -->
+            <pre><code class="mark">let pem = @key.armor("EC PRIVATE KEY", Bytes::make(48, b'\x42'))
+let (label, der) = @key.dearmor(pem[:])
+println(label)
+println(der.length())</code></pre>
+            <div class="out"><b>prints</b>
+EC PRIVATE KEY
+48</div>
+          </div>
+
+          <p>
+            From there, <code>parse_pkcs8</code>, <code>parse_spki</code>,
+            <code>parse_sec1</code> and the PKCS#1 pair take the DER apart into
+            numbers, and refuse a structure whose lengths do not add up.
+          </p>
+
+          <h2 id="random">Where randomness comes from</h2>
+          <p>
+            Nowhere. Nothing in this library calls an entropy source: a seed, a
+            salt and a nonce are arguments, and the library never invents one.
+            That is why every example on this page runs without a caveat, and why
+            every test in the suite gives the same answer twice.
+          </p>
+
+          <div class="note">
+            <span class="stamp">If you need entropy</span>
+            <p>
+              <code>moonbitlang/core/env</code> has
+              <code>rand(n : Int32) -&gt; Bytes?</code>. The length belongs to the
+              algorithm: 32 bytes for Ed25519 and X25519, 57 for Ed448, 56 for
+              X448, 66 for a P-521 scalar. An empty answer means the platform has
+              no source — stop there, rather than falling back to a seeded
+              generator.
+            </p>
+          </div>
+
+          <h2 id="next">Where to go next</h2>
+          <p>
+            The <a href="api.html">API reference</a> lists every public type and
+            function, grouped by package. The
+            <a href="showcase.html">showcase</a> runs three of these ideas in the
+            browser: the avalanche of a one-bit change, a tag that refuses a
+            touched ciphertext, and a one-time password counting down.
+          </p>
+          <p>
+            The source is at
+            <a href="https://github.com/moonbitstack/mooncrypt">moonbitstack/mooncrypt</a>.
+            <code>moon run src/examples/tour</code> prints one line from every
+            family if you would rather read the output than the page.
+          </p>
+        </article>
+      </div>
+    </div>
+
+    <footer class="foot">
+      <div class="wrap">
+        <span>mooncrypt · Apache-2.0</span>
+        <a href="https://github.com/moonbitstack/mooncrypt">Repository</a>
+        <a href="guide.html">Guide</a>
+        <a href="api.html">API</a>
+        <span class="spacer">No trackers, no cookies, no analytics</span>
+      </div>
+    </footer>
+
+    <script src="assets/site.js"></script>
+  </body>
+</html>
