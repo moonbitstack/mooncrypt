@@ -174,6 +174,80 @@ svg {
   color: var(--ground);
 }
 
+/* The plates, the tape, the rotor and the navigation are surfaces of a machine,
+   not text on a page. A drag that starts on one of them used to paint a
+   selection block across the brass, which breaks the object entirely: a typebar
+   does not highlight. Prose, listings, printed output and signatures stay
+   selectable, because those are what a reader actually copies. */
+.head,
+.nav,
+.foot,
+.hero,
+.rotor-fig,
+.device,
+.tape-band,
+.numbers,
+.parts,
+.part,
+.refusals,
+.refusal,
+.rail,
+.listing-bar,
+.doc-head,
+.bench,
+.dial,
+.dial-row,
+.hexdump,
+.grid-bits,
+.bits-legend,
+.code-pin,
+.otp-meta,
+.verdict-line,
+.sec-head,
+.tag,
+.kind {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  cursor: default;
+}
+
+/* Inside those surfaces two things stay exempt. A carriage you cannot select or
+   type into is not a carriage, so the text fields take selection back; and the
+   controls keep a pointer, because a link is still a link even when its label
+   cannot be highlighted. */
+.carriage,
+input,
+textarea,
+select {
+  -webkit-user-select: auto;
+  user-select: auto;
+  cursor: auto;
+}
+
+.head a,
+.nav a,
+.part a,
+.rail a,
+.btn,
+.field {
+  cursor: pointer;
+}
+
+/* A flash of grey under the finger is the mobile equivalent of the selection
+   block: it makes the object feel like a document. */
+a,
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Nor can the drawn parts be picked up and carried like a picture. */
+.rotor-fig,
+.device,
+.tape-band {
+  -webkit-user-drag: none;
+}
+
 :focus-visible {
   outline: 1px solid var(--brass);
   outline-offset: 2px;
