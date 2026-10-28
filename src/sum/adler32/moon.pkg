@@ -1,0 +1,15 @@
+// Adler-32, RFC 1950 §9: https://www.rfc-editor.org/rfc/rfc1950
+//
+// Two running sums instead of one: a byte sum and a sum of those sums, both
+// modulo 65521. It is much weaker than CRC-32 against burst errors, and much
+// faster — which is why zlib offers it for data whose integrity something else
+// has already covered.
+//
+// A checksum, not a hash: it catches accidental corruption and nothing else.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "test"

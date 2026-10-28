@@ -1,0 +1,43 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/sum/fnv"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub fn fnv(BytesView, kind? : Kind) -> UInt64
+
+// Errors
+
+// Types and methods
+pub struct Fnv {
+  kind : Kind
+  mut state : UInt64
+}
+pub fn Fnv::block(Self) -> Int32
+pub fn Fnv::finish(Self) -> Bytes
+pub fn Fnv::new(kind? : Kind) -> Self
+pub fn Fnv::reset(Self) -> Unit
+pub fn Fnv::size(Self) -> Int32
+pub fn Fnv::update(Self, BytesView) -> Unit
+pub fn Fnv::value(Self) -> UInt64
+pub fn Fnv::write(Self, BytesView) -> Unit
+pub impl @spec.Hash for Fnv
+
+pub(all) enum Kind {
+  Fnv1_32
+  Fnv1a_32
+  Fnv1_64
+  Fnv1a_64
+} derive(Eq, @debug.Debug)
+pub fn Kind::block(Self) -> Int32
+pub fn Kind::equal(Self, Self) -> Bool
+pub fn Kind::not_equal(Self, Self) -> Bool
+pub fn Kind::size(Self) -> Int32
+pub fn Kind::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

@@ -1,0 +1,32 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/sum/adler32"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub fn adler32(BytesView) -> UInt32
+
+pub let size : Int32
+
+// Errors
+
+// Types and methods
+pub struct Adler32 {
+  mut low : UInt32
+  mut high : UInt32
+}
+pub fn Adler32::block(Self) -> Int32
+pub fn Adler32::finish(Self) -> Bytes
+pub fn Adler32::new() -> Self
+pub fn Adler32::reset(Self) -> Unit
+pub fn Adler32::size(Self) -> Int32
+pub fn Adler32::update(Self, BytesView) -> Unit
+pub fn Adler32::value(Self) -> UInt32
+pub fn Adler32::write(Self, BytesView) -> Unit
+pub impl @spec.Hash for Adler32
+
+// Type aliases
+
+// Traits

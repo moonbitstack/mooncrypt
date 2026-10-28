@@ -1,0 +1,21 @@
+// CRC-32, ISO-HDLC / ITU-T V.42 / IEEE 802.3, and CRC-32C, RFC 3720:
+// https://www.rfc-editor.org/rfc/rfc3720
+//
+// A checksum, not a hash: it detects the kind of corruption a wire or a disk
+// produces — a burst of flipped bits in one place — and detects nothing at all
+// against someone who means to change the message. Use it for integrity, never
+// for authentication.
+//
+// Both members are the same machine with a different polynomial. They are
+// reflected, meaning the bits of each byte are processed least significant
+// first, which in practice means shifting right and xoring the table entry into
+// the low byte rather than the high one. CRC-32C uses a polynomial chosen so
+// that it catches the kinds of multi-byte burst that the original does not, and
+// is what iSCSI, ext4 and Btrfs write to disk.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "test"

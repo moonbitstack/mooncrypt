@@ -1,0 +1,49 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/sum/crc16"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub fn crc16(BytesView, kind? : Kind) -> UInt32
+
+// Errors
+
+// Types and methods
+pub struct Crc16 {
+  kind : Kind
+  params : Params
+  table : FixedArray[UInt32]
+  mut state : UInt32
+}
+pub fn Crc16::block(Self) -> Int32
+pub fn Crc16::finish(Self) -> Bytes
+pub fn Crc16::new(kind? : Kind) -> Self
+pub fn Crc16::reset(Self) -> Unit
+pub fn Crc16::size(Self) -> Int32
+pub fn Crc16::update(Self, BytesView) -> Unit
+pub fn Crc16::value(Self) -> UInt32
+pub fn Crc16::write(Self, BytesView) -> Unit
+pub impl @spec.Hash for Crc16
+
+pub(all) enum Kind {
+  Arc
+  CcittFalse
+  Xmodem
+  Kermit
+  X25
+  Modbus
+} derive(Eq, @debug.Debug)
+pub fn Kind::block(Self) -> Int32
+pub fn Kind::equal(Self, Self) -> Bool
+pub fn Kind::not_equal(Self, Self) -> Bool
+pub fn Kind::size(Self) -> Int32
+pub fn Kind::to_repr(Self) -> @debug.Repr
+
+type Params
+
+// Type aliases
+
+// Traits

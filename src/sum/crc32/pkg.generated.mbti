@@ -1,0 +1,42 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/sum/crc32"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub fn crc32(BytesView, kind? : Kind) -> UInt32
+
+// Errors
+
+// Types and methods
+pub struct Crc32 {
+  kind : Kind
+  table : FixedArray[UInt32]
+  mut state : UInt32
+}
+pub fn Crc32::block(Self) -> Int32
+pub fn Crc32::finish(Self) -> Bytes
+pub fn Crc32::new(kind? : Kind) -> Self
+pub fn Crc32::reset(Self) -> Unit
+pub fn Crc32::size(Self) -> Int32
+pub fn Crc32::update(Self, BytesView) -> Unit
+pub fn Crc32::value(Self) -> UInt32
+pub fn Crc32::write(Self, BytesView) -> Unit
+pub impl @spec.Hash for Crc32
+
+pub(all) enum Kind {
+  Ieee
+  Castagnoli
+} derive(Eq, @debug.Debug)
+pub fn Kind::block(Self) -> Int32
+pub fn Kind::equal(Self, Self) -> Bool
+pub fn Kind::not_equal(Self, Self) -> Bool
+pub fn Kind::size(Self) -> Int32
+pub fn Kind::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

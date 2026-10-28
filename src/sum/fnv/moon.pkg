@@ -1,0 +1,18 @@
+// FNV-1 and FNV-1a, 32 and 64 bit: http://www.isthe.com/chongo/tech/comp/fnv/
+//
+// Multiply, then xor (FNV-1), or xor, then multiply (FNV-1a). The two differ in
+// one line and produce different digests, so both are here and the default is
+// FNV-1a, which has better avalanche and is what everything means by "FNV"
+// today.
+//
+// A checksum, not a hash: it is fast and it distributes well, and it resists
+// nothing. The 128-bit variants are left out because a 64-bit multiply is the
+// widest thing this machine has, and doing 128 bits on top of it costs more than
+// the occasional collision is worth for the use these get.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "test"

@@ -1,0 +1,17 @@
+// CRC-16, the common variants: https://reveng.sourceforge.io/crc-catalogue/
+//
+// The same shift-and-xor machine as CRC-32 with a 16-bit register, but the
+// variants disagree about more than the polynomial: which way round the bits go,
+// what the register starts at, and whether the answer is complemented at the
+// end. Those four choices are what a CRC catalogue lists, and they are what this
+// package parameterises rather than hard-coding one of them.
+//
+// A checksum, not a hash. It detects the burst errors a wire produces and
+// detects nothing against someone who wants to change the message.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "test"
