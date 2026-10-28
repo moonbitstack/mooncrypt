@@ -533,7 +533,10 @@ def main() -> int:
     page = page.replace("__PACKAGES__", str(packages))
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(page, encoding="utf-8")
+    # Write LF explicitly: the file is compared byte for byte in CI, and a
+    # Windows default of CRLF would make every line differ on Linux.
+    with open(OUT, "w", encoding="utf-8", newline="\n") as f:
+        f.write(page)
     print("api.html: %d packages, %d declarations" % (packages, count))
     return 0
 
