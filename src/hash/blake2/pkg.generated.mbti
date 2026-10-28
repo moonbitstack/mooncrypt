@@ -1,0 +1,39 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/hash/blake2"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub fn hash(BytesView, kind? : Kind, len? : Int32, key? : BytesView, salt? : BytesView, person? : BytesView) -> Bytes
+
+pub fn mac(BytesView, BytesView, kind? : Kind) -> Bytes
+
+// Errors
+
+// Types and methods
+type Hasher
+pub fn Hasher::block(Self) -> Int32
+pub fn Hasher::finish(Self) -> Bytes
+pub fn Hasher::new(kind? : Kind, len? : Int32, key? : BytesView, salt? : BytesView, person? : BytesView) -> Self
+pub fn Hasher::reset(Self) -> Unit
+pub fn Hasher::size(Self) -> Int32
+pub fn Hasher::write(Self, BytesView) -> Unit
+pub impl @spec.Hash for Hasher
+
+pub(all) enum Kind {
+  Blake2b
+  Blake2s
+} derive(Eq, @debug.Debug)
+pub fn Kind::block(Self) -> Int32
+pub fn Kind::equal(Self, Self) -> Bool
+pub fn Kind::not_equal(Self, Self) -> Bool
+pub fn Kind::salt_size(Self) -> Int32
+pub fn Kind::size(Self) -> Int32
+pub fn Kind::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

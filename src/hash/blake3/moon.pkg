@@ -1,0 +1,13 @@
+// BLAKE3, the specification at https://github.com/BLAKE3-team/BLAKE3-specs
+//
+// One compression function, a binary tree of chunks, and an output that can be
+// read to any length. The tree is built as the message arrives, so a hasher
+// holds one chunk in progress and the roots of the subtrees already finished.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase",
+  "moonbitstack/moonbase/base16",
+} for "test"

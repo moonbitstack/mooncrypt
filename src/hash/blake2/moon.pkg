@@ -1,0 +1,14 @@
+// BLAKE2b and BLAKE2s, RFC 7693: https://www.rfc-editor.org/rfc/rfc7693
+//
+// Both widths in one package because they are one design at two word sizes,
+// exactly as SHA-2's two halves are. Keying, salting and personalisation are
+// part of the parameter block, so a keyed BLAKE2 is a different function rather
+// than a wrapper around the unkeyed one.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase",
+  "moonbitstack/moonbase/base16",
+} for "test"

@@ -1,0 +1,40 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/hash/blake3"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub fn blake3(BytesView, len? : Int32) -> Bytes
+
+pub let block : Int32
+
+pub let chunk : Int32
+
+pub fn derive_key(BytesView, BytesView, len? : Int32) -> Bytes
+
+pub fn hash(BytesView) -> Bytes
+
+pub fn keyed_hash(BytesView, BytesView, len? : Int32) -> Bytes raise @spec.Broken
+
+pub let size : Int32
+
+// Errors
+
+// Types and methods
+type Hasher
+pub fn Hasher::block(Self) -> Int32
+pub fn Hasher::derive_key(BytesView) -> Self
+pub fn Hasher::finish(Self) -> Bytes
+pub fn Hasher::keyed(BytesView) -> Self raise @spec.Broken
+pub fn Hasher::new() -> Self
+pub fn Hasher::read(Self, Int32) -> Bytes
+pub fn Hasher::reset(Self) -> Unit
+pub fn Hasher::size(Self) -> Int32
+pub fn Hasher::write(Self, BytesView) -> Unit
+pub impl @spec.Hash for Hasher
+
+// Type aliases
+
+// Traits
