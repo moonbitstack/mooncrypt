@@ -1,0 +1,30 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/aead/ccm"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub fn open(&@spec.Block, BytesView, BytesView, aad? : BytesView, tag? : Int32) -> Bytes raise @spec.Broken
+
+pub fn seal(&@spec.Block, BytesView, BytesView, aad? : BytesView, tag? : Int32) -> Bytes raise @spec.Broken
+
+pub let tag : Int32
+
+// Errors
+
+// Types and methods
+pub struct Ccm {
+  cipher : &@spec.Block
+  tag : Int32
+}
+pub fn Ccm::new(&@spec.Block, tag? : Int32) -> Self raise @spec.Broken
+pub fn Ccm::open(Self, nonce~ : BytesView, cipher~ : BytesView, aad? : BytesView) -> Bytes raise @spec.Broken
+pub fn Ccm::seal(Self, nonce~ : BytesView, plain~ : BytesView, aad? : BytesView) -> Bytes
+pub fn Ccm::size(Self) -> Int32
+pub impl @spec.Aead for Ccm
+
+// Type aliases
+
+// Traits

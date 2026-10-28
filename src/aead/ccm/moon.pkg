@@ -1,0 +1,21 @@
+// CCM, NIST SP 800-38C and RFC 3610:
+// https://www.rfc-editor.org/rfc/rfc3610
+//
+// Counter mode with CBC-MAC: the same key drives a MAC over the plaintext and a
+// stream cipher over the same bytes, and the tag is masked with one more block
+// of keystream. Two passes over the message is the price, and the reward is a
+// construction simple enough to be worth using on hardware that has nothing but
+// a block cipher — which is why 802.11 wrote it into WPA2.
+//
+// The nonce length is a parameter here, not a fixed number: 13 bytes is the
+// usual choice, and the constraint is only that together with the message
+// length it fills a block.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/mooncrypt/aead/ccm",
+  "moonbitstack/mooncrypt/cipher/aes",
+  "moonbitstack/moonbase/base16",
+} for "test"
