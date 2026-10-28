@@ -1,0 +1,47 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/kex/dh"
+
+import {
+  "moonbitlang/core/bigint",
+  "moonbitlang/core/debug",
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub let generator : Int32
+
+pub fn public_key(Group, BytesView) -> Bytes raise @spec.Broken
+
+pub fn shared_secret(Group, BytesView, BytesView) -> Bytes raise @spec.Broken
+
+// Errors
+
+// Types and methods
+pub(all) enum Group {
+  Ffdhe2048
+  Ffdhe3072
+  Ffdhe4096
+  Ffdhe6144
+  Ffdhe8192
+} derive(Eq, @debug.Debug)
+pub fn Group::bits(Self) -> Int32
+pub fn Group::equal(Self, Self) -> Bool
+pub fn Group::name(Self) -> String
+pub fn Group::not_equal(Self, Self) -> Bool
+pub fn Group::prime(Self) -> @bigint.BigInt
+pub fn Group::security(Self) -> Int32
+pub fn Group::size(Self) -> Int32
+pub fn Group::to_repr(Self) -> @debug.Repr
+
+pub struct Private {
+  group : Group
+  secret : @bigint.BigInt
+}
+pub fn Private::group(Self) -> Group
+pub fn Private::new(Group, BytesView) -> Self raise @spec.Broken
+pub fn Private::public(Self) -> Bytes
+pub fn Private::shared(Self, BytesView) -> Bytes raise @spec.Broken
+
+// Type aliases
+
+// Traits

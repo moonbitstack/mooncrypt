@@ -1,0 +1,19 @@
+// The concatenation KDF of NIST SP 800-56A §5.8.1, also known as Concat KDF.
+//
+// One digest per block, with a four-byte big-endian counter in front of the
+// counters and the protocol's own OtherInfo behind it:
+//
+//     K(i) = H(counter(i) || Z || OtherInfo)
+//
+// The counter leads. SEC1 §3.6.1 puts Z first instead and is a different
+// function; a protocol that names one of them and gets the other produces a key
+// that never matches, and nothing about the output says which happened.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+  "moonbitstack/mooncrypt/hash/sha1",
+  "moonbitstack/mooncrypt/hash/sha2",
+} for "test"

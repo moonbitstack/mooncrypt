@@ -1,0 +1,16 @@
+// Finite-field Diffie-Hellman over the ffdhe groups of RFC 7919.
+//
+// The alternative to an elliptic-curve exchange, and the one that still buys
+// something where a curve is not available. Every group here is a safe prime of
+// the form the RFC searched for: p = 2^n - 2^(n-64) + { ... } - 1, generator 2,
+// with the top and bottom 64 bits all ones. Because the subgroup order is the
+// prime (p-1)/2, a peer's value that is not in [2, p-2] is either a unit or a
+// member of a small subgroup, and both are refused rather than exponentiated.
+//
+// The primes are RFC 7919 constants, and the script that wrote them checked each
+// one for bit length, generator, the all-ones ends, primality and being 7 mod 8
+// before it emitted a digit.
+import {
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/moonbase/base16",
+}
