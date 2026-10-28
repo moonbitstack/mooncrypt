@@ -1,0 +1,44 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/kdf/argon2"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub let interactive : Params
+
+pub fn key(BytesView, BytesView, secret? : BytesView, ad? : BytesView, kind? : Kind, params? : Params, len? : Int32) -> Bytes
+
+pub let minimum : Params
+
+pub let recommended : Params
+
+// Errors
+
+// Types and methods
+pub(all) enum Kind {
+  Argon2d
+  Argon2i
+  Argon2id
+} derive(Eq, @debug.Debug)
+pub fn Kind::code(Self) -> Int32
+pub fn Kind::equal(Self, Self) -> Bool
+pub fn Kind::name(Self) -> String
+pub fn Kind::not_equal(Self, Self) -> Bool
+pub fn Kind::to_repr(Self) -> @debug.Repr
+
+pub(all) struct Params {
+  memory : Int32
+  passes : Int32
+  lanes : Int32
+} derive(Eq, @debug.Debug)
+pub fn Params::equal(Self, Self) -> Bool
+pub fn Params::memory_bytes(Self) -> Int32
+pub fn Params::new(memory? : Int32, passes? : Int32, lanes? : Int32) -> Self
+pub fn Params::not_equal(Self, Self) -> Bool
+pub fn Params::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

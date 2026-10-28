@@ -1,0 +1,20 @@
+// Argon2, RFC 9106: https://www.rfc-editor.org/rfc/rfc9106
+//
+// The memory-hard function that won the Password Hashing Competition. Where
+// scrypt ties its guarantee to one pass over a buffer, Argon2 builds a
+// thousand-block matrix and reads it back at pseudo-random positions, so the
+// cost of a guess is set by how much memory an attacker is willing to buy.
+//
+// All three variants are here because they share everything except where the
+// addresses come from: Argon2d reads them from the data, which is fastest but
+// leaks through cache timing; Argon2i derives them from a counter, which is
+// side-channel free but needs more passes; Argon2id does the first half-pass
+// data-independently and the rest not, which is why RFC 9106 recommends it.
+import {
+  "moonbitstack/mooncrypt/hash/blake2",
+}
+
+import {
+  "moonbitstack/moonbase",
+  "moonbitstack/moonbase/base16",
+} for "test"
