@@ -113,7 +113,7 @@ def parse_mbti(path: Path) -> list[dict]:
 def classify(text: str) -> dict | None:
     first = text.splitlines()[0]
 
-    m = re.match(r"pub(?:\([a-z]+\))?\s+fn\s+([A-Za-z0-9_:]+)", first)
+    m = re.match(r"pub(?:\([a-z]+\))?\s+fn(?:\[[^\]]*\])?\s+([A-Za-z0-9_:]+)", first)
     if m:
         return {"kind": "fn", "name": m.group(1), "sig": text}
 

@@ -30,6 +30,16 @@ pub struct PublicKey {
 }
 
 ///|
+/// A fresh signing key, its scalar drawn from `source` uniformly in [1, n - 1].
+pub fn[S : @moonrand.Source] PrivateKey::generate(
+  source : S,
+) -> PrivateKey raise @moonrand.Unavailable {
+  let order = @ec.params(curve).n.to_octets(length=key_size)
+  let scalar = BigInt::from_octets(@moonrand.scalar(order, source))
+  { scalar, point: @ec.mul(curve, scalar, @ec.generator(curve)), }
+}
+
+///|
 /// Read a signing key from its 32 bytes.
 ///
 /// The scalar has to lie in `[1, n-1]`. Zero is not a key, and a value at or above

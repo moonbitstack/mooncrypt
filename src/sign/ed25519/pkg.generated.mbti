@@ -3,6 +3,7 @@ package "moonbitstack/mooncrypt/sign/ed25519"
 
 import {
   "moonbitstack/mooncrypt/spec",
+  "moonbitstack/moonrand",
 }
 
 // Values
@@ -15,6 +16,7 @@ pub let sig_size : Int32
 // Types and methods
 type PrivateKey
 pub fn PrivateKey::bytes(Self) -> Bytes
+pub fn[S : @moonrand.Source] PrivateKey::generate(S) -> Self raise @moonrand.Unavailable
 pub fn PrivateKey::new(BytesView) -> Self raise @spec.Broken
 pub fn PrivateKey::of_secret(BytesView) -> Self
 pub fn PrivateKey::public(Self) -> PublicKey

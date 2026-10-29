@@ -181,8 +181,18 @@ pub fn PrivateKey::new(bytes : BytesView) -> PrivateKey raise @spec.Broken {
 ///|
 /// A private key from a scalar, refused unless it is in range.
 pub fn PrivateKey::from_big(d : BigInt) -> PrivateKey raise @spec.Broken {
-  guard d > (0 : BigInt) && d < curve.n else { raise @spec.Broken::Weak }
+  guard d > (0 : BigInt) && d < curve.n - 1 else { raise @spec.Broken::Weak }
   PrivateKey::{ d, }
+}
+
+///|
+/// A fresh private key, drawn from `source` uniformly in [1, n - 2] as GB/T
+/// 32918.1 §6.1 asks, so that 1 + d is invertible when signing.
+pub fn[S : @moonrand.Source] PrivateKey::generate(
+  source : S,
+) -> PrivateKey raise @moonrand.Unavailable {
+  let bound = (curve.n - 1).to_octets(length=32)
+  PrivateKey::{ d: BigInt::from_octets(@moonrand.scalar(bound, source)), }
 }
 
 ///|

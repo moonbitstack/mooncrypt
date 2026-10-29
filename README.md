@@ -29,9 +29,10 @@ let box = @sm4gcm.new(key[0:16])
 let sealed = box.seal(nonce=nonce[:], plain=b"the quick brown fox"[:], aad=b"v1"[:])
 box.open(nonce=nonce[:], cipher=sealed[:], aad=b"v1"[:])  // the plaintext, or a raise
 
-// A signature. Both schemes here are deterministic: the same key and message
-// always give the same bytes, so there is no entropy source to get wrong.
-let sk = @ed25519.PrivateKey::new(seed[:])
+// A signature. Ed25519 signing is deterministic: the same key and message
+// always give the same bytes. A fresh key takes its randomness from a source
+// the caller hands over, here the platform's, from moonrand.
+let sk = @ed25519.PrivateKey::generate(@system.source)
 let sig = sk.sign(b"the quick brown fox"[:])
 sk.public().verify(b"the quick brown fox"[:], sig[:])  // true
 ```
@@ -185,10 +186,20 @@ and without associated data, and each block cipher at every key length it takes,
 because those are the branches a vector copied straight from a specification
 never reaches.
 
+## Randomness
+
+No algorithm package reaches for entropy itself. Every private key type has
+`generate(source)`, and X25519, X448 and ECDH have a `generate(source)` for
+their scalars; `source` is any [moonrand](https://github.com/moonbitstack/moonrand)
+`Source`, the platform's (`@system.source`) or one of the program's own. Curve
+scalars are drawn as FIPS 186-5 A.2.2 draws them, and the ECDSA tests replay the
+bytes Go's `ecdsa.GenerateKey` sampled and expect the key Go made. An SM2 key is
+drawn from [1, n - 2], as GB/T 32918.1 asks, and a key of n - 1 is refused.
+
 ## What is not here
 
-Post-quantum schemes, and a random-number generator. Those two are the rest of
-the plan; the tracking list lives with the project.
+Post-quantum schemes: the rest of the plan, with the tracking list kept with the
+project.
 
 Certificates and tokens are not cryptography and live in `mooncred`; protocols
 live in `moonhttp`, `moontls` and `moonquic`; encodings live in `moonbase`.

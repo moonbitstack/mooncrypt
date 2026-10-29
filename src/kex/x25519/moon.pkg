@@ -3,6 +3,7 @@
 // The Curve25519 Diffie-Hellman, over the field mod 2^255-19. A low-order point
 // is refused rather than returned as an all-zero secret.
 import {
+  "moonbitstack/moonrand",
   "moonbitstack/mooncrypt/spec",
 }
 

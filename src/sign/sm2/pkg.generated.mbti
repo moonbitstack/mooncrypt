@@ -4,6 +4,7 @@ package "moonbitstack/mooncrypt/sign/sm2"
 import {
   "moonbitlang/core/bigint",
   "moonbitstack/mooncrypt/spec",
+  "moonbitstack/moonrand",
 }
 
 // Values
@@ -19,6 +20,7 @@ pub struct PrivateKey {
 }
 pub fn PrivateKey::encode(Self) -> Bytes
 pub fn PrivateKey::from_big(@bigint.BigInt) -> Self raise @spec.Broken
+pub fn[S : @moonrand.Source] PrivateKey::generate(S) -> Self raise @moonrand.Unavailable
 pub fn PrivateKey::new(BytesView) -> Self raise @spec.Broken
 pub fn PrivateKey::public(Self) -> PublicKey
 pub fn PrivateKey::sign(Self, BytesView) -> Bytes

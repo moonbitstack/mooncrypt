@@ -44,6 +44,15 @@ pub fn PublicKey::bytes(self : PublicKey) -> Bytes {
 }
 
 ///|
+/// A fresh signing key from 32 bytes of `source`, as Go's
+/// `ed25519.GenerateKey` makes one and RFC 8032 §5.1.5 describes.
+pub fn[S : @moonrand.Source] PrivateKey::generate(
+  source : S,
+) -> PrivateKey raise @moonrand.Unavailable {
+  expand(@moonrand.bytes(key_size, source))
+}
+
+///|
 /// Read a signing key from its 32-byte seed.
 pub fn PrivateKey::new(seed : BytesView) -> PrivateKey raise @spec.Broken {
   guard seed.length() == key_size else {

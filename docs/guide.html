@@ -392,21 +392,27 @@ EC PRIVATE KEY
 
           <h2 id="random">Where randomness comes from</h2>
           <p>
-            Nowhere. Nothing in this library calls an entropy source: a seed, a
-            salt and a nonce are arguments, and the library never invents one.
-            That is why every example on this page runs without a caveat, and why
-            every test in the suite gives the same answer twice.
+            From the caller. No algorithm here reaches for an entropy source: a
+            seed, a salt and a nonce are arguments, and the library never invents
+            one. That is why every example on this page runs without a caveat, and
+            why every test in the suite gives the same answer twice.
+          </p>
+          <p>
+            A fresh key takes a source instead: every private key type has
+            <code>generate(source)</code>, and X25519, X448 and ECDH have a
+            <code>generate(source)</code> for their scalars. The source is any
+            <a href="https://github.com/moonbitstack/moonrand">moonrand</a>
+            <code>Source</code>. Curve scalars are drawn as FIPS 186-5 A.2.2 draws
+            them, from the same bytes as Go's <code>ecdsa.GenerateKey</code>.
           </p>
 
           <div class="note">
             <span class="stamp">If you need entropy</span>
             <p>
-              <code>moonbitlang/core/env</code> has
-              <code>rand(n : Int32) -&gt; Bytes?</code>. The length belongs to the
-              algorithm: 32 bytes for Ed25519 and X25519, 57 for Ed448, 56 for
-              X448, 66 for a P-521 scalar. An empty answer means the platform has
-              no source — stop there, rather than falling back to a seeded
-              generator.
+              <code>@system.source</code> from <code>moonbitstack/moonrand/system</code>
+              is the platform's. When the platform has none, the call raises
+              <code>Platform</code> rather than falling back to a seeded generator;
+              a test hands over a <code>Replay</code> of fixed bytes instead.
             </p>
           </div>
 

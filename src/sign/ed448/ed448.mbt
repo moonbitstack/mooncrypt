@@ -50,6 +50,14 @@ pub fn PublicKey::bytes(self : PublicKey) -> Bytes {
 }
 
 ///|
+/// A fresh signing key from 57 bytes of `source`, as RFC 8032 §5.2.5 describes.
+pub fn[S : @moonrand.Source] PrivateKey::generate(
+  source : S,
+) -> PrivateKey raise @moonrand.Unavailable {
+  expand(@moonrand.bytes(key_size, source))
+}
+
+///|
 /// Read a signing key from its 57-byte secret.
 pub fn PrivateKey::new(seed : BytesView) -> PrivateKey raise @spec.Broken {
   guard seed.length() == key_size else {

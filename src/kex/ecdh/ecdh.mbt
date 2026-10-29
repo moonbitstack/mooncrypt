@@ -7,6 +7,16 @@
 pub using @curve {type Curve}
 
 ///|
+/// A fresh private scalar for `curve`, drawn from `source` uniformly in
+/// [1, n - 1], big-endian and `curve.size()` bytes.
+pub fn[S : @moonrand.Source] generate(
+  source : S,
+  curve~ : Curve = P256,
+) -> Bytes raise @moonrand.Unavailable {
+  @moonrand.scalar(@ec.params(curve).n.to_octets(length=curve.size()), source)
+}
+
+///|
 /// The public value for the private `scalar` (big-endian, `curve.size()` bytes,
 /// in `[1, n)`): the uncompressed SEC 1 point `04 ∥ X ∥ Y`, which is what a TLS
 /// key share carries.

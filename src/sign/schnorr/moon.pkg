@@ -17,6 +17,7 @@
 // randomness so that a compromised entropy source cannot leak the key, while the
 // derivation still makes a signature reproducible when that input is fixed.
 import {
+  "moonbitstack/moonrand",
   "moonbitstack/mooncrypt/spec",
   "moonbitstack/mooncrypt/hash/sha2",
   "moonbitstack/mooncrypt/curve",

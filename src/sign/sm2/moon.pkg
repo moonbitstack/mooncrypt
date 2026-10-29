@@ -5,6 +5,7 @@
 // SM3 — a signature is defined over both, so this package carries its own
 // curve arithmetic rather than borrowing another curve's.
 import {
+  "moonbitstack/moonrand",
   "moonbitstack/mooncrypt/spec",
   "moonbitstack/mooncrypt/hash/sm3",
   "moonbitstack/mooncrypt/mac/hmac",

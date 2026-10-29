@@ -148,6 +148,15 @@ pub fn shared(
 }
 
 ///|
+/// A fresh private scalar: 32 bytes from `source`, as RFC 7748 §6.1 has it;
+/// the bits are clamped where the scalar is used.
+pub fn[S : @moonrand.Source] generate(
+  source : S,
+) -> Bytes raise @moonrand.Unavailable {
+  @moonrand.bytes(32, source)
+}
+
+///|
 /// The public key for a private one: the scalar applied to the base point.
 pub fn public(scalar : BytesView) -> Bytes raise @spec.Broken {
   shared(scalar, base[:])

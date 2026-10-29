@@ -3,10 +3,13 @@ package "moonbitstack/mooncrypt/kex/x25519"
 
 import {
   "moonbitstack/mooncrypt/spec",
+  "moonbitstack/moonrand",
 }
 
 // Values
 pub let base : Bytes
+
+pub fn[S : @moonrand.Source] generate(S) -> Bytes raise @moonrand.Unavailable
 
 pub fn public(BytesView) -> Bytes raise @spec.Broken
 

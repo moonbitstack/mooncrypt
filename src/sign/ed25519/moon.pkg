@@ -4,6 +4,7 @@
 // — so there is no entropy source to get wrong, which is the whole reason this
 // scheme replaced ECDSA wherever it could.
 import {
+  "moonbitstack/moonrand",
   "moonbitstack/mooncrypt/spec",
   "moonbitstack/mooncrypt/hash/sha2",
 }
