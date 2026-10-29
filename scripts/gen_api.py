@@ -400,7 +400,8 @@ TEMPLATE = """<!doctype html>
       rel="stylesheet"
     />
     <link rel="stylesheet" href="assets/site.css?v=2" />
-    <script>
+    
+    <script type="module" src="assets/scrollbar.js"></script><script>
       (() => {
         try {
           const saved = localStorage.getItem("mooncrypt-theme");
