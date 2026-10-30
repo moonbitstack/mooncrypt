@@ -150,30 +150,6 @@
     settle();
   }
 
-  /* ── the scrollbar ────────────────────────────────────────────────────── */
-
-  // On the homepage the bar is not drawn while the page is still at the top;
-  // it appears the moment there is something to travel through.
-
-  if (root.hasAttribute("data-home")) {
-    let quiet = false;
-    const edge = () => {
-      quiet = false;
-      root.toggleAttribute("data-scrolled", window.scrollY > 0);
-    };
-    edge();
-    window.addEventListener(
-      "scroll",
-      () => {
-        if (quiet) return;
-        quiet = true;
-        requestAnimationFrame(edge);
-      },
-      { passive: true }
-    );
-    window.addEventListener("resize", edge, { passive: true });
-  }
-
   /* ── listings ─────────────────────────────────────────────────────────── */
 
   const words =

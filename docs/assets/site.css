@@ -98,8 +98,6 @@
 
 html {
   -webkit-text-size-adjust: 100%;
-  scrollbar-color: var(--line-2) var(--ground);
-  scrollbar-width: thin;
 }
 
 @supports not selector(::-webkit-scrollbar) {
@@ -128,24 +126,13 @@ html {
   background: var(--brass);
 }
 
-/* At the very top the homepage shows no bar, and gives up none of its width:
-   the strip stays where it is and is simply drawn in the colour of the page,
-   so the first turn of the wheel shifts nothing. */
-
-html[data-home]:not([data-scrolled]) {
-  scrollbar-color: transparent transparent;
-}
-
-html[data-home]:not([data-scrolled])::-webkit-scrollbar-track,
-html[data-home]:not([data-scrolled])::-webkit-scrollbar-corner {
+/* At rest the page bar is not drawn and gives up none of its width: the strip
+   stays where it is in the colour of the page, so nothing shifts when it
+   appears. */
+html:not(.scrolling)::-webkit-scrollbar-track,
+html:not(.scrolling)::-webkit-scrollbar-corner {
   background: transparent;
   border-left-color: transparent;
-}
-
-html[data-home]:not([data-scrolled])::-webkit-scrollbar-thumb,
-html[data-home]:not([data-scrolled])::-webkit-scrollbar-thumb:hover {
-  background: transparent;
-  border-color: transparent;
 }
 
 body {
@@ -1640,7 +1627,12 @@ p {
   overflow-x: auto;
   line-height: 1.6;
   padding-bottom: 2px;
-  scrollbar-width: thin;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .item .sig {
+    scrollbar-width: thin;
+  }
 }
 
 .item .sig .ret {
@@ -1856,7 +1848,12 @@ input[type="range"] {
     gap: 2px;
     overflow-x: auto;
     padding-bottom: 2px;
-    scrollbar-width: thin;
+  }
+
+  @supports not selector(::-webkit-scrollbar) {
+    .rail ol {
+      scrollbar-width: thin;
+    }
   }
 
   .rail a {
