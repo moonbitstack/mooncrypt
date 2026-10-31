@@ -9,7 +9,7 @@
 // exactly 56 bytes, so every bit of the input is part of the value. A low-order
 // point is refused rather than returned as an all-zero secret.
 import {
-  "moonbitstack/moonrand",
+  "moonbitstack/moonseed",
   "moonbitstack/mooncrypt/spec",
 }
 

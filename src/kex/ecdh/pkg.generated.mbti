@@ -4,11 +4,11 @@ package "moonbitstack/mooncrypt/kex/ecdh"
 import {
   "moonbitstack/mooncrypt/curve",
   "moonbitstack/mooncrypt/spec",
-  "moonbitstack/moonrand",
+  "moonbitstack/moonseed",
 }
 
 // Values
-pub fn[S : @moonrand.Source] generate(S, curve? : @curve.Curve) -> Bytes raise @moonrand.Unavailable
+pub fn[S : @moonseed.Source] generate(S, curve? : @curve.Curve) -> Bytes raise @moonseed.Unavailable
 
 pub fn public(BytesView, curve? : @curve.Curve) -> Bytes raise @spec.Broken
 

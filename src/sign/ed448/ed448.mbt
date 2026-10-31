@@ -51,10 +51,10 @@ pub fn PublicKey::bytes(self : PublicKey) -> Bytes {
 
 ///|
 /// A fresh signing key from 57 bytes of `source`, as RFC 8032 §5.2.5 describes.
-pub fn[S : @moonrand.Source] PrivateKey::generate(
+pub fn[S : @moonseed.Source] PrivateKey::generate(
   source : S,
-) -> PrivateKey raise @moonrand.Unavailable {
-  expand(@moonrand.bytes(key_size, source))
+) -> PrivateKey raise @moonseed.Unavailable {
+  expand(@moonseed.bytes(key_size, source))
 }
 
 ///|

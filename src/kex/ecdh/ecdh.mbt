@@ -9,11 +9,11 @@ pub using @curve {type Curve}
 ///|
 /// A fresh private scalar for `curve`, drawn from `source` uniformly in
 /// [1, n - 1], big-endian and `curve.size()` bytes.
-pub fn[S : @moonrand.Source] generate(
+pub fn[S : @moonseed.Source] generate(
   source : S,
   curve~ : Curve = P256,
-) -> Bytes raise @moonrand.Unavailable {
-  @moonrand.scalar(@ec.params(curve).n.to_octets(length=curve.size()), source)
+) -> Bytes raise @moonseed.Unavailable {
+  @moonseed.scalar(@ec.params(curve).n.to_octets(length=curve.size()), source)
 }
 
 ///|

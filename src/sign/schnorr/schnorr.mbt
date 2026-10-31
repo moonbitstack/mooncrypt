@@ -31,11 +31,11 @@ pub struct PublicKey {
 
 ///|
 /// A fresh signing key, its scalar drawn from `source` uniformly in [1, n - 1].
-pub fn[S : @moonrand.Source] PrivateKey::generate(
+pub fn[S : @moonseed.Source] PrivateKey::generate(
   source : S,
-) -> PrivateKey raise @moonrand.Unavailable {
+) -> PrivateKey raise @moonseed.Unavailable {
   let order = @ec.params(curve).n.to_octets(length=key_size)
-  let scalar = BigInt::from_octets(@moonrand.scalar(order, source))
+  let scalar = BigInt::from_octets(@moonseed.scalar(order, source))
   { scalar, point: @ec.mul(curve, scalar, @ec.generator(curve)), }
 }
 

@@ -145,10 +145,10 @@ pub fn shared(
 ///|
 /// A fresh private scalar: 56 bytes from `source`, as RFC 7748 §6.1 has it;
 /// the bits are clamped where the scalar is used.
-pub fn[S : @moonrand.Source] generate(
+pub fn[S : @moonseed.Source] generate(
   source : S,
-) -> Bytes raise @moonrand.Unavailable {
-  @moonrand.bytes(56, source)
+) -> Bytes raise @moonseed.Unavailable {
+  @moonseed.bytes(56, source)
 }
 
 ///|

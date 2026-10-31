@@ -31,7 +31,7 @@ box.open(nonce=nonce[:], cipher=sealed[:], aad=b"v1"[:])  // the plaintext, or a
 
 // A signature. Ed25519 signing is deterministic: the same key and message
 // always give the same bytes. A fresh key takes its randomness from a source
-// the caller hands over, here the platform's, from moonrand.
+// the caller hands over, here the platform's, from moonseed.
 let sk = @ed25519.PrivateKey::generate(@system.source)
 let sig = sk.sign(b"the quick brown fox"[:])
 sk.public().verify(b"the quick brown fox"[:], sig[:])  // true
@@ -190,7 +190,7 @@ never reaches.
 
 No algorithm package reaches for entropy itself. Every private key type has
 `generate(source)`, and X25519, X448 and ECDH have a `generate(source)` for
-their scalars; `source` is any [moonrand](https://github.com/moonbitstack/moonrand)
+their scalars; `source` is any [moonseed](https://github.com/moonbitstack/moonseed)
 `Source`, the platform's (`@system.source`) or one of the program's own. Curve
 scalars are drawn as FIPS 186-5 A.2.2 draws them, and the ECDSA tests replay the
 bytes Go's `ecdsa.GenerateKey` sampled and expect the key Go made. An SM2 key is

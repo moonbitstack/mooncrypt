@@ -112,12 +112,12 @@ pub fn PublicKey::curve(self : PublicKey) -> Curve {
 /// A fresh signing key, its scalar drawn from `source` uniformly in [1, n - 1]
 /// as FIPS 186-5 A.2.2 and Go's `ecdsa.GenerateKey` draw it: Python
 /// cryptography's `ec.generate_private_key`.
-pub fn[S : @moonrand.Source] PrivateKey::generate(
+pub fn[S : @moonseed.Source] PrivateKey::generate(
   source : S,
   curve~ : Curve = P256,
-) -> PrivateKey raise @moonrand.Unavailable {
+) -> PrivateKey raise @moonseed.Unavailable {
   let order = @ec.params(curve).n.to_octets(length=curve.size())
-  let d = BigInt::from_octets(@moonrand.scalar(order, source))
+  let d = BigInt::from_octets(@moonseed.scalar(order, source))
   { curve, hash: paired(curve), d, }
 }
 

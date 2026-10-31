@@ -4,7 +4,7 @@ test "generate takes its 57-byte secret from the source" {
   let seed = unhex(
     "6c82a562cb808d10d632be89c8513ebf6c929f34ddfa8c9f63c9960ef6e348a3528c8a3fcc2f044e39a3fc5b94492f8f032e7549a20098f95b",
   )
-  let source = @moonrand.Replay::new(seed)
+  let source = @moonseed.Replay::new(seed)
   let key = @ed448.PrivateKey::generate(source)
   assert_eq(
     hx(key.public().bytes()),

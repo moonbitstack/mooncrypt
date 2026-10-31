@@ -188,11 +188,11 @@ pub fn PrivateKey::from_big(d : BigInt) -> PrivateKey raise @spec.Broken {
 ///|
 /// A fresh private key, drawn from `source` uniformly in [1, n - 2] as GB/T
 /// 32918.1 §6.1 asks, so that 1 + d is invertible when signing.
-pub fn[S : @moonrand.Source] PrivateKey::generate(
+pub fn[S : @moonseed.Source] PrivateKey::generate(
   source : S,
-) -> PrivateKey raise @moonrand.Unavailable {
+) -> PrivateKey raise @moonseed.Unavailable {
   let bound = (curve.n - 1).to_octets(length=32)
-  PrivateKey::{ d: BigInt::from_octets(@moonrand.scalar(bound, source)), }
+  PrivateKey::{ d: BigInt::from_octets(@moonseed.scalar(bound, source)), }
 }
 
 ///|

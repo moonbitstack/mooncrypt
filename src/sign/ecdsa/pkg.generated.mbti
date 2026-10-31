@@ -4,7 +4,7 @@ package "moonbitstack/mooncrypt/sign/ecdsa"
 import {
   "moonbitstack/mooncrypt/curve",
   "moonbitstack/mooncrypt/spec",
-  "moonbitstack/moonrand",
+  "moonbitstack/moonseed",
 }
 
 // Values
@@ -15,7 +15,7 @@ import {
 type PrivateKey
 pub fn PrivateKey::bytes(Self) -> Bytes
 pub fn PrivateKey::curve(Self) -> @curve.Curve
-pub fn[S : @moonrand.Source] PrivateKey::generate(S, curve? : @curve.Curve) -> Self raise @moonrand.Unavailable
+pub fn[S : @moonseed.Source] PrivateKey::generate(S, curve? : @curve.Curve) -> Self raise @moonseed.Unavailable
 pub fn PrivateKey::new(BytesView, curve? : @curve.Curve) -> Self raise @spec.Broken
 pub fn PrivateKey::public(Self) -> PublicKey
 pub fn PrivateKey::sign(Self, BytesView) -> Bytes

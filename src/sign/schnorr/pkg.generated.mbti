@@ -5,7 +5,7 @@ import {
   "moonbitlang/core/bigint",
   "moonbitstack/mooncrypt/internal/ec",
   "moonbitstack/mooncrypt/spec",
-  "moonbitstack/moonrand",
+  "moonbitstack/moonseed",
 }
 
 // Values
@@ -21,7 +21,7 @@ pub struct PrivateKey {
   point : @ec.Point
 }
 pub fn PrivateKey::bytes(Self) -> Bytes
-pub fn[S : @moonrand.Source] PrivateKey::generate(S) -> Self raise @moonrand.Unavailable
+pub fn[S : @moonseed.Source] PrivateKey::generate(S) -> Self raise @moonseed.Unavailable
 pub fn PrivateKey::new(BytesView) -> Self raise @spec.Broken
 pub fn PrivateKey::public(Self) -> PublicKey
 pub fn PrivateKey::sign(Self, BytesView) -> Bytes

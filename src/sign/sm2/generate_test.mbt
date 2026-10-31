@@ -6,7 +6,7 @@ test "generate keeps d below n - 1, so that 1 + d can be inverted" {
   let n_minus_2 = unhex(
     "FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFF7203DF6B21C6052B53BBF40939D54121",
   )
-  let source = @moonrand.Replay::new(n_minus_1 + n_minus_2)
+  let source = @moonseed.Replay::new(n_minus_1 + n_minus_2)
   let key = @sm2.PrivateKey::generate(source)
   assert_eq(hex(key.encode()), hex(n_minus_2))
   assert_eq(source.remaining(), 0)

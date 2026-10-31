@@ -3,13 +3,13 @@ package "moonbitstack/mooncrypt/kex/x448"
 
 import {
   "moonbitstack/mooncrypt/spec",
-  "moonbitstack/moonrand",
+  "moonbitstack/moonseed",
 }
 
 // Values
 pub let base : Bytes
 
-pub fn[S : @moonrand.Source] generate(S) -> Bytes raise @moonrand.Unavailable
+pub fn[S : @moonseed.Source] generate(S) -> Bytes raise @moonseed.Unavailable
 
 pub fn public(BytesView) -> Bytes raise @spec.Broken
 

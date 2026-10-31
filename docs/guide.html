@@ -402,7 +402,7 @@ EC PRIVATE KEY
             A fresh key takes a source instead: every private key type has
             <code>generate(source)</code>, and X25519, X448 and ECDH have a
             <code>generate(source)</code> for their scalars. The source is any
-            <a href="https://github.com/moonbitstack/moonrand">moonrand</a>
+            <a href="https://github.com/moonbitstack/moonseed">moonseed</a>
             <code>Source</code>. Curve scalars are drawn as FIPS 186-5 A.2.2 draws
             them, from the same bytes as Go's <code>ecdsa.GenerateKey</code>.
           </p>
@@ -410,7 +410,7 @@ EC PRIVATE KEY
           <div class="note">
             <span class="stamp">If you need entropy</span>
             <p>
-              <code>@system.source</code> from <code>moonbitstack/moonrand/system</code>
+              <code>@system.source</code> from <code>moonbitstack/moonseed/system</code>
               is the platform's. When the platform has none, the call raises
               <code>Platform</code> rather than falling back to a seeded generator;
               a test hands over a <code>Replay</code> of fixed bytes instead.

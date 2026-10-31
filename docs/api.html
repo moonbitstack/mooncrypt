@@ -1961,7 +1961,7 @@
 </div>
 <div class="item" id="sign-ecdsa-privatekey-generate">
 <div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>generate</div>
-<div class="body"><div class="sig">pub fn[S : @moonrand.Source] PrivateKey::generate(S, curve? : @curve.Curve) -&gt; Self raise @moonrand.Unavailable</div></div>
+<div class="body"><div class="sig">pub fn[S : @moonseed.Source] PrivateKey::generate(S, curve? : @curve.Curve) -&gt; Self raise @moonseed.Unavailable</div></div>
 </div>
 <div class="item" id="sign-ecdsa-privatekey-new">
 <div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>new</div>
@@ -2024,7 +2024,7 @@
 </div>
 <div class="item" id="sign-ed25519-privatekey-generate">
 <div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>generate</div>
-<div class="body"><div class="sig">pub fn[S : @moonrand.Source] PrivateKey::generate(S) -&gt; Self raise @moonrand.Unavailable</div></div>
+<div class="body"><div class="sig">pub fn[S : @moonseed.Source] PrivateKey::generate(S) -&gt; Self raise @moonseed.Unavailable</div></div>
 </div>
 <div class="item" id="sign-ed25519-privatekey-new">
 <div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>new</div>
@@ -2075,7 +2075,7 @@
 </div>
 <div class="item" id="sign-ed448-privatekey-generate">
 <div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>generate</div>
-<div class="body"><div class="sig">pub fn[S : @moonrand.Source] PrivateKey::generate(S) -&gt; Self raise @moonrand.Unavailable</div></div>
+<div class="body"><div class="sig">pub fn[S : @moonseed.Source] PrivateKey::generate(S) -&gt; Self raise @moonseed.Unavailable</div></div>
 </div>
 <div class="item" id="sign-ed448-privatekey-new">
 <div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>new</div>
@@ -2134,7 +2134,7 @@
 </div>
 <div class="item" id="sign-schnorr-privatekey-generate">
 <div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>generate</div>
-<div class="body"><div class="sig">pub fn[S : @moonrand.Source] PrivateKey::generate(S) -&gt; Self raise @moonrand.Unavailable</div></div>
+<div class="body"><div class="sig">pub fn[S : @moonseed.Source] PrivateKey::generate(S) -&gt; Self raise @moonseed.Unavailable</div></div>
 </div>
 <div class="item" id="sign-schnorr-privatekey-new">
 <div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>new</div>
@@ -2196,7 +2196,7 @@
 </div>
 <div class="item" id="sign-sm2-privatekey-generate">
 <div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>generate</div>
-<div class="body"><div class="sig">pub fn[S : @moonrand.Source] PrivateKey::generate(S) -&gt; Self raise @moonrand.Unavailable</div></div>
+<div class="body"><div class="sig">pub fn[S : @moonseed.Source] PrivateKey::generate(S) -&gt; Self raise @moonseed.Unavailable</div></div>
 </div>
 <div class="item" id="sign-sm2-privatekey-new">
 <div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>new</div>
@@ -2302,7 +2302,7 @@
 <div class="pkg-head"><span class="no">02</span><h2>ecdh</h2><span class="path">moonbitstack/mooncrypt/kex/ecdh</span></div><p class="pkg-ref">Elliptic-curve Diffie-Hellman over the NIST primes, SEC 1 §3.3.1: https://www.secg.org/sec1-v2.pdf</p><p class="pkg-note">The shape of `kex/x25519`: a public value from a scalar, a shared secret from a scalar and the peer's value. TLS 1.3 names secp256r1 and secp384r1 (RFC 8446 §4.2.7); the secret is the X coordinate (§7.4.2).</p>
 <div class="item" id="kex-ecdh-generate">
 <div class="name"><span class="kind">fn</span>generate</div>
-<div class="body"><div class="sig">pub fn[S : @moonrand.Source] generate(S, curve? : @curve.Curve) -&gt; Bytes raise @moonrand.Unavailable</div></div>
+<div class="body"><div class="sig">pub fn[S : @moonseed.Source] generate(S, curve? : @curve.Curve) -&gt; Bytes raise @moonseed.Unavailable</div></div>
 </div>
 <div class="item" id="kex-ecdh-public">
 <div class="name"><span class="kind">fn</span>public</div>
@@ -2325,7 +2325,7 @@
 </div>
 <div class="item" id="kex-x25519-generate">
 <div class="name"><span class="kind">fn</span>generate</div>
-<div class="body"><div class="sig">pub fn[S : @moonrand.Source] generate(S) -&gt; Bytes raise @moonrand.Unavailable</div></div>
+<div class="body"><div class="sig">pub fn[S : @moonseed.Source] generate(S) -&gt; Bytes raise @moonseed.Unavailable</div></div>
 </div>
 <div class="item" id="kex-x25519-public">
 <div class="name"><span class="kind">fn</span>public</div>
@@ -2348,7 +2348,7 @@
 </div>
 <div class="item" id="kex-x448-generate">
 <div class="name"><span class="kind">fn</span>generate</div>
-<div class="body"><div class="sig">pub fn[S : @moonrand.Source] generate(S) -&gt; Bytes raise @moonrand.Unavailable</div></div>
+<div class="body"><div class="sig">pub fn[S : @moonseed.Source] generate(S) -&gt; Bytes raise @moonseed.Unavailable</div></div>
 </div>
 <div class="item" id="kex-x448-public">
 <div class="name"><span class="kind">fn</span>public</div>

@@ -4,7 +4,7 @@ test "generate takes the private scalar from the source" {
   let private = raw(
     "77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a",
   )
-  let source = @moonrand.Replay::new(private)
+  let source = @moonseed.Replay::new(private)
   let scalar = @x25519.generate(source)
   assert_eq(scalar, private)
   assert_eq(

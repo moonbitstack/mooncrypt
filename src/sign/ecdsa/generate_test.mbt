@@ -1,6 +1,6 @@
 ///|
 /// The byte streams Go's `ecdsa.GenerateKey` sampled and the keys it made of
-/// them (moonrand's `scripts/gen_vectors.go`); the second of each pair starts
+/// them (moonseed's `scripts/gen_vectors.go`); the second of each pair starts
 /// with two draws Go rejects.
 let go_keys : Array[(@ecdsa.Curve, Bytes, Bytes)] = [
   (
@@ -29,7 +29,7 @@ let go_keys : Array[(@ecdsa.Curve, Bytes, Bytes)] = [
 test "generate makes the key Go's ecdsa.GenerateKey makes from the same bytes" {
   for k in go_keys {
     let (curve, stream, want) = k
-    let source = @moonrand.Replay::new(stream)
+    let source = @moonseed.Replay::new(stream)
     let key = @ecdsa.PrivateKey::generate(source, curve~)
     assert_eq(key.bytes(), want)
     assert_eq(key.curve(), curve)
@@ -39,8 +39,8 @@ test "generate makes the key Go's ecdsa.GenerateKey makes from the same bytes" {
 
 ///|
 test "a generated key signs and verifies" {
-  let source = @moonrand.Replay::new(go_keys[0].1)
+  let source = @moonseed.Replay::new(go_keys[0].1)
   let key = @ecdsa.PrivateKey::generate(source)
-  let signature = key.sign(b"moonrand")
-  assert_true(key.public().verify(b"moonrand", signature))
+  let signature = key.sign(b"moonseed")
+  assert_true(key.public().verify(b"moonseed", signature))
 }

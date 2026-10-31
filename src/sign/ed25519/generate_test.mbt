@@ -4,7 +4,7 @@ test "generate takes its seed from the source, as Go's ed25519.GenerateKey does"
   let seed = raw(
     "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
   )
-  let source = @moonrand.Replay::new(seed)
+  let source = @moonseed.Replay::new(seed)
   let key = @ed25519.PrivateKey::generate(source)
   assert_eq(key.bytes(), seed)
   assert_eq(
