@@ -3,7 +3,7 @@
 
 ///|
 fn ascii(s : String) -> Bytes {
-  @moonbase.ascii(s)
+  @utf8.encode(s)
 }
 
 ///|

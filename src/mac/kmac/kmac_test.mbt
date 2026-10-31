@@ -31,7 +31,7 @@ test "KMAC128 matches the SP 800-185 examples" {
     hex(@kmac.mac(key()[:], msg()[:], len=32)),
     "e5780b0d3ea6f7d3a429c5706aa43a00fadbd7d49628839e3187243f456ee14e",
   )
-  let tag : Bytes = @moonbase.ascii("My Tagged Application")
+  let tag : Bytes = @utf8.encode("My Tagged Application")
   assert_eq(
     hex(@kmac.mac(key()[:], msg()[:], len=32, custom=tag[:])),
     "3b1fba963cd8b0b59e8c1a6d71888b7143651af8ba0a7070c0979e2811324aa5",
@@ -42,7 +42,7 @@ test "KMAC128 matches the SP 800-185 examples" {
 /// SP 800-185 A.3 and A.4: a message longer than the rate, and the 256-bit
 /// variant.
 test "KMAC carries a message past the block boundary" {
-  let tag : Bytes = @moonbase.ascii("My Tagged Application")
+  let tag : Bytes = @utf8.encode("My Tagged Application")
   assert_eq(
     hex(@kmac.mac(key()[:], long()[:], len=64, custom=tag[:])),
     "bc834ff753cb4fce2b44658f71c62c1e5b5cf3ade4f4383c5f09316532f0730b833af6d4f2b018d5d216a41c331c81ba1012ede8c62777caa665ee74e18b4d3c",

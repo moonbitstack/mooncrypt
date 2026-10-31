@@ -19,8 +19,8 @@ fn pattern(n : Int32) -> Bytes {
 /// side of a block (64), of a chunk (1024) and of the powers of two the tree
 /// doubles at.
 test "BLAKE3 matches the published test vectors" {
-  let key = @moonbase.ascii(vector_key)
-  let context = @moonbase.ascii(vector_context)
+  let key = @utf8.encode(vector_key)
+  let context = @utf8.encode(vector_context)
   for case in vector_cases {
     let (len, plain, keyed, derived) = case
     let input = pattern(len)
@@ -89,7 +89,7 @@ test "BLAKE3 reports its sizes and resets in place" {
   let as_hash : &@spec.Hash = h
   assert_eq(as_hash.size(), 32)
   assert_eq(as_hash.block(), 64)
-  let keyed = @blake3.Hasher::keyed(@moonbase.ascii(vector_key))
+  let keyed = @blake3.Hasher::keyed(@utf8.encode(vector_key))
   keyed.write(b"abc"[:])
   let first = keyed.finish()
   keyed.reset()

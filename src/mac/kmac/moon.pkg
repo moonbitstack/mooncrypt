@@ -9,6 +9,6 @@ import {
 }
 
 import {
-  "moonbitstack/moonbase",
+  "moonbitlang/core/encoding/utf8",
   "moonbitstack/moonbase/base16",
 } for "test"
