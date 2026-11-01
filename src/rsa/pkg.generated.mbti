@@ -4,6 +4,7 @@ package "moonbitstack/mooncrypt/rsa"
 import {
   "moonbitlang/core/debug",
   "moonbitstack/mooncrypt/spec",
+  "moonbitstack/moonseed",
 }
 
 // Values
@@ -24,6 +25,7 @@ pub fn Digest::to_repr(Self) -> @debug.Repr
 
 type PrivateKey
 pub fn PrivateKey::decrypt(Self, BytesView, digest? : Digest, mgf? : Digest, label? : BytesView) -> Bytes raise @spec.Broken
+pub fn[S : @moonseed.Source] PrivateKey::generate(S, bits? : Int32, digest? : Digest, scheme? : Scheme) -> Self raise @moonseed.Unavailable
 pub fn PrivateKey::new(BytesView, BytesView, BytesView, digest? : Digest, scheme? : Scheme) -> Self raise @spec.Broken
 pub fn PrivateKey::public(Self) -> PublicKey
 pub fn PrivateKey::sign(Self, BytesView) -> Bytes

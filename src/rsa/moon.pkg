@@ -8,6 +8,7 @@
 // doing two jobs over one key type, and a method must live in its type's
 // package: splitting it would put decryption where the private key is not.
 import {
+  "moonbitstack/moonseed",
   "moonbitstack/mooncrypt/spec",
   "moonbitstack/mooncrypt/hash/sha1",
   "moonbitstack/mooncrypt/hash/sha2",
@@ -16,4 +17,5 @@ import {
 
 import {
   "moonbitstack/moonbase/base16",
+  "moonbitstack/mooncrypt/drbg",
 } for "test"
