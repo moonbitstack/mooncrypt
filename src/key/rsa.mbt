@@ -30,6 +30,9 @@ pub fn curve_oid(curve : @curve.Curve) -> Array[Int32] {
     P384 => [1, 3, 132, 0, 34]
     P521 => [1, 3, 132, 0, 35]
     Secp256k1 => [1, 3, 132, 0, 10]
+    BrainpoolP256r1 => [1, 3, 36, 3, 3, 2, 8, 1, 1, 7]
+    BrainpoolP384r1 => [1, 3, 36, 3, 3, 2, 8, 1, 1, 11]
+    BrainpoolP512r1 => [1, 3, 36, 3, 3, 2, 8, 1, 1, 13]
   }
 }
 
@@ -42,6 +45,9 @@ pub fn curve_of_oid(oid : StringView) -> @curve.Curve? {
     "1.3.132.0.34" => Some(P384)
     "1.3.132.0.35" => Some(P521)
     "1.3.132.0.10" => Some(Secp256k1)
+    "1.3.36.3.3.2.8.1.1.7" => Some(BrainpoolP256r1)
+    "1.3.36.3.3.2.8.1.1.11" => Some(BrainpoolP384r1)
+    "1.3.36.3.3.2.8.1.1.13" => Some(BrainpoolP512r1)
     _ => None
   }
 }

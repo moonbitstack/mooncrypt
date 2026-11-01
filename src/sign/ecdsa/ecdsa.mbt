@@ -251,9 +251,9 @@ pub impl @spec.Verifier for PublicKey with fn verify(
 /// and ES512 name.
 fn paired(c : Curve) -> () -> &@spec.Hash {
   match c {
-    P256 | Secp256k1 => fn() { @sha2.Hasher::new() }
-    P384 => fn() { @sha2.Hasher::new(kind=Sha384) }
-    P521 => fn() { @sha2.Hasher::new(kind=Sha512) }
+    P256 | Secp256k1 | BrainpoolP256r1 => fn() { @sha2.Hasher::new() }
+    P384 | BrainpoolP384r1 => fn() { @sha2.Hasher::new(kind=Sha384) }
+    P521 | BrainpoolP512r1 => fn() { @sha2.Hasher::new(kind=Sha512) }
   }
 }
 

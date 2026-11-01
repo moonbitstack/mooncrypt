@@ -164,7 +164,15 @@ test "ec spki round-trips" {
 ///|
 /// The named-curve identifiers, both ways, for every curve this library has.
 test "curve oids round-trip" {
-  let curves = [@curve.P256, @curve.P384, @curve.P521, @curve.Secp256k1]
+  let curves = [
+    @curve.P256,
+    @curve.P384,
+    @curve.P521,
+    @curve.Secp256k1,
+    @curve.BrainpoolP256r1,
+    @curve.BrainpoolP384r1,
+    @curve.BrainpoolP512r1,
+  ]
   for curve in curves {
     let oid = @key.curve_oid(curve)
     // Written as arcs, read back as dotted decimal, and compared that way.
@@ -173,6 +181,9 @@ test "curve oids round-trip" {
       P384 => "1.3.132.0.34"
       P521 => "1.3.132.0.35"
       Secp256k1 => "1.3.132.0.10"
+      BrainpoolP256r1 => "1.3.36.3.3.2.8.1.1.7"
+      BrainpoolP384r1 => "1.3.36.3.3.2.8.1.1.11"
+      BrainpoolP512r1 => "1.3.36.3.3.2.8.1.1.13"
     }
     assert_eq(@key.curve_of_oid(dotted), Some(curve))
     assert_eq(oid.length() >= 3, true)

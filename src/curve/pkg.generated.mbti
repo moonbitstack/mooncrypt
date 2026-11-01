@@ -15,6 +15,9 @@ pub(all) enum Curve {
   P384
   P521
   Secp256k1
+  BrainpoolP256r1
+  BrainpoolP384r1
+  BrainpoolP512r1
 } derive(Eq, @debug.Debug)
 pub fn Curve::equal(Self, Self) -> Bool
 pub fn Curve::not_equal(Self, Self) -> Bool
