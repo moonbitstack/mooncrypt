@@ -11,6 +11,19 @@ import {
 // Errors
 
 // Types and methods
+pub struct CtrDrbg {
+  mut key : FixedArray[Byte]
+  mut v : FixedArray[Byte]
+  mut reseed_counter : UInt64
+}
+pub fn CtrDrbg::fill(Self, FixedArray[Byte]) -> Unit raise @moonseed.Unavailable
+pub fn CtrDrbg::generate(Self, Int32) -> Bytes
+pub fn CtrDrbg::generate_with(Self, Int32, additional~ : BytesView) -> Bytes
+pub fn CtrDrbg::new(entropy~ : BytesView, nonce~ : BytesView, personalization~ : BytesView) -> Self
+pub fn CtrDrbg::reseed(Self, entropy~ : BytesView, additional~ : BytesView) -> Unit
+pub fn CtrDrbg::reseed_counter(Self) -> UInt64
+pub impl @moonseed.Source for CtrDrbg
+
 pub struct HashDrbg {
   hash : () -> &@spec.Hash
   mut v : FixedArray[Byte]
