@@ -1,0 +1,15 @@
+// GOST R 34.11-2012 (Streebog), RFC 6986: https://www.rfc-editor.org/rfc/rfc6986
+//
+// A 512-bit-block hash in an SP-network: the LPS transform over GF(2), twelve
+// rounds keyed from the chaining value, and the Miyaguchi-Preneel-style g_N
+// compression with a length counter and a checksum. Two output sizes share the
+// machinery and differ only in the initial vector and how much of the state is
+// published.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+  "moonbitlang/core/encoding/utf8",
+} for "test"

@@ -1,0 +1,25 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/hash/streebog"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub fn hash(BytesView, size? : Int32) -> Bytes
+
+// Errors
+
+// Types and methods
+type Hasher
+pub fn Hasher::block(Self) -> Int32
+pub fn Hasher::finish(Self) -> Bytes
+pub fn Hasher::new(size? : Int32) -> Self
+pub fn Hasher::reset(Self) -> Unit
+pub fn Hasher::size(Self) -> Int32
+pub fn Hasher::write(Self, BytesView) -> Unit
+pub impl @spec.Hash for Hasher
+
+// Type aliases
+
+// Traits
