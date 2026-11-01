@@ -47,7 +47,7 @@ Import the ones you use. A package nothing imports is not linked, which is what
 
 | Package | What | Specification |
 |:--:|:--|:--|
-| `spec` | The `Hash`, `Mac`, `Block`, `Aead`, `Signer` and `Verifier` traits, constant-time comparison, erasure | — |
+| `spec` | The `Hash`, `Mac`, `Block`, `Kem`, `Aead`, `Signer` and `Verifier` traits, constant-time comparison, erasure | — |
 | `hash/sha2` | SHA-224, SHA-256, SHA-384, SHA-512, SHA-512/224, SHA-512/256 | FIPS 180-4 |
 | `hash/sha1` | SHA-1 — legacy: collisions are cheap enough to be routine | FIPS 180-4 |
 | `hash/sha3` | SHA3-224/256/384/512, SHAKE128 and SHAKE256, and the cSHAKE encoding rules KMAC is built from | FIPS 202, SP 800-185 |
@@ -74,13 +74,15 @@ Import the ones you use. A package nothing imports is not linked, which is what
 | `kdf/argon2` | Argon2d, Argon2i and Argon2id, with secret and associated data | RFC 9106 |
 | `kdf/bcrypt` | bcrypt, the `$2b$` text format and a constant-time verify | Provos & Mazières 1999 |
 | `kdf/concat` | The Concat KDF, as a NIST key agreement derives from a shared secret | SP 800-56A §5.8.1 |
+| `drbg` | HMAC-DRBG, a seeded deterministic generator that is also a `moonseed` `Source`, so a key type can draw from it | SP 800-90A |
 | `curve` | The curves an EC key can live on — P-256, P-384, P-521, secp256k1 — and their coordinate width; `sign/ecdsa` and `kex/ecdh` re-export it, import it to name a curve | FIPS 186-4, SEC 2 |
 | `sign/ed25519` | Ed25519 | RFC 8032 |
 | `sign/ed448` | Ed448, with context and the prehash form | RFC 8032 |
 | `sign/ecdsa` | ECDSA over P-256, P-384, P-521 and secp256k1, with RFC 6979 nonces | FIPS 186-4, RFC 6979 |
 | `sign/schnorr` | Schnorr over secp256k1, x-only keys and all | BIP 340 |
 | `sign/sm2` | SM2, with the signer identity mixed into the hash | GB/T 32918.2-2016 |
-| `rsa` | RSA PKCS#1 v1.5 and PSS signatures, OAEP encryption | RFC 8017 |
+| `sign/dsa` | DSA over FIPS 186-4 domains, with RFC 6979 nonces | FIPS 186-4, RFC 6979 |
+| `rsa` | RSA PKCS#1 v1.5 and PSS signatures, OAEP encryption, and key generation from a source | RFC 8017, FIPS 186-5 |
 | `cipher/aes` | AES-128, AES-192 and AES-256, both directions | FIPS 197 |
 | `cipher/sm4` | SM4 | GB/T 32907-2016 |
 | `cipher/camellia` | Camellia-128/192/256 | RFC 3713 |
@@ -108,7 +110,7 @@ Each package's `moon.pkg` names the specification it implements and links to it.
 
 ## The contracts
 
-Everything is written against five traits in `spec`, so a digest or a signature
+Everything is written against the traits in `spec`, so a digest or a signature
 scheme that is not here becomes usable throughout the library the day it
 implements one of them. HMAC takes a function that makes a hash rather than a
 hash function, which is why one HMAC serves every digest — including yours.
