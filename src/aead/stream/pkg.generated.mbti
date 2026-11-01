@@ -1,0 +1,22 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/aead/stream"
+
+import {
+  "moonbitstack/mooncrypt/aead/chachapoly",
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub let chunk : Int32
+
+// Errors
+
+// Types and methods
+type Stream
+pub fn Stream::new(@chachapoly.ChaChaPoly, chunk? : Int32) -> Self
+pub fn Stream::open(Self, BytesView) -> Bytes raise @spec.Broken
+pub fn Stream::seal(Self, BytesView) -> Bytes
+
+// Type aliases
+
+// Traits

@@ -1,0 +1,15 @@
+// STREAM, the chunked payload encryption of the age format: https://c2sp.org/age
+//
+// The payload is split into 64 KiB chunks, each sealed with ChaCha20-Poly1305
+// under a 12-byte nonce of an 11-byte big-endian counter and a final-chunk flag.
+// This is the STREAM construction of Hoang-Reyhanitabar-Rogaway-Vizar, without
+// the key prefix because the payload key is already 256 bits and derived from
+// both the file key and the nonce.
+import {
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/mooncrypt/aead/chachapoly",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "test"
