@@ -98,6 +98,7 @@ Import the ones you use. A package nothing imports is not linked, which is what
 | `aead/sm4gcm` | SM4-GCM | SP 800-38D, GB/T 32907 |
 | `aead/ccm` | CCM over any 128-bit block cipher, any even tag length from 4 to 16 bytes | SP 800-38C, RFC 3610 |
 | `aead/siv` | AES-SIV, nonce misuse resistant, with the multi-AD form | RFC 5297 |
+| `aead/stream` | STREAM chunked AEAD over ChaCha20-Poly1305, as the age format encrypts a payload | age v1 (STREAM) |
 | `kex/x25519` | X25519, with a low-order point refused | RFC 7748 |
 | `kex/x448` | X448, with the same refusal | RFC 7748 |
 | `kex/ecdh` | ECDH over P-256, P-384, P-521 and secp256k1, with an off-curve point refused | SEC 1 §3.3.1 |
