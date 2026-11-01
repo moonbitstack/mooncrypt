@@ -36,6 +36,8 @@ pub(open) trait Block {
   fn block(Self) -> Int32
   fn encrypt(Self, BytesView) -> Bytes
   fn decrypt(Self, BytesView) -> Bytes
+  fn encrypt_blocks(Self, BytesView) -> Bytes
+  fn decrypt_blocks(Self, BytesView) -> Bytes
 }
 
 pub(open) trait Hash {
@@ -44,6 +46,12 @@ pub(open) trait Hash {
   fn reset(Self) -> Unit
   fn size(Self) -> Int32
   fn block(Self) -> Int32
+}
+
+pub(open) trait Kem {
+  fn shared(Self) -> Int32
+  fn encapsulation(Self) -> Int32
+  fn ciphertext(Self) -> Int32
 }
 
 pub(open) trait Mac {

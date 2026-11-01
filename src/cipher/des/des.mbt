@@ -255,6 +255,80 @@ pub impl @spec.Block for TripleDes with fn decrypt(self, input) {
   self.decrypt(input)
 }
 
+///|
+/// Encrypt every [`block`]-byte slice of `input` as an independent block, in
+/// order, for both the single and triple DES keys.
+pub impl @spec.Block for Cipher with fn encrypt_blocks(self, input) {
+  let b = self.block()
+  guard input.length() % b == 0 else {
+    abort(
+      "des: the input is not a whole number of blocks (\{input.length()} bytes, block is \{b})",
+    )
+  }
+  let out = Array::make(input.length(), b'\x00')
+  for i in 0..<(input.length() / b) {
+    let blk = self.encrypt(input[i * b:(i + 1) * b])
+    for j in 0..<b {
+      out[i * b + j] = blk[j]
+    }
+  }
+  Bytes::from_array(out)
+}
+
+///|
+pub impl @spec.Block for Cipher with fn decrypt_blocks(self, input) {
+  let b = self.block()
+  guard input.length() % b == 0 else {
+    abort(
+      "des: the input is not a whole number of blocks (\{input.length()} bytes, block is \{b})",
+    )
+  }
+  let out = Array::make(input.length(), b'\x00')
+  for i in 0..<(input.length() / b) {
+    let blk = self.decrypt(input[i * b:(i + 1) * b])
+    for j in 0..<b {
+      out[i * b + j] = blk[j]
+    }
+  }
+  Bytes::from_array(out)
+}
+
+///|
+pub impl @spec.Block for TripleDes with fn encrypt_blocks(self, input) {
+  let b = self.block()
+  guard input.length() % b == 0 else {
+    abort(
+      "des: the input is not a whole number of blocks (\{input.length()} bytes, block is \{b})",
+    )
+  }
+  let out = Array::make(input.length(), b'\x00')
+  for i in 0..<(input.length() / b) {
+    let blk = self.encrypt(input[i * b:(i + 1) * b])
+    for j in 0..<b {
+      out[i * b + j] = blk[j]
+    }
+  }
+  Bytes::from_array(out)
+}
+
+///|
+pub impl @spec.Block for TripleDes with fn decrypt_blocks(self, input) {
+  let b = self.block()
+  guard input.length() % b == 0 else {
+    abort(
+      "des: the input is not a whole number of blocks (\{input.length()} bytes, block is \{b})",
+    )
+  }
+  let out = Array::make(input.length(), b'\x00')
+  for i in 0..<(input.length() / b) {
+    let blk = self.decrypt(input[i * b:(i + 1) * b])
+    for j in 0..<b {
+      out[i * b + j] = blk[j]
+    }
+  }
+  Bytes::from_array(out)
+}
+
 // ------------------------------------------------------------------- tables
 //
 // All from FIPS 46-3. Note that the numbering is one-based and starts at the most
@@ -390,3 +464,9 @@ let s_boxes : FixedArray[UInt32] = [
    7, 11, 4, 1, 9, 12, 14, 2, 0, 6, 10, 13, 15, 3, 5, 8, //
    2, 1, 14, 7, 4, 10, 8, 13, 15, 12, 9, 0, 3, 5, 6, 11,
 ]
+
+///|
+pub extend Cipher with @spec.Block::{decrypt_blocks, encrypt_blocks}
+
+///|
+pub extend TripleDes with @spec.Block::{decrypt_blocks, encrypt_blocks}

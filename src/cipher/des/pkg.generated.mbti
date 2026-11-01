@@ -20,7 +20,9 @@ pub struct Cipher {
 }
 pub fn Cipher::block(Self) -> Int32
 pub fn Cipher::decrypt(Self, BytesView) -> Bytes
+pub fn Cipher::decrypt_blocks(Self, BytesView) -> Bytes
 pub fn Cipher::encrypt(Self, BytesView) -> Bytes
+pub fn Cipher::encrypt_blocks(Self, BytesView) -> Bytes
 pub fn Cipher::new(BytesView) -> Self raise @spec.Broken
 pub fn Cipher::wipe(Self) -> Unit
 pub impl @spec.Block for Cipher
@@ -32,7 +34,9 @@ pub struct TripleDes {
 }
 pub fn TripleDes::block(Self) -> Int32
 pub fn TripleDes::decrypt(Self, BytesView) -> Bytes
+pub fn TripleDes::decrypt_blocks(Self, BytesView) -> Bytes
 pub fn TripleDes::encrypt(Self, BytesView) -> Bytes
+pub fn TripleDes::encrypt_blocks(Self, BytesView) -> Bytes
 pub fn TripleDes::from_two_keys(BytesView) -> Self raise @spec.Broken
 pub fn TripleDes::new(BytesView) -> Self raise @spec.Broken
 pub fn TripleDes::wipe(Self) -> Unit

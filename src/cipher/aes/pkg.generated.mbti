@@ -17,7 +17,9 @@ pub struct Cipher {
 }
 pub fn Cipher::block(Self) -> Int32
 pub fn Cipher::decrypt(Self, BytesView) -> Bytes
+pub fn Cipher::decrypt_blocks(Self, BytesView) -> Bytes
 pub fn Cipher::encrypt(Self, BytesView) -> Bytes
+pub fn Cipher::encrypt_blocks(Self, BytesView) -> Bytes
 pub fn Cipher::new(BytesView) -> Self raise @spec.Broken
 pub fn Cipher::size(Self) -> Int32
 pub fn Cipher::wipe(Self) -> Unit

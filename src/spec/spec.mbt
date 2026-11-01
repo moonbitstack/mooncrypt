@@ -55,6 +55,31 @@ pub(open) trait Block {
   fn encrypt(Self, BytesView) -> Bytes
   /// Decrypt one block. The input must be exactly [`block`] bytes.
   fn decrypt(Self, BytesView) -> Bytes
+  /// Encrypt several blocks at once, for modes that apply the cipher many times
+  /// (CTR, GCM). `input` must be a whole number of [`block`]-byte blocks and the
+  /// output is the same length. A cipher may override this with a batch path that
+  /// beats the single-block loop, which is what the default does.
+  fn encrypt_blocks(Self, BytesView) -> Bytes
+  /// Decrypt several blocks at once, the inverse of [`encrypt_blocks`].
+  fn decrypt_blocks(Self, BytesView) -> Bytes
+}
+
+///|
+/// A key encapsulation mechanism.
+///
+/// The contract fixes the byte lengths of the three moving parts — the shared
+/// secret, the encapsulation (public) key and the ciphertext — so ML-KEM and any
+/// later hybrid KEM sit behind one interface, and a caller that holds a [`Kem`]
+/// need know nothing of the algorithm inside. Each scheme adds `keypair`,
+/// `encapsulate` and `decapsulate` over its own key types; the lengths here are
+/// what an index, a wire format or a key store needs without instantiating it.
+pub(open) trait Kem {
+  /// The shared-secret length, in bytes.
+  fn shared(Self) -> Int32
+  /// The encapsulation-key length, in bytes.
+  fn encapsulation(Self) -> Int32
+  /// The ciphertext length, in bytes.
+  fn ciphertext(Self) -> Int32
 }
 
 ///|

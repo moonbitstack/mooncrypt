@@ -459,3 +459,46 @@ pub impl @spec.Block for Cipher with fn encrypt(self, input) {
 pub impl @spec.Block for Cipher with fn decrypt(self, input) {
   self.decrypt(input)
 }
+
+///|
+/// Encrypt every [`block`]-byte slice of `input` as an independent block, in
+/// order.
+pub impl @spec.Block for Cipher with fn encrypt_blocks(self, input) {
+  let b = self.block()
+  guard input.length() % b == 0 else {
+    abort(
+      "camellia: the input is not a whole number of blocks (\{input.length()} bytes, block is \{b})",
+    )
+  }
+  let out = Array::make(input.length(), b'\x00')
+  for i in 0..<(input.length() / b) {
+    let blk = self.encrypt(input[i * b:(i + 1) * b])
+    for j in 0..<b {
+      out[i * b + j] = blk[j]
+    }
+  }
+  Bytes::from_array(out)
+}
+
+///|
+/// Decrypt every [`block`]-byte slice of `input` as an independent block, in
+/// order.
+pub impl @spec.Block for Cipher with fn decrypt_blocks(self, input) {
+  let b = self.block()
+  guard input.length() % b == 0 else {
+    abort(
+      "camellia: the input is not a whole number of blocks (\{input.length()} bytes, block is \{b})",
+    )
+  }
+  let out = Array::make(input.length(), b'\x00')
+  for i in 0..<(input.length() / b) {
+    let blk = self.decrypt(input[i * b:(i + 1) * b])
+    for j in 0..<b {
+      out[i * b + j] = blk[j]
+    }
+  }
+  Bytes::from_array(out)
+}
+
+///|
+pub extend Cipher with @spec.Block::{decrypt_blocks, encrypt_blocks}
