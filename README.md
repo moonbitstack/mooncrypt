@@ -57,6 +57,7 @@ Import the ones you use. A package nothing imports is not linked, which is what
 | `hash/md5` | MD5 — legacy, and broken for anything adversarial | RFC 1321 |
 | `hash/ripemd` | RIPEMD-160 — legacy: a 1996 design kept for the data that already uses it | Dobbertin–Bosselaers–Preneel |
 | `hash/whirlpool` | Whirlpool, a 512-bit hash and a Miyaguchi-Preneel design of its own | ISO/IEC 10118-3 |
+| `hash/streebog` | Streebog, the Russian GOST 512-bit-block hash, 256- and 512-bit digests | RFC 6986 |
 | `mac/hmac` | HMAC over any `Hash` | RFC 2104, FIPS 198-1 |
 | `mac/poly1305` | Poly1305, the one-time authenticator | RFC 8439 §2.5 |
 | `mac/cmac` | CMAC over any `Block`, any tag length up to the block size | SP 800-38B |
