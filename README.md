@@ -56,6 +56,7 @@ Import the ones you use. A package nothing imports is not linked, which is what
 | `hash/sm3` | SM3 | GB/T 32905-2016 |
 | `hash/md5` | MD5 — legacy, and broken for anything adversarial | RFC 1321 |
 | `hash/ripemd` | RIPEMD-160 — legacy: a 1996 design kept for the data that already uses it | Dobbertin–Bosselaers–Preneel |
+| `hash/whirlpool` | Whirlpool, a 512-bit hash and a Miyaguchi-Preneel design of its own | ISO/IEC 10118-3 |
 | `mac/hmac` | HMAC over any `Hash` | RFC 2104, FIPS 198-1 |
 | `mac/poly1305` | Poly1305, the one-time authenticator | RFC 8439 §2.5 |
 | `mac/cmac` | CMAC over any `Block`, any tag length up to the block size | SP 800-38B |
@@ -75,7 +76,7 @@ Import the ones you use. A package nothing imports is not linked, which is what
 | `kdf/bcrypt` | bcrypt, the `$2b$` text format and a constant-time verify | Provos & Mazières 1999 |
 | `kdf/concat` | The Concat KDF, as a NIST key agreement derives from a shared secret | SP 800-56A §5.8.1 |
 | `drbg` | HMAC-DRBG, a seeded deterministic generator that is also a `moonseed` `Source`, so a key type can draw from it | SP 800-90A |
-| `curve` | The curves an EC key can live on — P-256, P-384, P-521, secp256k1 — and their coordinate width; `sign/ecdsa` and `kex/ecdh` re-export it, import it to name a curve | FIPS 186-4, SEC 2 |
+| `curve` | The curves an EC key can live on — P-256, P-384, P-521, secp256k1 and brainpoolP256r1/P384r1/P512r1 — and their coordinate width; `sign/ecdsa` and `kex/ecdh` re-export it, import it to name a curve | FIPS 186-4, SEC 2, RFC 5639 |
 | `sign/ed25519` | Ed25519 | RFC 8032 |
 | `sign/ed448` | Ed448, with context and the prehash form | RFC 8032 |
 | `sign/ecdsa` | ECDSA over P-256, P-384, P-521 and secp256k1, with RFC 6979 nonces | FIPS 186-4, RFC 6979 |
