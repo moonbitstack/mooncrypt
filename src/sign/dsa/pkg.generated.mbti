@@ -12,11 +12,7 @@ import {
 // Errors
 
 // Types and methods
-pub struct Domain {
-  p : @bigint.BigInt
-  q : @bigint.BigInt
-  g : @bigint.BigInt
-}
+type Domain
 pub fn Domain::g(Self) -> @bigint.BigInt
 pub fn Domain::modulus_size(Self) -> Int32
 pub fn Domain::new(BytesView, BytesView, BytesView) -> Self
@@ -25,11 +21,7 @@ pub fn Domain::q(Self) -> @bigint.BigInt
 pub fn Domain::raw(@bigint.BigInt, @bigint.BigInt, @bigint.BigInt) -> Self
 pub fn Domain::size(Self) -> Int32
 
-pub struct PrivateKey {
-  domain : Domain
-  hash : () -> &@spec.Hash
-  x : @bigint.BigInt
-}
+type PrivateKey
 pub fn PrivateKey::bytes(Self) -> Bytes
 pub fn PrivateKey::domain(Self) -> Domain
 pub fn[S : @moonseed.Source] PrivateKey::generate(S, domain~ : Domain) -> Self raise @moonseed.Unavailable
@@ -40,11 +32,7 @@ pub fn PrivateKey::sign(Self, BytesView) -> Bytes
 pub fn PrivateKey::with_hash(BytesView, () -> &@spec.Hash, domain~ : Domain) -> Self raise @spec.Broken
 pub impl @spec.Signer for PrivateKey
 
-pub struct PublicKey {
-  domain : Domain
-  hash : () -> &@spec.Hash
-  y : @bigint.BigInt
-}
+type PublicKey
 pub fn PublicKey::bytes(Self) -> Bytes
 pub fn PublicKey::domain(Self) -> Domain
 pub fn PublicKey::new(BytesView, domain~ : Domain) -> Self raise @spec.Broken

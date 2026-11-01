@@ -6,7 +6,7 @@
 /// generator `g = h^{(p - 1)/q} mod p`. The bit length of `q` sets the work
 /// factor and the signature size; FIPS 186-4 approves `q` at 160, 224 or 256
 /// bits over a `p` of 1024, 2048 or 3072.
-pub struct Domain {
+struct Domain {
   p : BigInt
   q : BigInt
   g : BigInt
@@ -58,7 +58,7 @@ pub fn Domain::modulus_size(self : Domain) -> Int32 {
 
 ///|
 /// A DSA verification key: `y = g^x mod p`.
-pub struct PublicKey {
+struct PublicKey {
   domain : Domain
   hash : () -> &@spec.Hash
   y : BigInt
@@ -66,7 +66,7 @@ pub struct PublicKey {
 
 ///|
 /// A DSA signing key: a scalar `x` in `[1, q - 1]`.
-pub struct PrivateKey {
+struct PrivateKey {
   domain : Domain
   hash : () -> &@spec.Hash
   x : BigInt
