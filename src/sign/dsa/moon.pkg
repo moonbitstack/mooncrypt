@@ -1,0 +1,18 @@
+// DSA, FIPS 186-4: https://doi.org/10.6028/NIST.FIPS.186-4
+// Deterministic nonces, RFC 6979: https://www.rfc-editor.org/rfc/rfc6979
+//
+// Signatures are `r ∥ s`, two fixed-width big-endian integers — the encoding
+// most wire formats carry; the ASN.1 DER wrapper OpenSSL writes is a separate
+// concern and belongs with the other DER.
+import {
+  "moonbitstack/moonseed",
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/mooncrypt/internal/ec",
+  "moonbitstack/mooncrypt/mac/hmac",
+  "moonbitstack/mooncrypt/hash/sha2",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+  "moonbitlang/core/encoding/utf8",
+} for "test"
