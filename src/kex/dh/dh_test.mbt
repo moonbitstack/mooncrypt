@@ -237,3 +237,35 @@ fn refuses(key : @dh.Private, peer : Bytes) -> Bool {
     _ => true
   }
 }
+
+///|
+test "a group spelled out gives what the named group gives" {
+  let group = @dh.Group::Ffdhe2048
+  let prime = group.prime().to_octets(length=group.size())
+  let (a, b) = (Bytes::make(32, b'\x11'), Bytes::make(32, b'\x22'))
+  let two = b"\x02"
+  assert_eq(
+    @dh.public_with(prime[:], two[:], a[:]),
+    @dh.public_key(group, a[:]),
+  )
+  let theirs = @dh.public_key(group, b[:])
+  assert_eq(
+    @dh.shared_with(prime[:], a[:], theirs[:]),
+    @dh.shared_secret(group, a[:], theirs[:]),
+  )
+}
+
+///|
+test "a peer's value outside [2, p-2] is refused in a group spelled out" {
+  let prime = b"\x17"
+  for bad in [b"\x00", b"\x01", b"\x16", b"\x17", b"\x18"] {
+    let refused = try {
+      @dh.shared_with(prime[:], b"\x03"[:], bad[:]) |> ignore
+      false
+    } catch {
+      _ => true
+    }
+    assert_true(refused)
+  }
+  assert_eq(@dh.shared_with(prime[:], b"\x03"[:], b"\x02"[:]), b"\x08")
+}

@@ -556,3 +556,33 @@ fn xor(a : Array[Byte], b : Bytes) -> Array[Byte] {
   }
   out
 }
+
+///|
+/// RSAEP (RFC 8017 §5.1.1): the message, `k` octets, raised to the public exponent. The bare
+/// operation, for a framing this package does not write itself, as TLS's RSA key exchange has.
+pub fn PublicKey::rsaep(
+  self : PublicKey,
+  message : BytesView,
+) -> Bytes raise @spec.Broken {
+  guard message.length() == self.size else {
+    raise @spec.Size(want=self.size, got=message.length())
+  }
+  let m = BigInt::from_octets(message)
+  guard m < self.n else { raise @spec.Tag }
+  m.pow(self.e, modulus=self.n).to_octets(length=self.size)
+}
+
+///|
+/// RSADP (RFC 8017 §5.1.2): the inverse of `PublicKey::rsaep`. What comes back is unchecked, and a
+/// caller that branches on it has built a padding oracle.
+pub fn PrivateKey::rsadp(
+  self : PrivateKey,
+  cipher : BytesView,
+) -> Bytes raise @spec.Broken {
+  guard cipher.length() == self.size else {
+    raise @spec.Size(want=self.size, got=cipher.length())
+  }
+  let c = BigInt::from_octets(cipher)
+  guard c < self.n else { raise @spec.Tag }
+  c.pow(self.d, modulus=self.n).to_octets(length=self.size)
+}

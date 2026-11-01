@@ -12,7 +12,11 @@ pub let generator : Int32
 
 pub fn public_key(Group, BytesView) -> Bytes raise @spec.Broken
 
+pub fn public_with(BytesView, BytesView, BytesView) -> Bytes raise @spec.Broken
+
 pub fn shared_secret(Group, BytesView, BytesView) -> Bytes raise @spec.Broken
+
+pub fn shared_with(BytesView, BytesView, BytesView) -> Bytes raise @spec.Broken
 
 // Errors
 

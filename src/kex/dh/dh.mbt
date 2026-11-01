@@ -188,6 +188,41 @@ pub fn shared_secret(
   Private::new(group, secret).shared(peer)
 }
 
+///|
+/// The public value in a group the other side chose, which is what a TLS 1.2 server may do: `prime`
+/// and `generator` as big-endian octets, the result as long as the prime.
+///
+/// Whether the group is any good is the caller's to judge; `Group` is for the ones known to be.
+pub fn public_with(
+  prime : BytesView,
+  generator : BytesView,
+  secret : BytesView,
+) -> Bytes raise @spec.Broken {
+  let p = BigInt::from_octets(prime)
+  guard p > (3 : BigInt) else { raise @spec.Broken::Weak }
+  BigInt::from_octets(generator)
+  .pow(BigInt::from_octets(secret), modulus=p)
+  .to_octets(length=prime.length())
+}
+
+///|
+/// The shared secret in such a group, as long as the prime. A peer's value outside `[2, p-2]` is
+/// refused, as `Private::shared` refuses it.
+pub fn shared_with(
+  prime : BytesView,
+  secret : BytesView,
+  peer : BytesView,
+) -> Bytes raise @spec.Broken {
+  let p = BigInt::from_octets(prime)
+  let value = BigInt::from_octets(peer)
+  guard p > (3 : BigInt) && value >= (2 : BigInt) && value <= p - (2 : BigInt) else {
+    raise @spec.Broken::Weak
+  }
+  value
+  .pow(BigInt::from_octets(secret), modulus=p)
+  .to_octets(length=prime.length())
+}
+
 // The five primes of RFC 7919 §A, in hex. Written out rather than generated at
 // load time because a group that is wrong is a group that silently agrees with
 // nobody.

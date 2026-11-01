@@ -140,3 +140,33 @@ test "OAEP refuses a tampered block" {
   }
   assert_eq(refused, true)
 }
+
+///|
+test "RSADP undoes RSAEP, and a value past the modulus is refused" {
+  let key = oaep_key()
+  let public = key.public()
+  let k = public.size()
+  let message = Bytes::makei(k, i => {
+    if i == 0 {
+      b'\x00'
+    } else {
+      (i & 0xff).to_byte()
+    }
+  })
+  assert_eq(key.rsadp(public.rsaep(message[:])[:]), message)
+  let past = Bytes::make(k, b'\xff')
+  let refused = try {
+    public.rsaep(past[:]) |> ignore
+    false
+  } catch {
+    _ => true
+  }
+  assert_true(refused)
+  let short = try {
+    key.rsadp(b"\x01"[:]) |> ignore
+    false
+  } catch {
+    _ => true
+  }
+  assert_true(short)
+}

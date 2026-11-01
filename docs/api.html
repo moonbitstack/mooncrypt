@@ -74,7 +74,7 @@
         <h1>Every package, in order</h1>
         <p class="lede">
           Generated from each package's interface file and the comments above its
-          declarations. 630 public declarations across 61
+          declarations. 634 public declarations across 61
           packages.
         </p>
       </div>
@@ -2142,6 +2142,10 @@
 <div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>public</div>
 <div class="body"><div class="sig">pub fn PrivateKey::public(Self) -&gt; PublicKey</div><p>The public half of a signing key — what verifies what it signs.</p></div>
 </div>
+<div class="item" id="rsa-privatekey-rsadp">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>rsadp</div>
+<div class="body"><div class="sig">pub fn PrivateKey::rsadp(Self, BytesView) -&gt; Bytes raise @spec.Broken</div><p>RSADP (RFC 8017 §5.1.2): the inverse of `PublicKey::rsaep`. What comes back is unchecked, and a caller that branches on it has built a padding oracle.</p></div>
+</div>
 <div class="item" id="rsa-privatekey-sign">
 <div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>sign</div>
 <div class="body"><div class="sig">pub fn PrivateKey::sign(Self, BytesView) -&gt; Bytes</div></div>
@@ -2169,6 +2173,10 @@
 <div class="item" id="rsa-publickey-new">
 <div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>new</div>
 <div class="body"><div class="sig">pub fn PublicKey::new(BytesView, BytesView, digest? : Digest, scheme? : Scheme) -&gt; Self raise @spec.Broken</div><p>Read a verification key from its modulus and exponent, big-endian.</p></div>
+</div>
+<div class="item" id="rsa-publickey-rsaep">
+<div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>rsaep</div>
+<div class="body"><div class="sig">pub fn PublicKey::rsaep(Self, BytesView) -&gt; Bytes raise @spec.Broken</div><p>RSAEP (RFC 8017 §5.1.1): the message, `k` octets, raised to the public exponent. The bare operation, for a framing this package does not write itself, as TLS's RSA key exchange has.</p></div>
 </div>
 <div class="item" id="rsa-publickey-size">
 <div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>size</div>
@@ -2610,9 +2618,17 @@
 <div class="name"><span class="kind">fn</span>public_key</div>
 <div class="body"><div class="sig">pub fn public_key(Group, BytesView) -&gt; Bytes raise @spec.Broken</div><p>The public value for a secret, without keeping the secret.</p></div>
 </div>
+<div class="item" id="kex-dh-public-with">
+<div class="name"><span class="kind">fn</span>public_with</div>
+<div class="body"><div class="sig">pub fn public_with(BytesView, BytesView, BytesView) -&gt; Bytes raise @spec.Broken</div><p>The public value in a group the other side chose, which is what a TLS 1.2 server may do: `prime` and `generator` as big-endian octets, the result as long as the prime.</p><p>Whether the group is any good is the caller's to judge; `Group` is for the ones known to be.</p></div>
+</div>
 <div class="item" id="kex-dh-shared-secret">
 <div class="name"><span class="kind">fn</span>shared_secret</div>
 <div class="body"><div class="sig">pub fn shared_secret(Group, BytesView, BytesView) -&gt; Bytes raise @spec.Broken</div><p>The shared secret for one side of an exchange.</p></div>
+</div>
+<div class="item" id="kex-dh-shared-with">
+<div class="name"><span class="kind">fn</span>shared_with</div>
+<div class="body"><div class="sig">pub fn shared_with(BytesView, BytesView, BytesView) -&gt; Bytes raise @spec.Broken</div><p>The shared secret in such a group, as long as the prime. A peer's value outside `[2, p-2]` is refused, as `Private::shared` refuses it.</p></div>
 </div>
 </section>
 <section class="pkg">

@@ -28,6 +28,7 @@ pub fn PrivateKey::decrypt(Self, BytesView, digest? : Digest, mgf? : Digest, lab
 pub fn[S : @moonseed.Source] PrivateKey::generate(S, bits? : Int32, digest? : Digest, scheme? : Scheme) -> Self raise @moonseed.Unavailable
 pub fn PrivateKey::new(BytesView, BytesView, BytesView, digest? : Digest, scheme? : Scheme) -> Self raise @spec.Broken
 pub fn PrivateKey::public(Self) -> PublicKey
+pub fn PrivateKey::rsadp(Self, BytesView) -> Bytes raise @spec.Broken
 pub fn PrivateKey::sign(Self, BytesView) -> Bytes
 pub fn PrivateKey::size(Self) -> Int32
 pub fn PrivateKey::with_scheme(Self, digest~ : Digest, scheme~ : Scheme) -> Self
@@ -38,6 +39,7 @@ pub fn PublicKey::encrypt(Self, BytesView, seed~ : BytesView, digest? : Digest, 
 pub fn PublicKey::exponent(Self) -> Bytes
 pub fn PublicKey::modulus(Self) -> Bytes
 pub fn PublicKey::new(BytesView, BytesView, digest? : Digest, scheme? : Scheme) -> Self raise @spec.Broken
+pub fn PublicKey::rsaep(Self, BytesView) -> Bytes raise @spec.Broken
 pub fn PublicKey::size(Self) -> Int32
 pub fn PublicKey::verify(Self, BytesView, BytesView) -> Bool
 pub fn PublicKey::with_scheme(Self, digest~ : Digest, scheme~ : Scheme) -> Self
