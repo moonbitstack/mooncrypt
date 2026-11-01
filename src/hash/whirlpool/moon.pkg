@@ -1,0 +1,12 @@
+// Whirlpool, ISO/IEC 10118-3: the 512-bit hash of Rijmen and Barreto that the
+// NESSIE project recommended. A Miyaguchi-Preneel construction over a dedicated
+// 512-bit block cipher, with its own S-box and a circulant MDS matrix over
+// GF(2^8) — not AES's field, not AES's table.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+  "moonbitlang/core/encoding/utf8",
+} for "test"
