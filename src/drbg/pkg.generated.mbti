@@ -1,0 +1,26 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/drbg"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/moonseed",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+type HmacDrbg
+pub fn HmacDrbg::fill(Self, FixedArray[Byte]) -> Unit raise @moonseed.Unavailable
+pub fn HmacDrbg::generate(Self, Int32) -> Bytes
+pub fn HmacDrbg::generate_with(Self, Int32, additional~ : BytesView) -> Bytes
+pub fn HmacDrbg::new(() -> &@spec.Hash, entropy~ : BytesView, nonce~ : BytesView, personalization~ : BytesView) -> Self
+pub fn HmacDrbg::reseed(Self, entropy~ : BytesView, additional~ : BytesView) -> Unit
+pub fn HmacDrbg::reseed_counter(Self) -> UInt64
+pub fn HmacDrbg::wipe(Self) -> Unit
+pub impl @moonseed.Source for HmacDrbg
+
+// Type aliases
+
+// Traits
