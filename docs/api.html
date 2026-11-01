@@ -74,7 +74,7 @@
         <h1>Every package, in order</h1>
         <p class="lede">
           Generated from each package's interface file and the comments above its
-          declarations. 557 public declarations across 56
+          declarations. 609 public declarations across 60
           packages.
         </p>
       </div>
@@ -90,13 +90,14 @@
             <li><a href="#mac"><span class="n">03</span>Message authentication</a></li>
             <li><a href="#sum"><span class="n">04</span>Checksums</a></li>
             <li><a href="#kdf"><span class="n">05</span>Key derivation</a></li>
-            <li><a href="#cipher"><span class="n">06</span>Block ciphers</a></li>
-            <li><a href="#stream"><span class="n">07</span>Stream ciphers</a></li>
-            <li><a href="#aead"><span class="n">08</span>Authenticated encryption</a></li>
-            <li><a href="#sign"><span class="n">09</span>Signatures</a></li>
-            <li><a href="#kex"><span class="n">10</span>Key agreement</a></li>
-            <li><a href="#key"><span class="n">11</span>Key files</a></li>
-            <li><a href="#otp"><span class="n">12</span>One-time passwords</a></li>
+            <li><a href="#drbg"><span class="n">06</span>Randomness</a></li>
+            <li><a href="#cipher"><span class="n">07</span>Block ciphers</a></li>
+            <li><a href="#stream"><span class="n">08</span>Stream ciphers</a></li>
+            <li><a href="#aead"><span class="n">09</span>Authenticated encryption</a></li>
+            <li><a href="#sign"><span class="n">10</span>Signatures</a></li>
+            <li><a href="#kex"><span class="n">11</span>Key agreement</a></li>
+            <li><a href="#key"><span class="n">12</span>Key files</a></li>
+            <li><a href="#otp"><span class="n">13</span>One-time passwords</a></li>
           </ol>
         </aside>
 
@@ -107,6 +108,7 @@
 <a href="#mac">Message authentication</a>
 <a href="#sum">Checksums</a>
 <a href="#kdf">Key derivation</a>
+<a href="#drbg">Randomness</a>
 <a href="#cipher">Block ciphers</a>
 <a href="#stream">Stream ciphers</a>
 <a href="#aead">Authenticated encryption</a>
@@ -132,6 +134,8 @@
   fn block(Self) -&gt; Int32
   fn encrypt(Self, BytesView) -&gt; Bytes
   fn decrypt(Self, BytesView) -&gt; Bytes
+  fn encrypt_blocks(Self, BytesView) -&gt; Bytes
+  fn decrypt_blocks(Self, BytesView) -&gt; Bytes
 }</div><p>A block cipher: a keyed permutation of a fixed-size block.</p><p>It is the thing a mode of operation is built on, which is why it is a contract rather than a concrete type — GCM is defined for any 128-bit block cipher, so it takes one of these and SM4-GCM costs nothing more than an SM4 that implements it.</p><p>Both directions are here although a counter mode needs only [`encrypt`]: a permutation that cannot be inverted is not a block cipher, and a mode such as CBC needs the inverse.</p></div>
 </div>
 <div class="item" id="spec-hash">
@@ -143,6 +147,14 @@
   fn size(Self) -&gt; Int32
   fn block(Self) -&gt; Int32
 }</div><p>A cryptographic hash, as a state you feed and then read.</p><p>Five methods and no more, because everything mooncrypt builds on top of a hash needs exactly these: HMAC needs [`block`] to size its pads, HKDF and PBKDF2 need [`size`] to count output blocks, and every one-shot needs [`write`] then [`finish`]. A third-party digest becomes usable throughout the library the moment it implements this.</p><p>[`finish`] does not consume the state, so a caller may keep writing and read again; [`reset`] returns it to the initial vector, which is how HMAC reuses one allocation for both passes.</p></div>
+</div>
+<div class="item" id="spec-kem">
+<div class="name"><span class="kind">trait</span>Kem</div>
+<div class="body"><div class="sig">pub(open) trait Kem {
+  fn shared(Self) -&gt; Int32
+  fn encapsulation(Self) -&gt; Int32
+  fn ciphertext(Self) -&gt; Int32
+}</div><p>A key encapsulation mechanism.</p><p>The contract fixes the byte lengths of the three moving parts — the shared secret, the encapsulation (public) key and the ciphertext — so ML-KEM and any later hybrid KEM sit behind one interface, and a caller that holds a [`Kem`] need know nothing of the algorithm inside. Each scheme adds `keypair`, `encapsulate` and `decapsulate` over its own key types; the lengths here are what an index, a wire format or a key store needs without instantiating it.</p></div>
 </div>
 <div class="item" id="spec-mac">
 <div class="name"><span class="kind">trait</span>Mac</div>
@@ -586,6 +598,37 @@
 <div class="item" id="hash-sm3-hash">
 <div class="name"><span class="kind">fn</span>hash</div>
 <div class="body"><div class="sig">pub fn hash(BytesView) -&gt; Bytes</div><p>Hash one whole message.</p></div>
+</div>
+</section>
+<section class="pkg">
+<div class="pkg-head"><span class="no">09</span><h2>whirlpool</h2><span class="path">moonbitstack/mooncrypt/hash/whirlpool</span></div><p class="pkg-ref">Whirlpool, ISO/IEC 10118-3: the 512-bit hash of Rijmen and Barreto that the NESSIE project recommended. A Miyaguchi-Preneel construction over a dedicated 512-bit block cipher, with its own S-box and a circulant MDS matrix over GF(2^8) — not AES's field, not AES's table.</p>
+<div class="item" id="hash-whirlpool-hasher-block">
+<div class="name"><span class="kind">fn</span><span class="dim">Hasher::</span>block</div>
+<div class="body"><div class="sig">pub fn Hasher::block(Self) -&gt; Int32</div></div>
+</div>
+<div class="item" id="hash-whirlpool-hasher-finish">
+<div class="name"><span class="kind">fn</span><span class="dim">Hasher::</span>finish</div>
+<div class="body"><div class="sig">pub fn Hasher::finish(Self) -&gt; Bytes</div></div>
+</div>
+<div class="item" id="hash-whirlpool-hasher-new">
+<div class="name"><span class="kind">fn</span><span class="dim">Hasher::</span>new</div>
+<div class="body"><div class="sig">pub fn Hasher::new() -&gt; Self</div><p>A fresh state: sixty-four bytes of output, a sixty-four-byte block, and an all-zero chaining value.</p></div>
+</div>
+<div class="item" id="hash-whirlpool-hasher-reset">
+<div class="name"><span class="kind">fn</span><span class="dim">Hasher::</span>reset</div>
+<div class="body"><div class="sig">pub fn Hasher::reset(Self) -&gt; Unit</div></div>
+</div>
+<div class="item" id="hash-whirlpool-hasher-size">
+<div class="name"><span class="kind">fn</span><span class="dim">Hasher::</span>size</div>
+<div class="body"><div class="sig">pub fn Hasher::size(Self) -&gt; Int32</div></div>
+</div>
+<div class="item" id="hash-whirlpool-hasher-write">
+<div class="name"><span class="kind">fn</span><span class="dim">Hasher::</span>write</div>
+<div class="body"><div class="sig">pub fn Hasher::write(Self, BytesView) -&gt; Unit</div></div>
+</div>
+<div class="item" id="hash-whirlpool-hash">
+<div class="name"><span class="kind">fn</span>hash</div>
+<div class="body"><div class="sig">pub fn hash(BytesView) -&gt; Bytes</div><p>One whole message through Whirlpool, in one call.</p></div>
 </div>
 </section>
 <h2 id="mac"><span class="no">03</span> Message authentication</h2>
@@ -1312,7 +1355,40 @@
 <div class="body"><div class="sig">pub fn key(BytesView, BytesView, params? : Params, len? : Int32) -&gt; Bytes</div><p>Derive `len` bytes from a password and a salt (RFC 7914 §6).</p><p>`n`, `r` and `p` are the cost. The memory is `128 * r * n` bytes, so the default preset's 16 MiB is deliberate rather than incidental: it is what makes a hardware attack cost memory as well as time.</p></div>
 </div>
 </section>
-<h2 id="cipher"><span class="no">06</span> Block ciphers</h2>
+<h2 id="drbg"><span class="no">06</span> Randomness</h2>
+<p class="lede">Deterministic generators seeded from an entropy source</p>
+<section class="pkg">
+<div class="pkg-head"><span class="no">01</span><h2>drbg</h2><span class="path">moonbitstack/mooncrypt/drbg</span></div><p class="pkg-ref">DRBG, NIST SP 800-90A: https://doi.org/10.6028/NIST.SP.800-90A</p><p class="pkg-note">HMAC-DRBG over any hash. It implements `moonseed.Source`, so a key generator or a signing routine that draws from a source can take a seeded, deterministic generator instead of the platform's entropy — and reproduce a test vector.</p>
+<div class="item" id="drbg-hmacdrbg-fill">
+<div class="name"><span class="kind">fn</span><span class="dim">HmacDrbg::</span>fill</div>
+<div class="body"><div class="sig">pub fn HmacDrbg::fill(Self, FixedArray[Byte]) -&gt; Unit raise @moonseed.Unavailable</div></div>
+</div>
+<div class="item" id="drbg-hmacdrbg-generate">
+<div class="name"><span class="kind">fn</span><span class="dim">HmacDrbg::</span>generate</div>
+<div class="body"><div class="sig">pub fn HmacDrbg::generate(Self, Int32) -&gt; Bytes</div><p>Draw `n` bytes with no additional input.</p></div>
+</div>
+<div class="item" id="drbg-hmacdrbg-generate-with">
+<div class="name"><span class="kind">fn</span><span class="dim">HmacDrbg::</span>generate_with</div>
+<div class="body"><div class="sig">pub fn HmacDrbg::generate_with(Self, Int32, additional~ : BytesView) -&gt; Bytes</div><p>Draw `n` bytes with an additional input folded in (SP 800-90A §10.1.2.5). The additional input binds this call to its context without changing the seed, so two calls with different context strings diverge.</p></div>
+</div>
+<div class="item" id="drbg-hmacdrbg-new">
+<div class="name"><span class="kind">fn</span><span class="dim">HmacDrbg::</span>new</div>
+<div class="body"><div class="sig">pub fn HmacDrbg::new(() -&gt; &amp;@spec.Hash, entropy~ : BytesView, nonce~ : BytesView, personalization~ : BytesView) -&gt; Self</div><p>Seed the generator from an entropy input, a nonce and a personalization string (SP 800-90A §10.1.2.3). The three identify the instance; the entropy input carries the strength, and a caller with none of its own should draw it from the platform's [`@moonseed.Source`].</p></div>
+</div>
+<div class="item" id="drbg-hmacdrbg-reseed">
+<div class="name"><span class="kind">fn</span><span class="dim">HmacDrbg::</span>reseed</div>
+<div class="body"><div class="sig">pub fn HmacDrbg::reseed(Self, entropy~ : BytesView, additional~ : BytesView) -&gt; Unit</div><p>Reseed, folding fresh entropy back in (SP 800-90A §10.1.2.4). A long-lived generator outlives the strength it was seeded with, so a caller that has more entropy mixes it rather than starting over and losing the output already drawn.</p></div>
+</div>
+<div class="item" id="drbg-hmacdrbg-reseed-counter">
+<div class="name"><span class="kind">fn</span><span class="dim">HmacDrbg::</span>reseed_counter</div>
+<div class="body"><div class="sig">pub fn HmacDrbg::reseed_counter(Self) -&gt; UInt64</div><p>How many bytes have been drawn since the last instantiation or reseed; a caller that watches this can reseed before the interval is spent.</p></div>
+</div>
+<div class="item" id="drbg-hmacdrbg-wipe">
+<div class="name"><span class="kind">fn</span><span class="dim">HmacDrbg::</span>wipe</div>
+<div class="body"><div class="sig">pub fn HmacDrbg::wipe(Self) -&gt; Unit</div><p>Erase the state. See [`@spec.wipe`] for what that is worth.</p></div>
+</div>
+</section>
+<h2 id="cipher"><span class="no">07</span> Block ciphers</h2>
 <p class="lede">Sixteen-byte blocks and the modes that chain them</p>
 <section class="pkg">
 <div class="pkg-head"><span class="no">01</span><h2>aes</h2><span class="path">moonbitstack/mooncrypt/cipher/aes</span></div><p class="pkg-ref">AES, FIPS 197: https://doi.org/10.6028/NIST.FIPS.197-upd1</p><p class="pkg-note">All three key lengths. The key is the only thing that varies, so there is no variant to name: the length says which one it is.</p>
@@ -1332,9 +1408,17 @@
 <div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>decrypt</div>
 <div class="body"><div class="sig">pub fn Cipher::decrypt(Self, BytesView) -&gt; Bytes</div><p>Decrypt one block (FIPS 197 §5.3 InvCipher).</p></div>
 </div>
+<div class="item" id="cipher-aes-cipher-decrypt-blocks">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>decrypt_blocks</div>
+<div class="body"><div class="sig">pub fn Cipher::decrypt_blocks(Self, BytesView) -&gt; Bytes</div></div>
+</div>
 <div class="item" id="cipher-aes-cipher-encrypt">
 <div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>encrypt</div>
 <div class="body"><div class="sig">pub fn Cipher::encrypt(Self, BytesView) -&gt; Bytes</div><p>Encrypt one block (FIPS 197 §5.1 Cipher).</p><p>The state is column-major: byte `k` is row `k % 4`, column `k / 4`.</p></div>
+</div>
+<div class="item" id="cipher-aes-cipher-encrypt-blocks">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>encrypt_blocks</div>
+<div class="body"><div class="sig">pub fn Cipher::encrypt_blocks(Self, BytesView) -&gt; Bytes</div></div>
 </div>
 <div class="item" id="cipher-aes-cipher-new">
 <div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>new</div>
@@ -1379,9 +1463,17 @@
 <div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>decrypt</div>
 <div class="body"><div class="sig">pub fn Cipher::decrypt(Self, BytesView) -&gt; Bytes</div><p>Decrypt one block.</p></div>
 </div>
+<div class="item" id="cipher-blowfish-cipher-decrypt-blocks">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>decrypt_blocks</div>
+<div class="body"><div class="sig">pub fn Cipher::decrypt_blocks(Self, BytesView) -&gt; Bytes</div></div>
+</div>
 <div class="item" id="cipher-blowfish-cipher-encrypt">
 <div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>encrypt</div>
 <div class="body"><div class="sig">pub fn Cipher::encrypt(Self, BytesView) -&gt; Bytes</div><p>Encrypt one block.</p></div>
+</div>
+<div class="item" id="cipher-blowfish-cipher-encrypt-blocks">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>encrypt_blocks</div>
+<div class="body"><div class="sig">pub fn Cipher::encrypt_blocks(Self, BytesView) -&gt; Bytes</div></div>
 </div>
 <div class="item" id="cipher-blowfish-cipher-new">
 <div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>new</div>
@@ -1414,9 +1506,17 @@
 <div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>decrypt</div>
 <div class="body"><div class="sig">pub fn Cipher::decrypt(Self, BytesView) -&gt; Bytes</div><p>Decrypt one 16-byte block.</p></div>
 </div>
+<div class="item" id="cipher-camellia-cipher-decrypt-blocks">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>decrypt_blocks</div>
+<div class="body"><div class="sig">pub fn Cipher::decrypt_blocks(Self, BytesView) -&gt; Bytes</div></div>
+</div>
 <div class="item" id="cipher-camellia-cipher-encrypt">
 <div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>encrypt</div>
 <div class="body"><div class="sig">pub fn Cipher::encrypt(Self, BytesView) -&gt; Bytes</div><p>Encrypt one 16-byte block.</p></div>
+</div>
+<div class="item" id="cipher-camellia-cipher-encrypt-blocks">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>encrypt_blocks</div>
+<div class="body"><div class="sig">pub fn Cipher::encrypt_blocks(Self, BytesView) -&gt; Bytes</div></div>
 </div>
 <div class="item" id="cipher-camellia-cipher-new">
 <div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>new</div>
@@ -1457,9 +1557,17 @@
 <div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>decrypt</div>
 <div class="body"><div class="sig">pub fn Cipher::decrypt(Self, BytesView) -&gt; Bytes</div><p>Decrypt one 8-byte block: the same cipher with the round keys in reverse.</p></div>
 </div>
+<div class="item" id="cipher-des-cipher-decrypt-blocks">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>decrypt_blocks</div>
+<div class="body"><div class="sig">pub fn Cipher::decrypt_blocks(Self, BytesView) -&gt; Bytes</div></div>
+</div>
 <div class="item" id="cipher-des-cipher-encrypt">
 <div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>encrypt</div>
 <div class="body"><div class="sig">pub fn Cipher::encrypt(Self, BytesView) -&gt; Bytes</div><p>Encrypt one 8-byte block.</p></div>
+</div>
+<div class="item" id="cipher-des-cipher-encrypt-blocks">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>encrypt_blocks</div>
+<div class="body"><div class="sig">pub fn Cipher::encrypt_blocks(Self, BytesView) -&gt; Bytes</div></div>
 </div>
 <div class="item" id="cipher-des-cipher-new">
 <div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>new</div>
@@ -1477,9 +1585,17 @@
 <div class="name"><span class="kind">fn</span><span class="dim">TripleDes::</span>decrypt</div>
 <div class="body"><div class="sig">pub fn TripleDes::decrypt(Self, BytesView) -&gt; Bytes</div><p>Decrypt one 8-byte block: E-D-E in reverse, which is D-E-D.</p></div>
 </div>
+<div class="item" id="cipher-des-tripledes-decrypt-blocks">
+<div class="name"><span class="kind">fn</span><span class="dim">TripleDes::</span>decrypt_blocks</div>
+<div class="body"><div class="sig">pub fn TripleDes::decrypt_blocks(Self, BytesView) -&gt; Bytes</div></div>
+</div>
 <div class="item" id="cipher-des-tripledes-encrypt">
 <div class="name"><span class="kind">fn</span><span class="dim">TripleDes::</span>encrypt</div>
 <div class="body"><div class="sig">pub fn TripleDes::encrypt(Self, BytesView) -&gt; Bytes</div><p>Encrypt one 8-byte block.</p></div>
+</div>
+<div class="item" id="cipher-des-tripledes-encrypt-blocks">
+<div class="name"><span class="kind">fn</span><span class="dim">TripleDes::</span>encrypt_blocks</div>
+<div class="body"><div class="sig">pub fn TripleDes::encrypt_blocks(Self, BytesView) -&gt; Bytes</div></div>
 </div>
 <div class="item" id="cipher-des-tripledes-from-two-keys">
 <div class="name"><span class="kind">fn</span><span class="dim">TripleDes::</span>from_two_keys</div>
@@ -1571,9 +1687,17 @@
 <div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>decrypt</div>
 <div class="body"><div class="sig">pub fn Cipher::decrypt(Self, BytesView) -&gt; Bytes</div><p>Decrypt one block.</p></div>
 </div>
+<div class="item" id="cipher-sm4-cipher-decrypt-blocks">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>decrypt_blocks</div>
+<div class="body"><div class="sig">pub fn Cipher::decrypt_blocks(Self, BytesView) -&gt; Bytes</div></div>
+</div>
 <div class="item" id="cipher-sm4-cipher-encrypt">
 <div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>encrypt</div>
 <div class="body"><div class="sig">pub fn Cipher::encrypt(Self, BytesView) -&gt; Bytes</div><p>Encrypt one block.</p></div>
+</div>
+<div class="item" id="cipher-sm4-cipher-encrypt-blocks">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>encrypt_blocks</div>
+<div class="body"><div class="sig">pub fn Cipher::encrypt_blocks(Self, BytesView) -&gt; Bytes</div></div>
 </div>
 <div class="item" id="cipher-sm4-cipher-new">
 <div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>new</div>
@@ -1584,7 +1708,7 @@
 <div class="body"><div class="sig">pub fn Cipher::wipe(Self) -&gt; Unit</div><p>Overwrite the round keys.</p></div>
 </div>
 </section>
-<h2 id="stream"><span class="no">07</span> Stream ciphers</h2>
+<h2 id="stream"><span class="no">08</span> Stream ciphers</h2>
 <p class="lede">A keystream, exclusive-ored with the message</p>
 <section class="pkg">
 <div class="pkg-head"><span class="no">01</span><h2>chacha20</h2><span class="path">moonbitstack/mooncrypt/cipher/chacha20</span></div><p class="pkg-note">ChaCha20, RFC 8439 §2.3–2.4: https://www.rfc-editor.org/rfc/rfc8439#section-2.3</p><p class="pkg-note">The 96-bit nonce and 32-bit counter of the IETF variant. `block` is exposed on its own because QUIC's header protection uses one block as a mask.</p>
@@ -1718,7 +1842,7 @@
 <div class="body"><div class="sig">pub fn subkey(BytesView, BytesView) -&gt; Bytes raise @spec.Broken</div><p>The subkey HChaCha20 derives from a 32-byte `key` and a 16-byte `nonce`.</p><p>This is ChaCha20's block function with the feed-forward left out, so what comes back is a value that looks like a key. It is public because it is useful on its own — libsodium's sealed boxes derive a key from a shared secret and a nonce the same way — and because it is the one part of XChaCha20 a reader is likely to want to check in isolation.</p></div>
 </div>
 </section>
-<h2 id="aead"><span class="no">08</span> Authenticated encryption</h2>
+<h2 id="aead"><span class="no">09</span> Authenticated encryption</h2>
 <p class="lede">Encryption that carries its own tag</p>
 <section class="pkg">
 <div class="pkg-head"><span class="no">01</span><h2>ccm</h2><span class="path">moonbitstack/mooncrypt/aead/ccm</span></div><p class="pkg-ref">CCM, NIST SP 800-38C and RFC 3610: https://www.rfc-editor.org/rfc/rfc3610</p><p class="pkg-note">Counter mode with CBC-MAC: the same key drives a MAC over the plaintext and a stream cipher over the same bytes, and the tag is masked with one more block of keystream. Two passes over the message is the price, and the reward is a construction simple enough to be worth using on hardware that has nothing but a block cipher — which is why 802.11 wrote it into WPA2.</p><p class="pkg-note">The nonce length is a parameter here, not a fixed number: 13 bytes is the usual choice, and the constraint is only that together with the message length it fills a block.</p>
@@ -1875,7 +1999,26 @@
 <div class="body"><div class="sig">pub fn seal(BytesView, nonce~ : BytesView, plain~ : BytesView, aad? : BytesView) -&gt; Bytes raise @spec.Broken</div><p>Seal one message in one call.</p></div>
 </div>
 </section>
-<h2 id="sign"><span class="no">09</span> Signatures</h2>
+<section class="pkg">
+<div class="pkg-head"><span class="no">06</span><h2>stream</h2><span class="path">moonbitstack/mooncrypt/aead/stream</span></div><p class="pkg-note">STREAM, the chunked payload encryption of the age format: https://c2sp.org/age</p><p class="pkg-note">The payload is split into 64 KiB chunks, each sealed with ChaCha20-Poly1305 under a 12-byte nonce of an 11-byte big-endian counter and a final-chunk flag. This is the STREAM construction of Hoang-Reyhanitabar-Rogaway-Vizar, without the key prefix because the payload key is already 256 bits and derived from both the file key and the nonce.</p>
+<div class="item" id="aead-stream-chunk">
+<div class="name"><span class="kind">let</span>chunk</div>
+<div class="body"><div class="sig">pub let chunk : Int32</div><p>The plaintext size of a full chunk: 64 KiB, as age fixes it.</p></div>
+</div>
+<div class="item" id="aead-stream-stream-new">
+<div class="name"><span class="kind">fn</span><span class="dim">Stream::</span>new</div>
+<div class="body"><div class="sig">pub fn Stream::new(@chachapoly.ChaChaPoly, chunk? : Int32) -&gt; Self</div><p>Wrap a payload cipher under a chunk size. Every chunk but the last holds exactly `chunk` plaintext bytes; 64 KiB is what age uses.</p></div>
+</div>
+<div class="item" id="aead-stream-stream-open">
+<div class="name"><span class="kind">fn</span><span class="dim">Stream::</span>open</div>
+<div class="body"><div class="sig">pub fn Stream::open(Self, BytesView) -&gt; Bytes raise @spec.Broken</div><p>Open a sealed payload: split the ciphertext at `chunk + 16`-byte boundaries, the last chunk taking whatever is left, and open each in turn. A ciphertext too short to hold a tag, or any chunk that does not authenticate, raises — so a truncated stream cannot pass for a complete one.</p></div>
+</div>
+<div class="item" id="aead-stream-stream-seal">
+<div class="name"><span class="kind">fn</span><span class="dim">Stream::</span>seal</div>
+<div class="body"><div class="sig">pub fn Stream::seal(Self, BytesView) -&gt; Bytes</div><p>Seal a payload: split it into chunks, seal each under its counter and final flag, and concatenate. An empty payload still produces one empty final chunk, which is the sixteen-byte tag and nothing else — so a zero-length body never looks like an absent one.</p></div>
+</div>
+</section>
+<h2 id="sign"><span class="no">10</span> Signatures</h2>
 <p class="lede">Five schemes, two traits</p>
 <section class="pkg">
 <div class="pkg-head"><span class="no">01</span><h2>rsa</h2><span class="path">moonbitstack/mooncrypt/rsa</span></div><p class="pkg-ref">RSA, RFC 8017 (PKCS #1 v2.2): https://www.rfc-editor.org/rfc/rfc8017</p><p class="pkg-note">Signatures — PKCS#1 v1.5 (§9.2), what JOSE calls RS256 and what certificates carry, and PSS (§9.1), what JOSE calls PS256 and what new designs should use — and encryption, RSAES-OAEP (§7.1).</p><p class="pkg-note">It sits at the top rather than under `sign/` because RSA is one primitive doing two jobs over one key type, and a method must live in its type's package: splitting it would put decryption where the private key is not.</p>
@@ -1899,6 +2042,10 @@
 <div class="item" id="rsa-privatekey-decrypt">
 <div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>decrypt</div>
 <div class="body"><div class="sig">pub fn PrivateKey::decrypt(Self, BytesView, digest? : Digest, mgf? : Digest, label? : BytesView) -&gt; Bytes raise @spec.Broken</div><p>Decrypt an RSAES-OAEP block (RFC 8017 §7.1.2).</p><p>Every way the block can be wrong reports the same [`@spec.Tag`], and the checks all run before any of them is acted on: which check failed is exactly what Manger's 2001 attack reads off, so it is not told apart here.</p><p>`digest`, `mgf` and `label` mean what they do in [`PublicKey::encrypt`] and must match what encrypted the block.</p></div>
+</div>
+<div class="item" id="rsa-privatekey-generate">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>generate</div>
+<div class="body"><div class="sig">pub fn[S : @moonseed.Source] PrivateKey::generate(S, bits? : Int32, digest? : Digest, scheme? : Scheme) -&gt; Self raise @moonseed.Unavailable</div></div>
 </div>
 <div class="item" id="rsa-privatekey-new">
 <div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>new</div>
@@ -1950,7 +2097,90 @@
 </div>
 </section>
 <section class="pkg">
-<div class="pkg-head"><span class="no">02</span><h2>ecdsa</h2><span class="path">moonbitstack/mooncrypt/sign/ecdsa</span></div><p class="pkg-ref">ECDSA, FIPS 186-4: https://doi.org/10.6028/NIST.FIPS.186-4 Deterministic nonces, RFC 6979: https://www.rfc-editor.org/rfc/rfc6979 Curve parameters, SEC 2 v2: https://www.secg.org/sec2-v2.pdf</p><p class="pkg-note">Signatures are `r ∥ s`, fixed-width, which is what JOSE and most wire formats carry; the ASN.1 DER wrapper OpenSSL writes belongs with the other DER.</p>
+<div class="pkg-head"><span class="no">02</span><h2>dsa</h2><span class="path">moonbitstack/mooncrypt/sign/dsa</span></div><p class="pkg-ref">DSA, FIPS 186-4: https://doi.org/10.6028/NIST.FIPS.186-4 Deterministic nonces, RFC 6979: https://www.rfc-editor.org/rfc/rfc6979</p><p class="pkg-note">Signatures are `r ∥ s`, two fixed-width big-endian integers — the encoding most wire formats carry; the ASN.1 DER wrapper OpenSSL writes is a separate concern and belongs with the other DER.</p>
+<div class="item" id="sign-dsa-domain-g">
+<div class="name"><span class="kind">fn</span><span class="dim">Domain::</span>g</div>
+<div class="body"><div class="sig">pub fn Domain::g(Self) -&gt; @bigint.BigInt</div></div>
+</div>
+<div class="item" id="sign-dsa-domain-modulus-size">
+<div class="name"><span class="kind">fn</span><span class="dim">Domain::</span>modulus_size</div>
+<div class="body"><div class="sig">pub fn Domain::modulus_size(Self) -&gt; Int32</div><p>The width of a value modulo `p` — the public key `y` and the generator `g` — which is wider than a signature.</p></div>
+</div>
+<div class="item" id="sign-dsa-domain-new">
+<div class="name"><span class="kind">fn</span><span class="dim">Domain::</span>new</div>
+<div class="body"><div class="sig">pub fn Domain::new(BytesView, BytesView, BytesView) -&gt; Self</div><p>Build a domain from the three values, each fixed-width big-endian.</p></div>
+</div>
+<div class="item" id="sign-dsa-domain-p">
+<div class="name"><span class="kind">fn</span><span class="dim">Domain::</span>p</div>
+<div class="body"><div class="sig">pub fn Domain::p(Self) -&gt; @bigint.BigInt</div></div>
+</div>
+<div class="item" id="sign-dsa-domain-q">
+<div class="name"><span class="kind">fn</span><span class="dim">Domain::</span>q</div>
+<div class="body"><div class="sig">pub fn Domain::q(Self) -&gt; @bigint.BigInt</div></div>
+</div>
+<div class="item" id="sign-dsa-domain-raw">
+<div class="name"><span class="kind">fn</span><span class="dim">Domain::</span>raw</div>
+<div class="body"><div class="sig">pub fn Domain::raw(@bigint.BigInt, @bigint.BigInt, @bigint.BigInt) -&gt; Self</div><p>Build a domain from values already read as integers.</p></div>
+</div>
+<div class="item" id="sign-dsa-domain-size">
+<div class="name"><span class="kind">fn</span><span class="dim">Domain::</span>size</div>
+<div class="body"><div class="sig">pub fn Domain::size(Self) -&gt; Int32</div><p>The signature length in bytes: `r` and `s`, each as wide as `q`.</p></div>
+</div>
+<div class="item" id="sign-dsa-privatekey-bytes">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>bytes</div>
+<div class="body"><div class="sig">pub fn PrivateKey::bytes(Self) -&gt; Bytes</div><p>The scalar written as fixed-width big-endian.</p></div>
+</div>
+<div class="item" id="sign-dsa-privatekey-domain">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>domain</div>
+<div class="body"><div class="sig">pub fn PrivateKey::domain(Self) -&gt; Domain</div><p>Which domain this key is on.</p></div>
+</div>
+<div class="item" id="sign-dsa-privatekey-generate">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>generate</div>
+<div class="body"><div class="sig">pub fn[S : @moonseed.Source] PrivateKey::generate(S, domain~ : Domain) -&gt; Self raise @moonseed.Unavailable</div></div>
+</div>
+<div class="item" id="sign-dsa-privatekey-generate-with">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>generate_with</div>
+<div class="body"><div class="sig">pub fn[S : @moonseed.Source] PrivateKey::generate_with(S, () -&gt; &amp;@spec.Hash, domain~ : Domain) -&gt; Self raise @moonseed.Unavailable</div></div>
+</div>
+<div class="item" id="sign-dsa-privatekey-new">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>new</div>
+<div class="body"><div class="sig">pub fn PrivateKey::new(BytesView, domain~ : Domain) -&gt; Self raise @spec.Broken</div><p>Read a signing key from its scalar `x`, fixed-width big-endian, paired with SHA-256.</p></div>
+</div>
+<div class="item" id="sign-dsa-privatekey-public">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>public</div>
+<div class="body"><div class="sig">pub fn PrivateKey::public(Self) -&gt; PublicKey</div><p>The verification key that matches this signing key: `y = g^x mod p`.</p></div>
+</div>
+<div class="item" id="sign-dsa-privatekey-sign">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>sign</div>
+<div class="body"><div class="sig">pub fn PrivateKey::sign(Self, BytesView) -&gt; Bytes</div></div>
+</div>
+<div class="item" id="sign-dsa-privatekey-with-hash">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>with_hash</div>
+<div class="body"><div class="sig">pub fn PrivateKey::with_hash(BytesView, () -&gt; &amp;@spec.Hash, domain~ : Domain) -&gt; Self raise @spec.Broken</div><p>Read a signing key from its scalar `x` against a digest of the caller's choosing.</p></div>
+</div>
+<div class="item" id="sign-dsa-publickey-bytes">
+<div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>bytes</div>
+<div class="body"><div class="sig">pub fn PublicKey::bytes(Self) -&gt; Bytes</div><p>The key as `y`, fixed-width big-endian and as wide as `p`.</p></div>
+</div>
+<div class="item" id="sign-dsa-publickey-domain">
+<div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>domain</div>
+<div class="body"><div class="sig">pub fn PublicKey::domain(Self) -&gt; Domain</div><p>Which domain this key is on.</p></div>
+</div>
+<div class="item" id="sign-dsa-publickey-new">
+<div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>new</div>
+<div class="body"><div class="sig">pub fn PublicKey::new(BytesView, domain~ : Domain) -&gt; Self raise @spec.Broken</div><p>Read a public key from `y`, fixed-width big-endian and as wide as `p`, paired with SHA-256.</p></div>
+</div>
+<div class="item" id="sign-dsa-publickey-verify">
+<div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>verify</div>
+<div class="body"><div class="sig">pub fn PublicKey::verify(Self, BytesView, BytesView) -&gt; Bool</div></div>
+</div>
+<div class="item" id="sign-dsa-publickey-with-hash">
+<div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>with_hash</div>
+<div class="body"><div class="sig">pub fn PublicKey::with_hash(BytesView, () -&gt; &amp;@spec.Hash, domain~ : Domain) -&gt; Self raise @spec.Broken</div><p>Read a public key from `y` against a digest of the caller's choosing.</p></div>
+</div>
+</section>
+<section class="pkg">
+<div class="pkg-head"><span class="no">03</span><h2>ecdsa</h2><span class="path">moonbitstack/mooncrypt/sign/ecdsa</span></div><p class="pkg-ref">ECDSA, FIPS 186-4: https://doi.org/10.6028/NIST.FIPS.186-4 Deterministic nonces, RFC 6979: https://www.rfc-editor.org/rfc/rfc6979 Curve parameters, SEC 2 v2: https://www.secg.org/sec2-v2.pdf</p><p class="pkg-note">Signatures are `r ∥ s`, fixed-width, which is what JOSE and most wire formats carry; the ASN.1 DER wrapper OpenSSL writes belongs with the other DER.</p>
 <div class="item" id="sign-ecdsa-privatekey-bytes">
 <div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>bytes</div>
 <div class="body"><div class="sig">pub fn PrivateKey::bytes(Self) -&gt; Bytes</div><p>The scalar this key is written as, big-endian and fixed-width.</p></div>
@@ -2009,7 +2239,7 @@
 </div>
 </section>
 <section class="pkg">
-<div class="pkg-head"><span class="no">03</span><h2>ed25519</h2><span class="path">moonbitstack/mooncrypt/sign/ed25519</span></div><p class="pkg-note">Ed25519, RFC 8032: https://www.rfc-editor.org/rfc/rfc8032</p><p class="pkg-note">Signatures are deterministic — the nonce comes out of the key and the message — so there is no entropy source to get wrong, which is the whole reason this scheme replaced ECDSA wherever it could.</p>
+<div class="pkg-head"><span class="no">04</span><h2>ed25519</h2><span class="path">moonbitstack/mooncrypt/sign/ed25519</span></div><p class="pkg-note">Ed25519, RFC 8032: https://www.rfc-editor.org/rfc/rfc8032</p><p class="pkg-note">Signatures are deterministic — the nonce comes out of the key and the message — so there is no entropy source to get wrong, which is the whole reason this scheme replaced ECDSA wherever it could.</p>
 <div class="item" id="sign-ed25519-key-size">
 <div class="name"><span class="kind">let</span>key_size</div>
 <div class="body"><div class="sig">pub let key_size : Int32</div><p>The length of a seed, a public key and half a signature.</p></div>
@@ -2056,7 +2286,7 @@
 </div>
 </section>
 <section class="pkg">
-<div class="pkg-head"><span class="no">04</span><h2>ed448</h2><span class="path">moonbitstack/mooncrypt/sign/ed448</span></div><p class="pkg-note">Ed448, RFC 8032: https://www.rfc-editor.org/rfc/rfc8032</p><p class="pkg-note">The same scheme as Ed25519 over a wider curve, with three things different enough that the code cannot be shared:</p><p class="pkg-note">* the curve is untwisted (`a = 1`, not `a = -1`), so the addition law has a different shape; * the hash is SHAKE256 at 114 bytes rather than SHA-512 at 64, because 114 bytes covers two 456-bit scalars; * every scalar and coordinate is 57 bytes, not 32.</p><p class="pkg-note">The context string is supported, since the domain separator `dom4` is what makes a signature unusable in a protocol that did not ask for it. Both Ed448 and the prehashed Ed448ph are offered, because Ed448ph is the variant for messages that do not fit in memory.</p>
+<div class="pkg-head"><span class="no">05</span><h2>ed448</h2><span class="path">moonbitstack/mooncrypt/sign/ed448</span></div><p class="pkg-note">Ed448, RFC 8032: https://www.rfc-editor.org/rfc/rfc8032</p><p class="pkg-note">The same scheme as Ed25519 over a wider curve, with three things different enough that the code cannot be shared:</p><p class="pkg-note">* the curve is untwisted (`a = 1`, not `a = -1`), so the addition law has a different shape; * the hash is SHAKE256 at 114 bytes rather than SHA-512 at 64, because 114 bytes covers two 456-bit scalars; * every scalar and coordinate is 57 bytes, not 32.</p><p class="pkg-note">The context string is supported, since the domain separator `dom4` is what makes a signature unusable in a protocol that did not ask for it. Both Ed448 and the prehashed Ed448ph are offered, because Ed448ph is the variant for messages that do not fit in memory.</p>
 <div class="item" id="sign-ed448-key-size">
 <div class="name"><span class="kind">let</span>key_size</div>
 <div class="body"><div class="sig">pub let key_size : Int32</div><p>The length of a secret, a public key and half a signature: 57 bytes, which is 456 bits — the bit width `b` in RFC 8032's table, not the field width.</p></div>
@@ -2111,7 +2341,7 @@
 </div>
 </section>
 <section class="pkg">
-<div class="pkg-head"><span class="no">05</span><h2>schnorr</h2><span class="path">moonbitstack/mooncrypt/sign/schnorr</span></div><p class="pkg-note">Schnorr signatures over secp256k1, as BIP 340 defines them (2020).</p><p class="pkg-note">The scheme signs with a key whose public point has an even y coordinate, and verifies by lifting the 32-byte x coordinate back to that same point. That is the whole trick of the x-only public key: a point and its negation share an x, so half of each key pair is discarded, and a signature that would only hold for one of the two is what makes the encoding unambiguous again.</p><p class="pkg-note">Three tagged hashes in one signature, each with its own tag so that a value hashed for one purpose can never be reinterpreted as another:</p><p class="pkg-note">aux       the optional randomness mixed into the nonce nonce     r = H(aux-mixed secret || P || m) challenge e = H(R || P || m)</p><p class="pkg-note">The nonce is derived rather than random. BIP 340 takes 32 bytes of auxiliary randomness so that a compromised entropy source cannot leak the key, while the derivation still makes a signature reproducible when that input is fixed.</p>
+<div class="pkg-head"><span class="no">06</span><h2>schnorr</h2><span class="path">moonbitstack/mooncrypt/sign/schnorr</span></div><p class="pkg-note">Schnorr signatures over secp256k1, as BIP 340 defines them (2020).</p><p class="pkg-note">The scheme signs with a key whose public point has an even y coordinate, and verifies by lifting the 32-byte x coordinate back to that same point. That is the whole trick of the x-only public key: a point and its negation share an x, so half of each key pair is discarded, and a signature that would only hold for one of the two is what makes the encoding unambiguous again.</p><p class="pkg-note">Three tagged hashes in one signature, each with its own tag so that a value hashed for one purpose can never be reinterpreted as another:</p><p class="pkg-note">aux       the optional randomness mixed into the nonce nonce     r = H(aux-mixed secret || P || m) challenge e = H(R || P || m)</p><p class="pkg-note">The nonce is derived rather than random. BIP 340 takes 32 bytes of auxiliary randomness so that a compromised entropy source cannot leak the key, while the derivation still makes a signature reproducible when that input is fixed.</p>
 <div class="item" id="sign-schnorr-privatekey">
 <div class="name"><span class="kind">type</span>PrivateKey</div>
 <div class="body"><div class="sig">pub struct PrivateKey {</div><p>A signing key.</p><div class="sig">implements <code>@spec.Signer</code></div></div>
@@ -2166,7 +2396,7 @@
 </div>
 </section>
 <section class="pkg">
-<div class="pkg-head"><span class="no">06</span><h2>sm2</h2><span class="path">moonbitstack/mooncrypt/sign/sm2</span></div><p class="pkg-note">SM2 digital signature, GB/T 32918.2-2016: https://openstd.samr.gov.cn/bzgk/gb/newGbInfo?hcno=A6A3A9F0C2E4B6E9D0C4B1B0A9E1C2C1</p><p class="pkg-note">The curve is a 256-bit short Weierstrass curve of its own, and the digest is SM3 — a signature is defined over both, so this package carries its own curve arithmetic rather than borrowing another curve's.</p>
+<div class="pkg-head"><span class="no">07</span><h2>sm2</h2><span class="path">moonbitstack/mooncrypt/sign/sm2</span></div><p class="pkg-note">SM2 digital signature, GB/T 32918.2-2016: https://openstd.samr.gov.cn/bzgk/gb/newGbInfo?hcno=A6A3A9F0C2E4B6E9D0C4B1B0A9E1C2C1</p><p class="pkg-note">The curve is a 256-bit short Weierstrass curve of its own, and the digest is SM3 — a signature is defined over both, so this package carries its own curve arithmetic rather than borrowing another curve's.</p>
 <div class="item" id="sign-sm2-privatekey">
 <div class="name"><span class="kind">type</span>PrivateKey</div>
 <div class="body"><div class="sig">pub struct PrivateKey {</div><p>A signing key: a scalar in `[1, n-1]`.</p><div class="sig">implements <code>@spec.Signer</code></div></div>
@@ -2231,7 +2461,7 @@
 <div class="body"><div class="sig">pub fn PublicKey::verify_with(Self, BytesView, BytesView, id? : BytesView) -&gt; Bool</div><p>Check `sig` against `msg` and `id`. A malformed signature is a `false` answer, not an error: it is an expected thing for the peer to send.</p></div>
 </div>
 </section>
-<h2 id="kex"><span class="no">10</span> Key agreement</h2>
+<h2 id="kex"><span class="no">11</span> Key agreement</h2>
 <p class="lede">Two parties arriving at one secret</p>
 <section class="pkg">
 <div class="pkg-head"><span class="no">01</span><h2>dh</h2><span class="path">moonbitstack/mooncrypt/kex/dh</span></div><p class="pkg-note">Finite-field Diffie-Hellman over the ffdhe groups of RFC 7919.</p><p class="pkg-note">The alternative to an elliptic-curve exchange, and the one that still buys something where a curve is not available. Every group here is a safe prime of the form the RFC searched for: p = 2^n - 2^(n-64) + { ... } - 1, generator 2, with the top and bottom 64 bits all ones. Because the subgroup order is the prime (p-1)/2, a peer's value that is not in [2, p-2] is either a unit or a member of a small subgroup, and both are refused rather than exponentiated.</p><p class="pkg-note">The primes are RFC 7919 constants, and the script that wrote them checked each one for bit length, generator, the all-ones ends, primality and being 7 mod 8 before it emitted a digit.</p>
@@ -2359,7 +2589,7 @@
 <div class="body"><div class="sig">pub fn shared(BytesView, BytesView) -&gt; Bytes raise @spec.Broken</div><p>Apply a scalar to a u-coordinate, which is the whole of X448 (RFC 7748 §5).</p><p>Both inputs and the answer are 56 little-endian bytes. The scalar is clamped — and, unlike X25519, nothing is masked off the u-coordinate, because 56 bytes is exactly the width of the field.</p><p>An all-zero shared secret is refused, as in [`@x25519`]: it is what a low-order point produces, and it means the peer chose the answer rather than contributing to it.</p></div>
 </div>
 </section>
-<h2 id="key"><span class="no">11</span> Key files</h2>
+<h2 id="key"><span class="no">12</span> Key files</h2>
 <p class="lede">ASN.1, PEM, and the formats built on them</p>
 <section class="pkg">
 <div class="pkg-head"><span class="no">01</span><h2>asn1</h2><span class="path">moonbitstack/mooncrypt/asn1</span></div><p class="pkg-ref">ASN.1 Distinguished Encoding Rules, ITU-T X.690: https://www.itu.int/rec/T-REC-X.690</p><p class="pkg-note">The type-length-value layer that key files and certificates are built on. Nothing here is cryptography; it is here because everything cryptographic that has a file format needs it.</p>
@@ -2499,7 +2729,10 @@
   P384
   P521
   Secp256k1
-} derive(Eq, @debug.Debug)</div><p>Which curve a key lives on.</p><p>The four short-Weierstrass curves that protocols in use actually name: the three NIST primes, which TLS and JOSE speak, and secp256k1, which Bitcoin and Ethereum speak. They differ only in their parameters, so the arithmetic below is written once and each curve is a row in a table.</p></div>
+  BrainpoolP256r1
+  BrainpoolP384r1
+  BrainpoolP512r1
+} derive(Eq, @debug.Debug)</div><p>Which curve a key lives on.</p><p>The short-Weierstrass curves that protocols in use actually name: the three NIST primes, which TLS and JOSE speak; secp256k1, which Bitcoin and Ethereum speak; and the three brainpool curves RFC 5639 defines, which some European and government profiles require. They differ only in their parameters, so the arithmetic is written once and each curve is a row in a table.</p></div>
 </div>
 <div class="item" id="curve-curve-size">
 <div class="name"><span class="kind">fn</span><span class="dim">Curve::</span>size</div>
@@ -2605,7 +2838,7 @@
 <div class="body"><div class="sig">pub fn spki_ec_der(@curve.Curve, BytesView) -&gt; Bytes</div><p>A `SubjectPublicKeyInfo` for an EC key: the algorithm identifier names the curve, and the BIT STRING holds the point in its uncompressed form.</p></div>
 </div>
 </section>
-<h2 id="otp"><span class="no">12</span> One-time passwords</h2>
+<h2 id="otp"><span class="no">13</span> One-time passwords</h2>
 <p class="lede">A MAC of the clock</p>
 <section class="pkg">
 <div class="pkg-head"><span class="no">01</span><h2>otp</h2><span class="path">moonbitstack/mooncrypt/otp</span></div><p class="pkg-note">One-time passwords (RFC 4226) and their time-based form (RFC 6238).</p><p class="pkg-note">The two standards are one algorithm with a different counter: HOTP counts events, TOTP counts thirty-second steps since the Unix epoch, and both HMAC that counter and read four bytes out of the digest.</p><p class="pkg-note">This package depends on a hash rather than on a clock. A time-based code is computed from a unix time the caller passes in, which keeps the whole package testable against a fixed table and leaves "what time is it" to the program that already knows.</p>

@@ -29,6 +29,7 @@ FAMILIES = [
     ("mac", "Message authentication", "Keyed digests, from HMAC to KMAC"),
     ("sum", "Checksums", "Non-cryptographic digests for integrity against noise"),
     ("kdf", "Key derivation", "Turning one secret into the keys a protocol needs"),
+    ("drbg", "Randomness", "Deterministic generators seeded from an entropy source"),
     ("cipher", "Block ciphers", "Sixteen-byte blocks and the modes that chain them"),
     ("stream", "Stream ciphers", "A keystream, exclusive-ored with the message"),
     ("aead", "Authenticated encryption", "Encryption that carries its own tag"),
@@ -60,7 +61,7 @@ def family_of(path: str) -> str | None:
     head = parts[0]
     if head == "internal":
         return None
-    if head in {"spec", "hash", "mac", "sum", "kdf", "aead", "sign", "kex", "otp"}:
+    if head in {"spec", "hash", "mac", "sum", "kdf", "drbg", "aead", "sign", "kex", "otp"}:
         return head
     if head == "rsa":
         return "sign"
