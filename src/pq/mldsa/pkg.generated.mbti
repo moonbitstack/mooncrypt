@@ -1,0 +1,80 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/pq/mldsa"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/moonseed",
+}
+
+// Values
+pub let context_size : Int32
+
+// Errors
+
+// Types and methods
+pub(all) enum Kind {
+  D44
+  D65
+  D87
+} derive(Eq, @debug.Debug)
+pub fn Kind::equal(Self, Self) -> Bool
+pub fn Kind::not_equal(Self, Self) -> Bool
+pub fn Kind::private_key(Self) -> Int32
+pub fn Kind::public_key(Self) -> Int32
+pub fn Kind::seeds(Self) -> Int32
+pub fn Kind::signature(Self) -> Int32
+pub fn Kind::to_repr(Self) -> @debug.Repr
+
+pub(all) enum PreHash {
+  Sha2_224
+  Sha2_256
+  Sha2_384
+  Sha2_512
+  Sha2_512_224
+  Sha2_512_256
+  Sha3_224
+  Sha3_256
+  Sha3_384
+  Sha3_512
+  Shake128
+  Shake256
+} derive(Eq, @debug.Debug)
+pub fn PreHash::equal(Self, Self) -> Bool
+pub fn PreHash::not_equal(Self, Self) -> Bool
+pub fn PreHash::to_repr(Self) -> @debug.Repr
+
+pub struct PrivateKey {
+  kind : Kind
+  raw : Bytes
+  public : Bytes
+  rho : Bytes
+  key : Bytes
+  tr : Bytes
+  s1 : Array[FixedArray[Int32]]
+  s2 : Array[FixedArray[Int32]]
+  t0 : Array[FixedArray[Int32]]
+}
+pub fn PrivateKey::bytes(Self) -> Bytes
+pub fn PrivateKey::from_seed(kind~ : Kind, BytesView) -> Self raise @spec.Broken
+pub fn[S : @moonseed.Source] PrivateKey::generate(S, kind? : Kind) -> Self raise @moonseed.Unavailable
+pub fn PrivateKey::kind(Self) -> Kind
+pub fn PrivateKey::new(kind~ : Kind, BytesView) -> Self raise @spec.Broken
+pub fn PrivateKey::public_key(Self) -> PublicKey
+pub fn PrivateKey::sign(Self, BytesView, context? : BytesView, prehash? : PreHash) -> Bytes
+pub fn[S : @moonseed.Source] PrivateKey::sign_randomized(Self, BytesView, S, context? : BytesView, prehash? : PreHash) -> Bytes raise @moonseed.Unavailable
+pub impl @spec.Signer for PrivateKey
+
+pub struct PublicKey {
+  kind : Kind
+  raw : Bytes
+}
+pub fn PublicKey::bytes(Self) -> Bytes
+pub fn PublicKey::kind(Self) -> Kind
+pub fn PublicKey::new(kind~ : Kind, BytesView) -> Self raise @spec.Broken
+pub fn PublicKey::verify(Self, BytesView, BytesView, context? : BytesView, prehash? : PreHash) -> Bool
+pub impl @spec.Verifier for PublicKey
+
+// Type aliases
+
+// Traits

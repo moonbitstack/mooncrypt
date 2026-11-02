@@ -138,6 +138,99 @@ def mlkem(cache: pathlib.Path, _full: bool):
         write(ROOT / "pq" / "mlkem" / f"vectors_{name.lower()}_test.mbt", body)
 
 
+# --------------------------------------------------------------------- ML-DSA
+
+# Every signature family is sampled: a signing vector is a key and a signature,
+# which is kilobytes each, and the point of the set is to cover each interface
+# combination, not to replay the same interface hundreds of times.
+SAMPLE = 3
+
+
+def pick(cases, n=SAMPLE):
+    return cases[:n]
+
+
+def mldsa(cache: pathlib.Path, full: bool):
+    keygen = {}
+    for group, cases in load(cache, "ML-DSA-keyGen-FIPS204"):
+        keygen[param(group["parameterSet"])] = cases
+
+    siggen, sigver = {}, {}
+    for family, sink in (("ML-DSA-sigGen-FIPS204", siggen), ("ML-DSA-sigVer-FIPS204", sigver)):
+        for group, cases in load(cache, family):
+            name = param(group["parameterSet"])
+            sink.setdefault(name, []).append((group, pick(cases, 999) if full else pick(cases)))
+
+    for name in sorted(keygen):
+        body = table(
+            f"keygen_{name.lower()}",
+            "(String, String, String)",
+            [f"({h(c['seed'])}, {h(c['pk'])}, {h(c['sk'])})," for c in keygen[name]],
+        )
+
+        outer, inner = [], []
+        for group, cases in siggen.get(name, []):
+            for c in cases:
+                rnd = h(c.get("rnd", ""))
+                if group["signatureInterface"] == "external":
+                    tag = "pure" if group["preHash"] == "pure" else "prehash:" + c["hashAlg"].lower()
+                    outer.append(
+                        f"({h(tag)}, {h(c['message'])}, {h(c.get('context', ''))}, "
+                        f"{h(c['sk'])}, {rnd}, {h(c['signature'])}),"
+                    )
+                elif group["externalMu"]:
+                    inner.append(
+                        f"({h('mu')}, {h(c['sk'])}, {h(c['mu'])}, {rnd}, {h(c['signature'])}),"
+                    )
+                else:
+                    inner.append(
+                        f"({h('msg')}, {h(c['sk'])}, {h(c['message'])}, {rnd}, "
+                        f"{h(c['signature'])}),"
+                    )
+        body += table(
+            f"siggen_{name.lower()}",
+            "(String, String, String, String, String, String)",
+            outer,
+        )
+
+        ver, ver_inner = [], []
+        for group, cases in sigver.get(name, []):
+            for c in cases:
+                if group["signatureInterface"] == "external":
+                    tag = "pure" if group["preHash"] == "pure" else "prehash:" + c["hashAlg"].lower()
+                    ver.append(
+                        f"({h(tag)}, {h(c['pk'])}, {h(c['message'])}, {h(c.get('context', ''))}, "
+                        f"{h(c['signature'])}, {str(c['testPassed']).lower()}),"
+                    )
+                else:
+                    tag = "mu" if group["externalMu"] else "msg"
+                    subject = c["mu"] if group["externalMu"] else c["message"]
+                    ver_inner.append(
+                        f"({h(tag)}, {h(c['pk'])}, {h(subject)}, {h(c['signature'])}, "
+                        f"{str(c['testPassed']).lower()}),"
+                    )
+        body += table(
+            f"sigver_{name.lower()}",
+            "(String, String, String, String, String, Bool)",
+            ver,
+        )
+        write(ROOT / "pq" / "mldsa" / f"vectors_{name.lower()}_test.mbt", body)
+
+        # The internal interface is not part of the public surface, so its
+        # vectors live in the package's own white-box tests.
+        inner_body = table(
+            f"siggen_internal_{name.lower()}",
+            "(String, String, String, String, String)",
+            inner,
+        )
+        inner_body += table(
+            f"sigver_internal_{name.lower()}",
+            "(String, String, String, String, Bool)",
+            ver_inner,
+        )
+        write(ROOT / "pq" / "mldsa" / f"vectors_internal_{name.lower()}_wbtest.mbt", inner_body)
+
+
 def param(name: str) -> str:
     """ML-KEM-768 -> K768, ML-DSA-65 -> D65, SLH-DSA-SHA2-128f -> Sha2_128f."""
     if name.startswith("ML-KEM-"):
@@ -153,6 +246,7 @@ def main():
     cache = pathlib.Path(sys.argv[1])
     full = "--full" in sys.argv
     mlkem(cache, full)
+    mldsa(cache, full)
 
 
 if __name__ == "__main__":

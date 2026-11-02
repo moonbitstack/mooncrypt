@@ -74,7 +74,7 @@
         <h1>Every package, in order</h1>
         <p class="lede">
           Generated from each package's interface file and the comments above its
-          declarations. 655 public declarations across 62
+          declarations. 676 public declarations across 63
           packages.
         </p>
       </div>
@@ -2697,7 +2697,111 @@
 <h2 id="pq"><span class="no">12</span> Post-quantum</h2>
 <p class="lede">Lattice and hash-based schemes, from FIPS 203 to FIPS 205</p>
 <section class="pkg">
-<div class="pkg-head"><span class="no">01</span><h2>mlkem</h2><span class="path">moonbitstack/mooncrypt/pq/mlkem</span></div><p class="pkg-ref">ML-KEM, FIPS 203: https://doi.org/10.6028/NIST.FIPS.203</p><p class="pkg-note">A module-LWE key encapsulation over Z_3329, with the compression and the implicit rejection that the standard fixes. One package because the three parameter sets differ only in their constants, which are a `Kind`.</p>
+<div class="pkg-head"><span class="no">01</span><h2>mldsa</h2><span class="path">moonbitstack/mooncrypt/pq/mldsa</span></div><p class="pkg-ref">ML-DSA, FIPS 204: https://doi.org/10.6028/NIST.FIPS.204</p><p class="pkg-note">A module-lattice signature over Z_8380417, with the rejection loop, the hint mechanism and the two interfaces the standard defines. One package because the three parameter sets differ only in their table entries.</p>
+<div class="item" id="pq-mldsa-privatekey">
+<div class="name"><span class="kind">type</span>PrivateKey</div>
+<div class="body"><div class="sig">pub struct PrivateKey {</div><p>An ML-DSA signing key.</p><p>The components the rejection loop multiplies by are expanded once, here, and kept in the transform domain: every attempt needs them, and re-deriving them per attempt would cost more than the attempt itself. The public key is kept alongside because it is not part of the private key's bytes and computing it on demand would mean running the key generation again.</p><div class="sig">implements <code>@spec.Signer</code></div></div>
+</div>
+<div class="item" id="pq-mldsa-publickey">
+<div class="name"><span class="kind">type</span>PublicKey</div>
+<div class="body"><div class="sig">pub struct PublicKey {</div><p>An ML-DSA verification key.</p><div class="sig">implements <code>@spec.Verifier</code></div></div>
+</div>
+<div class="item" id="pq-mldsa-kind">
+<div class="name"><span class="kind">type</span>Kind</div>
+<div class="body"><div class="sig">pub(all) enum Kind {
+  D44
+  D65
+  D87
+} derive(Eq, @debug.Debug)</div><p>Which ML-DSA parameter set.</p><p>The three move together: more rows in the matrix, more noise in the secret, a wider masking range and a challenge with more non-zero coefficients. They are one type because every one of those is a table entry, not a different algorithm.</p></div>
+</div>
+<div class="item" id="pq-mldsa-prehash">
+<div class="name"><span class="kind">type</span>PreHash</div>
+<div class="body"><div class="sig">pub(all) enum PreHash {
+  Sha2_224
+  Sha2_256
+  Sha2_384
+  Sha2_512
+  Sha2_512_224
+  Sha2_512_256
+  Sha3_224
+  Sha3_256
+  Sha3_384
+  Sha3_512
+  Shake128
+  Shake256
+} derive(Eq, @debug.Debug)</div><p>A hash function usable as the pre-hash of [`PrivateKey::sign`], which is the twelve FIPS 204 §5.4 allows.</p><p>The list is the identity of the algorithm as well as its name: the object identifier that goes in front of the digest is `2.16.840.1.101.3.4.2.x` with `x` the position of the variant here, so the two cannot drift apart.</p></div>
+</div>
+<div class="item" id="pq-mldsa-context-size">
+<div class="name"><span class="kind">let</span>context_size</div>
+<div class="body"><div class="sig">pub let context_size : Int32</div><p>The longest context string a signature may carry, in bytes.</p></div>
+</div>
+<div class="item" id="pq-mldsa-kind-private-key">
+<div class="name"><span class="kind">fn</span><span class="dim">Kind::</span>private_key</div>
+<div class="body"><div class="sig">pub fn Kind::private_key(Self) -&gt; Int32</div><p>The private-key length: the two seeds, the public-key hash, and the packed `s1`, `s2` and `t0`.</p></div>
+</div>
+<div class="item" id="pq-mldsa-kind-public-key">
+<div class="name"><span class="kind">fn</span><span class="dim">Kind::</span>public_key</div>
+<div class="body"><div class="sig">pub fn Kind::public_key(Self) -&gt; Int32</div><p>The public-key length: `32 + 320 k` bytes.</p></div>
+</div>
+<div class="item" id="pq-mldsa-kind-seeds">
+<div class="name"><span class="kind">fn</span><span class="dim">Kind::</span>seeds</div>
+<div class="body"><div class="sig">pub fn Kind::seeds(Self) -&gt; Int32</div><p>The seed length, which is 32 bytes for every set.</p></div>
+</div>
+<div class="item" id="pq-mldsa-kind-signature">
+<div class="name"><span class="kind">fn</span><span class="dim">Kind::</span>signature</div>
+<div class="body"><div class="sig">pub fn Kind::signature(Self) -&gt; Int32</div><p>The signature length: the challenge hash, the packed `z`, and the hint.</p></div>
+</div>
+<div class="item" id="pq-mldsa-privatekey-bytes">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>bytes</div>
+<div class="body"><div class="sig">pub fn PrivateKey::bytes(Self) -&gt; Bytes</div><p>The bytes this key is written as.</p></div>
+</div>
+<div class="item" id="pq-mldsa-privatekey-from-seed">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>from_seed</div>
+<div class="body"><div class="sig">pub fn PrivateKey::from_seed(kind~ : Kind, BytesView) -&gt; Self raise @spec.Broken</div><p>Derive a key pair from its 32-byte seed, as FIPS 204 §7.1 does.</p></div>
+</div>
+<div class="item" id="pq-mldsa-privatekey-generate">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>generate</div>
+<div class="body"><div class="sig">pub fn[S : @moonseed.Source] PrivateKey::generate(S, kind? : Kind) -&gt; Self raise @moonseed.Unavailable</div></div>
+</div>
+<div class="item" id="pq-mldsa-privatekey-kind">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>kind</div>
+<div class="body"><div class="sig">pub fn PrivateKey::kind(Self) -&gt; Kind</div><p>Which parameter set the key belongs to.</p></div>
+</div>
+<div class="item" id="pq-mldsa-privatekey-new">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>new</div>
+<div class="body"><div class="sig">pub fn PrivateKey::new(kind~ : Kind, BytesView) -&gt; Self raise @spec.Broken</div><p>Read a signing key from the standard's byte layout.</p><p>The public key is not stored in it, so it is recomputed — one matrix product at load, after which signing costs what it costs.</p></div>
+</div>
+<div class="item" id="pq-mldsa-privatekey-public-key">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>public_key</div>
+<div class="body"><div class="sig">pub fn PrivateKey::public_key(Self) -&gt; PublicKey</div><p>The public half.</p></div>
+</div>
+<div class="item" id="pq-mldsa-privatekey-sign">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>sign</div>
+<div class="body"><div class="sig">pub fn PrivateKey::sign(Self, BytesView, context? : BytesView, prehash? : PreHash) -&gt; Bytes</div><p>Sign a message.</p><p>This is the deterministic variant of FIPS 204 §5.2: a given key and message always produce the same signature, which is what `@spec.Signer` promises. [`sign_randomized`] is the hedged variant, and the one to prefer where a source of randomness is available and a fault attack is a concern.</p><p>`context` is the domain separator of FIPS 204 §5.2, at most [`context_size`] bytes: it distinguishes one use of a key from another and is not secret. A longer one is a programming error — a context is a protocol constant, never something a peer supplies — and stops the process rather than producing a signature that cannot be verified.</p><p>`prehash` switches to HashML-DSA (§5.4): the message is digested by that function and its object identifier is signed in front of the digest, so a signature over a pre-hash cannot be read as one over the message.</p></div>
+</div>
+<div class="item" id="pq-mldsa-privatekey-sign-randomized">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>sign_randomized</div>
+<div class="body"><div class="sig">pub fn[S : @moonseed.Source] PrivateKey::sign_randomized(Self, BytesView, S, context? : BytesView, prehash? : PreHash) -&gt; Bytes raise @moonseed.Unavailable</div></div>
+</div>
+<div class="item" id="pq-mldsa-publickey-bytes">
+<div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>bytes</div>
+<div class="body"><div class="sig">pub fn PublicKey::bytes(Self) -&gt; Bytes</div><p>The bytes this key is written as.</p></div>
+</div>
+<div class="item" id="pq-mldsa-publickey-kind">
+<div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>kind</div>
+<div class="body"><div class="sig">pub fn PublicKey::kind(Self) -&gt; Kind</div><p>Which parameter set the key belongs to.</p></div>
+</div>
+<div class="item" id="pq-mldsa-publickey-new">
+<div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>new</div>
+<div class="body"><div class="sig">pub fn PublicKey::new(kind~ : Kind, BytesView) -&gt; Self raise @spec.Broken</div><p>Read a verification key. Only the length is checked: the ten-bit fields of `t1` cannot name anything outside the range they are decoded into.</p></div>
+</div>
+<div class="item" id="pq-mldsa-publickey-verify">
+<div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>verify</div>
+<div class="body"><div class="sig">pub fn PublicKey::verify(Self, BytesView, BytesView, context? : BytesView, prehash? : PreHash) -&gt; Bool</div><p>Check a signature.</p><p>A signature that does not verify is a `false`, not an error: a bad signature is an expected answer from a peer, and raising here invites a caller to swallow it.</p></div>
+</div>
+</section>
+<section class="pkg">
+<div class="pkg-head"><span class="no">02</span><h2>mlkem</h2><span class="path">moonbitstack/mooncrypt/pq/mlkem</span></div><p class="pkg-ref">ML-KEM, FIPS 203: https://doi.org/10.6028/NIST.FIPS.203</p><p class="pkg-note">A module-LWE key encapsulation over Z_3329, with the compression and the implicit rejection that the standard fixes. One package because the three parameter sets differ only in their constants, which are a `Kind`.</p>
 <div class="item" id="pq-mlkem-encapsulated">
 <div class="name"><span class="kind">type</span>Encapsulated</div>
 <div class="body"><div class="sig">pub(all) struct Encapsulated {
