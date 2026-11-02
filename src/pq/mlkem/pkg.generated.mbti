@@ -1,0 +1,60 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/pq/mlkem"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/moonseed",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) struct Encapsulated {
+  secret : Bytes
+  ciphertext : Bytes
+}
+
+pub(all) enum Kind {
+  K512
+  K768
+  K1024
+} derive(Eq, @debug.Debug)
+pub fn Kind::ciphertext(Self) -> Int32
+pub fn Kind::decapsulation(Self) -> Int32
+pub fn Kind::encapsulation(Self) -> Int32
+pub fn Kind::equal(Self, Self) -> Bool
+pub fn Kind::not_equal(Self, Self) -> Bool
+pub fn Kind::seeds(Self) -> Int32
+pub fn Kind::shared(Self) -> Int32
+pub fn Kind::to_repr(Self) -> @debug.Repr
+pub impl @spec.Kem for Kind
+
+pub struct PrivateKey {
+  kind : Kind
+  dk : Bytes
+  ek : Bytes
+}
+pub fn PrivateKey::bytes(Self) -> Bytes
+pub fn PrivateKey::decapsulate(Self, BytesView) -> Bytes raise @spec.Broken
+pub fn PrivateKey::encapsulation_key(Self) -> PublicKey
+pub fn PrivateKey::from_seed(kind~ : Kind, BytesView) -> Self raise @spec.Broken
+pub fn[S : @moonseed.Source] PrivateKey::generate(S, kind? : Kind) -> Self raise @moonseed.Unavailable
+pub fn PrivateKey::kind(Self) -> Kind
+pub fn PrivateKey::new(kind~ : Kind, BytesView) -> Self raise @spec.Broken
+
+pub struct PublicKey {
+  kind : Kind
+  raw : Bytes
+}
+pub fn PublicKey::bytes(Self) -> Bytes
+pub fn[S : @moonseed.Source] PublicKey::encapsulate(Self, S) -> Encapsulated raise @moonseed.Unavailable
+pub fn PublicKey::encapsulate_with(Self, BytesView) -> Encapsulated raise @spec.Broken
+pub fn PublicKey::kind(Self) -> Kind
+pub fn PublicKey::new(kind~ : Kind, BytesView) -> Self raise @spec.Broken
+
+// Type aliases
+
+// Traits

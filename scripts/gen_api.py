@@ -35,6 +35,11 @@ FAMILIES = [
     ("aead", "Authenticated encryption", "Encryption that carries its own tag"),
     ("sign", "Signatures", "Five schemes, two traits"),
     ("kex", "Key agreement", "Two parties arriving at one secret"),
+    (
+        "pq",
+        "Post-quantum",
+        "Lattice and hash-based schemes, from FIPS 203 to FIPS 205",
+    ),
     ("key", "Key files", "ASN.1, PEM, and the formats built on them"),
     ("otp", "One-time passwords", "A MAC of the clock"),
 ]
@@ -61,7 +66,19 @@ def family_of(path: str) -> str | None:
     head = parts[0]
     if head == "internal":
         return None
-    if head in {"spec", "hash", "mac", "sum", "kdf", "drbg", "aead", "sign", "kex", "otp"}:
+    if head in {
+        "spec",
+        "hash",
+        "mac",
+        "sum",
+        "kdf",
+        "drbg",
+        "aead",
+        "sign",
+        "kex",
+        "pq",
+        "otp",
+    }:
         return head
     if head == "rsa":
         return "sign"

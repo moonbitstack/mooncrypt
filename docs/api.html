@@ -74,7 +74,7 @@
         <h1>Every package, in order</h1>
         <p class="lede">
           Generated from each package's interface file and the comments above its
-          declarations. 634 public declarations across 61
+          declarations. 655 public declarations across 62
           packages.
         </p>
       </div>
@@ -96,8 +96,9 @@
             <li><a href="#aead"><span class="n">09</span>Authenticated encryption</a></li>
             <li><a href="#sign"><span class="n">10</span>Signatures</a></li>
             <li><a href="#kex"><span class="n">11</span>Key agreement</a></li>
-            <li><a href="#key"><span class="n">12</span>Key files</a></li>
-            <li><a href="#otp"><span class="n">13</span>One-time passwords</a></li>
+            <li><a href="#pq"><span class="n">12</span>Post-quantum</a></li>
+            <li><a href="#key"><span class="n">13</span>Key files</a></li>
+            <li><a href="#otp"><span class="n">14</span>One-time passwords</a></li>
           </ol>
         </aside>
 
@@ -114,6 +115,7 @@
 <a href="#aead">Authenticated encryption</a>
 <a href="#sign">Signatures</a>
 <a href="#kex">Key agreement</a>
+<a href="#pq">Post-quantum</a>
 <a href="#key">Key files</a>
 <a href="#otp">One-time passwords</a>
 </nav>
@@ -2692,7 +2694,103 @@
 <div class="body"><div class="sig">pub fn shared(BytesView, BytesView) -&gt; Bytes raise @spec.Broken</div><p>Apply a scalar to a u-coordinate, which is the whole of X448 (RFC 7748 §5).</p><p>Both inputs and the answer are 56 little-endian bytes. The scalar is clamped — and, unlike X25519, nothing is masked off the u-coordinate, because 56 bytes is exactly the width of the field.</p><p>An all-zero shared secret is refused, as in [`@x25519`]: it is what a low-order point produces, and it means the peer chose the answer rather than contributing to it.</p></div>
 </div>
 </section>
-<h2 id="key"><span class="no">12</span> Key files</h2>
+<h2 id="pq"><span class="no">12</span> Post-quantum</h2>
+<p class="lede">Lattice and hash-based schemes, from FIPS 203 to FIPS 205</p>
+<section class="pkg">
+<div class="pkg-head"><span class="no">01</span><h2>mlkem</h2><span class="path">moonbitstack/mooncrypt/pq/mlkem</span></div><p class="pkg-ref">ML-KEM, FIPS 203: https://doi.org/10.6028/NIST.FIPS.203</p><p class="pkg-note">A module-LWE key encapsulation over Z_3329, with the compression and the implicit rejection that the standard fixes. One package because the three parameter sets differ only in their constants, which are a `Kind`.</p>
+<div class="item" id="pq-mlkem-encapsulated">
+<div class="name"><span class="kind">type</span>Encapsulated</div>
+<div class="body"><div class="sig">pub(all) struct Encapsulated {
+  secret : Bytes
+  ciphertext : Bytes
+}</div><p>A shared secret and the ciphertext that carries it to the holder of the private key.</p></div>
+</div>
+<div class="item" id="pq-mlkem-privatekey">
+<div class="name"><span class="kind">type</span>PrivateKey</div>
+<div class="body"><div class="sig">pub struct PrivateKey {</div><p>An ML-KEM decapsulation key.</p><p>The bytes are the standard's own layout, 768 k + 96 of them, so a key file written by another implementation reads here without translation. The encapsulation key is kept alongside because decapsulation re-encrypts, and recovering it from the blob on every operation would mean hashing it again to check the copy.</p></div>
+</div>
+<div class="item" id="pq-mlkem-publickey">
+<div class="name"><span class="kind">type</span>PublicKey</div>
+<div class="body"><div class="sig">pub struct PublicKey {</div><p>An ML-KEM encapsulation key: the public half, which anyone may hold.</p></div>
+</div>
+<div class="item" id="pq-mlkem-kind">
+<div class="name"><span class="kind">type</span>Kind</div>
+<div class="body"><div class="sig">pub(all) enum Kind {
+  K512
+  K768
+  K1024
+} derive(Eq, @debug.Debug)</div><p>Which ML-KEM parameter set.</p><p>The three differ in the rank of the module — 2, 3 and 4 rows, so 800, 1184 and 1568 bytes of encapsulation key — and in the noise width of the first error term. Everything else, the modulus, the degree and the compression widths, is shared, which is why they are one type and not three packages.</p><div class="sig">implements <code>@spec.Kem</code></div></div>
+</div>
+<div class="item" id="pq-mlkem-kind-ciphertext">
+<div class="name"><span class="kind">fn</span><span class="dim">Kind::</span>ciphertext</div>
+<div class="body"><div class="sig">pub fn Kind::ciphertext(Self) -&gt; Int32</div><p>The ciphertext length: `32 (10 k + 4)` bytes.</p></div>
+</div>
+<div class="item" id="pq-mlkem-kind-decapsulation">
+<div class="name"><span class="kind">fn</span><span class="dim">Kind::</span>decapsulation</div>
+<div class="body"><div class="sig">pub fn Kind::decapsulation(Self) -&gt; Int32</div><p>The decapsulation-key length: `768 k + 96` bytes — the encoded secret, a copy of the encapsulation key, its hash, and the rejection seed.</p></div>
+</div>
+<div class="item" id="pq-mlkem-kind-encapsulation">
+<div class="name"><span class="kind">fn</span><span class="dim">Kind::</span>encapsulation</div>
+<div class="body"><div class="sig">pub fn Kind::encapsulation(Self) -&gt; Int32</div><p>The encapsulation-key length: `384 k + 32` bytes, the encoded vector `t` plus the seed the matrix expands from.</p></div>
+</div>
+<div class="item" id="pq-mlkem-kind-seeds">
+<div class="name"><span class="kind">fn</span><span class="dim">Kind::</span>seeds</div>
+<div class="body"><div class="sig">pub fn Kind::seeds(Self) -&gt; Int32</div><p>The length of the seed a key is derived from: the 32-byte `d` followed by the 32-byte `z` that implicit rejection draws on.</p></div>
+</div>
+<div class="item" id="pq-mlkem-kind-shared">
+<div class="name"><span class="kind">fn</span><span class="dim">Kind::</span>shared</div>
+<div class="body"><div class="sig">pub fn Kind::shared(Self) -&gt; Int32</div><p>The length of a shared secret, which is 32 bytes for every set.</p></div>
+</div>
+<div class="item" id="pq-mlkem-privatekey-bytes">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>bytes</div>
+<div class="body"><div class="sig">pub fn PrivateKey::bytes(Self) -&gt; Bytes</div><p>The bytes this key is written as: the full decapsulation key.</p></div>
+</div>
+<div class="item" id="pq-mlkem-privatekey-decapsulate">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>decapsulate</div>
+<div class="body"><div class="sig">pub fn PrivateKey::decapsulate(Self, BytesView) -&gt; Bytes raise @spec.Broken</div><p>Recover the secret that [`PublicKey::encapsulate`] chose.</p><p>A ciphertext of the wrong length raises. A ciphertext of the right length that does not decrypt to what it re-encrypts to does *not* raise: FIPS 203 replaces the secret with one derived from the rejection seed, so the answer is wrong rather than absent and an attacker learns nothing from the difference.</p></div>
+</div>
+<div class="item" id="pq-mlkem-privatekey-encapsulation-key">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>encapsulation_key</div>
+<div class="body"><div class="sig">pub fn PrivateKey::encapsulation_key(Self) -&gt; PublicKey</div><p>The public half, which may be handed to anyone.</p></div>
+</div>
+<div class="item" id="pq-mlkem-privatekey-from-seed">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>from_seed</div>
+<div class="body"><div class="sig">pub fn PrivateKey::from_seed(kind~ : Kind, BytesView) -&gt; Self raise @spec.Broken</div><p>Derive a key pair from its seed.</p><p>The seed is the 32-byte `d` and the 32-byte `z` of FIPS 203 §7.1, in that order. This is how a key is stored compactly, and how two implementations agree on a key without exchanging one.</p></div>
+</div>
+<div class="item" id="pq-mlkem-privatekey-generate">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>generate</div>
+<div class="body"><div class="sig">pub fn[S : @moonseed.Source] PrivateKey::generate(S, kind? : Kind) -&gt; Self raise @moonseed.Unavailable</div></div>
+</div>
+<div class="item" id="pq-mlkem-privatekey-kind">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>kind</div>
+<div class="body"><div class="sig">pub fn PrivateKey::kind(Self) -&gt; Kind</div><p>Which parameter set the key belongs to.</p></div>
+</div>
+<div class="item" id="pq-mlkem-privatekey-new">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>new</div>
+<div class="body"><div class="sig">pub fn PrivateKey::new(kind~ : Kind, BytesView) -&gt; Self raise @spec.Broken</div><p>Read a decapsulation key from the standard's own byte layout.</p><p>The embedded copy of the encapsulation key and its hash are checked, as FIPS 203 §7.3 requires: the hash is what binds the two halves, and a key whose halves do not agree would decapsulate to a secret the peer never computed.</p></div>
+</div>
+<div class="item" id="pq-mlkem-publickey-bytes">
+<div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>bytes</div>
+<div class="body"><div class="sig">pub fn PublicKey::bytes(Self) -&gt; Bytes</div><p>The bytes this key is written as.</p></div>
+</div>
+<div class="item" id="pq-mlkem-publickey-encapsulate">
+<div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>encapsulate</div>
+<div class="body"><div class="sig">pub fn[S : @moonseed.Source] PublicKey::encapsulate(Self, S) -&gt; Encapsulated raise @moonseed.Unavailable</div></div>
+</div>
+<div class="item" id="pq-mlkem-publickey-encapsulate-with">
+<div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>encapsulate_with</div>
+<div class="body"><div class="sig">pub fn PublicKey::encapsulate_with(Self, BytesView) -&gt; Encapsulated raise @spec.Broken</div><p>Encapsulate against a given 32-byte message, which FIPS 203 calls `m`.</p><p>Exposed because the standard's own test vectors are stated this way, and because a protocol that has to make encapsulation reproducible — a key exchange with a recorded transcript, a deterministic test — needs the same door. A caller that passes the same `m` twice gets the same ciphertext and the same secret, which is exactly what must not happen in production.</p></div>
+</div>
+<div class="item" id="pq-mlkem-publickey-kind">
+<div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>kind</div>
+<div class="body"><div class="sig">pub fn PublicKey::kind(Self) -&gt; Kind</div><p>Which parameter set the key belongs to.</p></div>
+</div>
+<div class="item" id="pq-mlkem-publickey-new">
+<div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>new</div>
+<div class="body"><div class="sig">pub fn PublicKey::new(kind~ : Kind, BytesView) -&gt; Self raise @spec.Broken</div><p>Read an encapsulation key.</p><p>The bytes are checked the way FIPS 203 §7.2 requires: the length, and every 12-bit coefficient below `q`. A key that is not the canonical encoding of the polynomial it claims to be is refused rather than reduced, because two different byte strings that behave as one key would let a peer pick which one a signature over the key commits to.</p></div>
+</div>
+</section>
+<h2 id="key"><span class="no">13</span> Key files</h2>
 <p class="lede">ASN.1, PEM, and the formats built on them</p>
 <section class="pkg">
 <div class="pkg-head"><span class="no">01</span><h2>asn1</h2><span class="path">moonbitstack/mooncrypt/asn1</span></div><p class="pkg-ref">ASN.1 Distinguished Encoding Rules, ITU-T X.690: https://www.itu.int/rec/T-REC-X.690</p><p class="pkg-note">The type-length-value layer that key files and certificates are built on. Nothing here is cryptography; it is here because everything cryptographic that has a file format needs it.</p>
@@ -2941,7 +3039,7 @@
 <div class="body"><div class="sig">pub fn spki_ec_der(@curve.Curve, BytesView) -&gt; Bytes</div><p>A `SubjectPublicKeyInfo` for an EC key: the algorithm identifier names the curve, and the BIT STRING holds the point in its uncompressed form.</p></div>
 </div>
 </section>
-<h2 id="otp"><span class="no">13</span> One-time passwords</h2>
+<h2 id="otp"><span class="no">14</span> One-time passwords</h2>
 <p class="lede">A MAC of the clock</p>
 <section class="pkg">
 <div class="pkg-head"><span class="no">01</span><h2>otp</h2><span class="path">moonbitstack/mooncrypt/otp</span></div><p class="pkg-note">One-time passwords (RFC 4226) and their time-based form (RFC 6238).</p><p class="pkg-note">The two standards are one algorithm with a different counter: HOTP counts events, TOTP counts thirty-second steps since the Unix epoch, and both HMAC that counter and read four bytes out of the digest.</p><p class="pkg-note">This package depends on a hash rather than on a clock. A time-based code is computed from a unix time the caller passes in, which keeps the whole package testable against a fixed table and leaves "what time is it" to the program that already knows.</p>

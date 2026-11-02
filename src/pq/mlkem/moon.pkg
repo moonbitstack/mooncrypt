@@ -1,0 +1,14 @@
+// ML-KEM, FIPS 203: https://doi.org/10.6028/NIST.FIPS.203
+//
+// A module-LWE key encapsulation over Z_3329, with the compression and the
+// implicit rejection that the standard fixes. One package because the three
+// parameter sets differ only in their constants, which are a `Kind`.
+import {
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/mooncrypt/hash/sha3",
+  "moonbitstack/moonseed",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "test"
