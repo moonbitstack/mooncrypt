@@ -59,6 +59,14 @@ def load(cache: pathlib.Path, family: str):
     return groups
 
 
+def row(text: str) -> str:
+    """A table row, wrapped across lines when one of its strings was split."""
+
+    if "\n" in text:
+        return "    (\n      " + text + "\n    ),"
+    return "    " + text
+
+
 def table(name, entry, rows, chunk=32):
     """One array, split over functions so no single initialiser gets long."""
     if not rows:
@@ -72,7 +80,7 @@ def table(name, entry, rows, chunk=32):
             "///|",
             f"fn {fn}() -> Array[{entry}] {{",
             "  [",
-            *[f"    {row}" for row in rows[i:i + chunk]],
+            *[row(r) for r in rows[i:i + chunk]],
             "  ]",
             "}",
             "",
@@ -87,7 +95,17 @@ def write(path: pathlib.Path, body):
 
 
 def h(text: str) -> str:
-    return f'"{text.lower()}"'
+    """Hex as a MoonBit string literal, split when it is longer than the
+    compiler's per-literal limit — an SLH-DSA signature is a hundred thousand
+    characters of hex and does not fit in one."""
+    body = text.lower()
+    limit = 1000
+    if len(body) <= limit:
+        return f'"{body}"'
+    pieces = [body[i:i + limit] for i in range(0, len(body), limit)]
+    # Joined across lines: a single line of source is capped at 65535
+    # characters, and one signature is twenty-five times that.
+    return ' +\n      '.join(f'"{piece}"' for piece in pieces)
 
 
 # --------------------------------------------------------------------- ML-KEM
@@ -231,6 +249,83 @@ def mldsa(cache: pathlib.Path, full: bool):
         write(ROOT / "pq" / "mldsa" / f"vectors_internal_{name.lower()}_wbtest.mbt", inner_body)
 
 
+# ------------------------------------------------------------------- SLH-DSA
+
+# One signing case per parameter set, and two verifications. An SLH-DSA
+# signature is 8 to 50 kilobytes and the slow parameter sets take seconds to
+# produce one, so the sample is chosen to cover every set once rather than to
+# replay a set that is already covered.
+
+def slhdsa(cache: pathlib.Path, full: bool):
+    keygen = {}
+    for group, cases in load(cache, "SLH-DSA-keyGen-FIPS205"):
+        keygen[param(group["parameterSet"])] = cases if full else cases[:1]
+
+    siggen = {}
+    for group, cases in load(cache, "SLH-DSA-sigGen-FIPS205"):
+        if not group["deterministic"] or group["signatureInterface"] != "external":
+            continue
+        if group["preHash"] != "pure":
+            continue
+        name = param(group["parameterSet"])
+        # Signing one of the slow sets costs seconds and a signature is up to
+        # fifty kilobytes, so one case of the fast sets plus the smallest slow
+        # one stands in for the rest: the code path is the same for every set,
+        # and key generation and verification cover all twelve.
+        if not full and not (name.endswith("f") or name == "Sha2_128s"):
+            continue
+        siggen.setdefault(name, []).append((group, cases if full else cases[:1]))
+
+    sigver = {}
+    for group, cases in load(cache, "SLH-DSA-sigVer-FIPS205"):
+        if group["signatureInterface"] != "external" or group["preHash"] != "pure":
+            continue
+        name = param(group["parameterSet"])
+        slot = sigver.setdefault(name, [])
+        if not slot:
+            good = [c for c in cases if c["testPassed"]]
+            bad = [c for c in cases if not c["testPassed"]]
+            # One that must verify and one that must not: a set of only-good
+            # vectors would pass a verifier that answers true to everything.
+            slot.append((group, (good[:1] + bad[:1]) if not full else cases))
+
+    for name in sorted(keygen):
+        body = table(
+            f"keygen_{name.lower()}",
+            "(String, String, String, String, String)",
+            [
+                f"({h(c['skSeed'])}, {h(c['skPrf'])}, {h(c['pkSeed'])}, "
+                f"{h(c['pk'])}, {h(c['sk'])}),"
+                for c in keygen[name]
+            ],
+        )
+        signatures = []
+        for group, cases in siggen.get(name, []):
+            for c in cases:
+                signatures.append(
+                    f"({h(c['sk'])}, {h(c['message'])}, {h(c.get('context', ''))}, "
+                    f"{h(c['signature'])}),"
+                )
+        body += table(
+            f"siggen_{name.lower()}",
+            "(String, String, String, String)",
+            signatures,
+        )
+        checks = []
+        for group, cases in sigver.get(name, []):
+            for c in cases:
+                checks.append(
+                    f"({h(c['pk'])}, {h(c['message'])}, {h(c.get('context', ''))}, "
+                    f"{h(c['signature'])}, {str(c['testPassed']).lower()}),"
+                )
+        body += table(
+            f"sigver_{name.lower()}",
+            "(String, String, String, String, Bool)",
+            checks,
+        )
+        write(ROOT / "pq" / "slhdsa" / f"vectors_{name.lower()}_test.mbt", body)
+
+
 def param(name: str) -> str:
     """ML-KEM-768 -> K768, ML-DSA-65 -> D65, SLH-DSA-SHA2-128f -> Sha2_128f."""
     if name.startswith("ML-KEM-"):
@@ -247,6 +342,7 @@ def main():
     full = "--full" in sys.argv
     mlkem(cache, full)
     mldsa(cache, full)
+    slhdsa(cache, full)
 
 
 if __name__ == "__main__":

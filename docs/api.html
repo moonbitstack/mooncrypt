@@ -74,7 +74,7 @@
         <h1>Every package, in order</h1>
         <p class="lede">
           Generated from each package's interface file and the comments above its
-          declarations. 676 public declarations across 63
+          declarations. 697 public declarations across 64
           packages.
         </p>
       </div>
@@ -2892,6 +2892,119 @@
 <div class="item" id="pq-mlkem-publickey-new">
 <div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>new</div>
 <div class="body"><div class="sig">pub fn PublicKey::new(kind~ : Kind, BytesView) -&gt; Self raise @spec.Broken</div><p>Read an encapsulation key.</p><p>The bytes are checked the way FIPS 203 §7.2 requires: the length, and every 12-bit coefficient below `q`. A key that is not the canonical encoding of the polynomial it claims to be is refused rather than reduced, because two different byte strings that behave as one key would let a peer pick which one a signature over the key commits to.</p></div>
+</div>
+</section>
+<section class="pkg">
+<div class="pkg-head"><span class="no">03</span><h2>slhdsa</h2><span class="path">moonbitstack/mooncrypt/pq/slhdsa</span></div><p class="pkg-ref">SLH-DSA, FIPS 205: https://doi.org/10.6028/NIST.FIPS.205</p><p class="pkg-note">Hash-based signatures: a few-time FORS signature at the bottom, a hypertree of XMSS keys above it, and nothing but the set's hash throughout. The twelve parameter sets are one `Kind` because they differ only in their table row.</p>
+<div class="item" id="pq-slhdsa-privatekey">
+<div class="name"><span class="kind">type</span>PrivateKey</div>
+<div class="body"><div class="sig">pub struct PrivateKey {</div><p>A SLH-DSA signing key.</p><p>The four parts are the signature's two secrets, the public seed and the public root; the last two are repeated in the verification key because a signer needs them and a key file should be one file.</p><div class="sig">implements <code>@spec.Signer</code></div></div>
+</div>
+<div class="item" id="pq-slhdsa-publickey">
+<div class="name"><span class="kind">type</span>PublicKey</div>
+<div class="body"><div class="sig">pub struct PublicKey {</div><p>A SLH-DSA verification key: the public seed and the root of the top tree.</p><div class="sig">implements <code>@spec.Verifier</code></div></div>
+</div>
+<div class="item" id="pq-slhdsa-kind">
+<div class="name"><span class="kind">type</span>Kind</div>
+<div class="body"><div class="sig">pub(all) enum Kind {
+  Sha2_128s
+  Sha2_128f
+  Sha2_192s
+  Sha2_192f
+  Sha2_256s
+  Sha2_256f
+  Shake_128s
+  Shake_128f
+  Shake_192s
+  Shake_192f
+  Shake_256s
+  Shake_256f
+} derive(Eq, @debug.Debug)</div><p>Which SLH-DSA parameter set.</p><p>A set is a hash family, a block width `n`, and five numbers: the height of the hypertree, how many layers it is split into, how many bits of the message digest a FORS tree covers, how many of them there are, and how big a hash is allowed to be. The names carry the trade they make — `s` for small signatures and slow signing, `f` for fast signing and larger signatures.</p></div>
+</div>
+<div class="item" id="pq-slhdsa-prehash">
+<div class="name"><span class="kind">type</span>PreHash</div>
+<div class="body"><div class="sig">pub(all) enum PreHash {
+  Sha2_224
+  Sha2_256
+  Sha2_384
+  Sha2_512
+  Sha2_512_224
+  Sha2_512_256
+  Sha3_224
+  Sha3_256
+  Sha3_384
+  Sha3_512
+  Shake128
+  Shake256
+} derive(Eq, @debug.Debug)</div><p>A hash function usable as the pre-hash of [`PrivateKey::sign`].</p></div>
+</div>
+<div class="item" id="pq-slhdsa-context-size">
+<div class="name"><span class="kind">let</span>context_size</div>
+<div class="body"><div class="sig">pub let context_size : Int32</div><p>The longest context string a signature may carry, in bytes.</p></div>
+</div>
+<div class="item" id="pq-slhdsa-kind-private-key">
+<div class="name"><span class="kind">fn</span><span class="dim">Kind::</span>private_key</div>
+<div class="body"><div class="sig">pub fn Kind::private_key(Self) -&gt; Int32</div><p>The private-key length: the two seeds, the public seed and the public root.</p></div>
+</div>
+<div class="item" id="pq-slhdsa-kind-public-key">
+<div class="name"><span class="kind">fn</span><span class="dim">Kind::</span>public_key</div>
+<div class="body"><div class="sig">pub fn Kind::public_key(Self) -&gt; Int32</div><p>The public-key length: two `n`-byte values.</p></div>
+</div>
+<div class="item" id="pq-slhdsa-kind-seeds">
+<div class="name"><span class="kind">fn</span><span class="dim">Kind::</span>seeds</div>
+<div class="body"><div class="sig">pub fn Kind::seeds(Self) -&gt; Int32</div><p>The seed a key is derived from: `SK.seed`, `SK.prf` and `PK.seed`, three `n`-byte values.</p></div>
+</div>
+<div class="item" id="pq-slhdsa-kind-signature">
+<div class="name"><span class="kind">fn</span><span class="dim">Kind::</span>signature</div>
+<div class="body"><div class="sig">pub fn Kind::signature(Self) -&gt; Int32</div><p>The signature length: `R`, the FORS signature and the hypertree signature.</p></div>
+</div>
+<div class="item" id="pq-slhdsa-privatekey-bytes">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>bytes</div>
+<div class="body"><div class="sig">pub fn PrivateKey::bytes(Self) -&gt; Bytes</div></div>
+</div>
+<div class="item" id="pq-slhdsa-privatekey-from-seed">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>from_seed</div>
+<div class="body"><div class="sig">pub fn PrivateKey::from_seed(kind~ : Kind, BytesView) -&gt; Self raise @spec.Broken</div><p>Derive a key pair from its `3n`-byte seed: `SK.seed`, `SK.prf`, `PK.seed`.</p><p>The root has to be computed, which means one full tree of height `h / d` — the same work as signing into the top layer.</p></div>
+</div>
+<div class="item" id="pq-slhdsa-privatekey-generate">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>generate</div>
+<div class="body"><div class="sig">pub fn[S : @moonseed.Source] PrivateKey::generate(S, kind? : Kind) -&gt; Self raise @moonseed.Unavailable</div></div>
+</div>
+<div class="item" id="pq-slhdsa-privatekey-kind">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>kind</div>
+<div class="body"><div class="sig">pub fn PrivateKey::kind(Self) -&gt; Kind</div></div>
+</div>
+<div class="item" id="pq-slhdsa-privatekey-new">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>new</div>
+<div class="body"><div class="sig">pub fn PrivateKey::new(kind~ : Kind, BytesView) -&gt; Self raise @spec.Broken</div></div>
+</div>
+<div class="item" id="pq-slhdsa-privatekey-public-key">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>public_key</div>
+<div class="body"><div class="sig">pub fn PrivateKey::public_key(Self) -&gt; PublicKey</div></div>
+</div>
+<div class="item" id="pq-slhdsa-privatekey-sign">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>sign</div>
+<div class="body"><div class="sig">pub fn PrivateKey::sign(Self, BytesView, context? : BytesView, prehash? : PreHash) -&gt; Bytes</div></div>
+</div>
+<div class="item" id="pq-slhdsa-privatekey-sign-randomized">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>sign_randomized</div>
+<div class="body"><div class="sig">pub fn[S : @moonseed.Source] PrivateKey::sign_randomized(Self, BytesView, S, context? : BytesView, prehash? : PreHash) -&gt; Bytes raise @moonseed.Unavailable</div></div>
+</div>
+<div class="item" id="pq-slhdsa-publickey-bytes">
+<div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>bytes</div>
+<div class="body"><div class="sig">pub fn PublicKey::bytes(Self) -&gt; Bytes</div></div>
+</div>
+<div class="item" id="pq-slhdsa-publickey-kind">
+<div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>kind</div>
+<div class="body"><div class="sig">pub fn PublicKey::kind(Self) -&gt; Kind</div></div>
+</div>
+<div class="item" id="pq-slhdsa-publickey-new">
+<div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>new</div>
+<div class="body"><div class="sig">pub fn PublicKey::new(kind~ : Kind, BytesView) -&gt; Self raise @spec.Broken</div></div>
+</div>
+<div class="item" id="pq-slhdsa-publickey-verify">
+<div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>verify</div>
+<div class="body"><div class="sig">pub fn PublicKey::verify(Self, BytesView, BytesView, context? : BytesView, prehash? : PreHash) -&gt; Bool</div></div>
 </div>
 </section>
 <h2 id="key"><span class="no">13</span> Key files</h2>

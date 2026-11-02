@@ -1,0 +1,20 @@
+// SLH-DSA, FIPS 205: https://doi.org/10.6028/NIST.FIPS.205
+//
+// Hash-based signatures: a few-time FORS signature at the bottom, a hypertree
+// of XMSS keys above it, and nothing but the set's hash throughout. The twelve
+// parameter sets are one `Kind` because they differ only in their table row.
+import {
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/mooncrypt/hash/sha2",
+  "moonbitstack/mooncrypt/hash/sha3",
+  "moonbitstack/mooncrypt/mac/hmac",
+  "moonbitstack/moonseed",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "test"
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "wbtest"
