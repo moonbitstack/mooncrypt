@@ -518,6 +518,27 @@ GITHUB = """<svg viewBox="0 0 16 16" aria-hidden="true">
             </svg>"""
 
 
+def fill_counts(packages: int) -> None:
+    """Write the family and package counts into the home page.
+
+    They are derived from the same walk of `src/` that the API page is built
+    from, so a new package cannot leave the home page claiming an old number.
+    """
+
+    index = ROOT / "docs" / "index.html"
+    text = index.read_text(encoding="utf-8")
+    groups = collect()
+    families = len(groups)
+    text = re.sub(r"<div>\d+ families</div>", f"<div>{families} families</div>", text)
+    text = re.sub(r"<b>\d+</b><span>families</span>", f"<b>{families}</b><span>families</span>", text)
+    text = re.sub(
+        r'<span class="rest">\d+ families · \d+ packages</span>',
+        f'<span class="rest">{families} families · {packages} packages</span>',
+        text,
+    )
+    index.write_text(text, encoding="utf-8", newline="\n")
+
+
 def main() -> int:
     families = collect()
     rail: list[str] = []
@@ -557,6 +578,7 @@ def main() -> int:
     with open(OUT, "w", encoding="utf-8", newline="\n") as f:
         f.write(page)
     print("api.html: %d packages, %d declarations" % (packages, count))
+    fill_counts(packages)
     return 0
 
 

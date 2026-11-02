@@ -1,0 +1,12 @@
+// The three post-quantum schemes end to end, runnable:
+// `moon run src/examples/post-quantum`.
+pkgtype(kind: "executable")
+
+import {
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/mooncrypt/pq/mlkem",
+  "moonbitstack/mooncrypt/pq/mldsa",
+  "moonbitstack/mooncrypt/pq/slhdsa",
+  "moonbitstack/moonseed",
+  "moonbitstack/moonbase/base16",
+}

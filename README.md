@@ -105,6 +105,9 @@ Import the ones you use. A package nothing imports is not linked, which is what
 | `kex/x448` | X448, with the same refusal | RFC 7748 |
 | `kex/ecdh` | ECDH over P-256, P-384, P-521 and secp256k1, with an off-curve point refused | SEC 1 §3.3.1 |
 | `kex/dh` | Finite-field Diffie-Hellman over the five ffdhe groups, with a range check on the peer's share | RFC 7919 |
+| `pq/mlkem` | ML-KEM-512, -768 and -1024: the key encapsulation behind TLS's hybrid group, with both key checks and the implicit rejection | FIPS 203 |
+| `pq/mldsa` | ML-DSA-44, -65 and -87, with contexts, the pre-hash form and the internal interface | FIPS 204 |
+| `pq/slhdsa` | SLH-DSA, all twelve parameter sets of the hash-based scheme | FIPS 205 |
 | `otp` | HOTP and TOTP, 6 to 9 digits, with a clock skew window | RFC 4226, RFC 6238 |
 | `key` | Key files: PEM around DER, in PKCS#1, PKCS#8, SPKI and SEC1 shapes | RFC 7468, RFC 8017, RFC 5958, RFC 5915 |
 | `asn1` | ASN.1 DER, read and write — the layer a key file and a certificate are built on | ITU-T X.690 |
@@ -170,8 +173,8 @@ usefully catch.
 Every algorithm is tested against the vectors its specification publishes —
 FIPS 180-4's worked examples, RFC 4231, RFC 5869 appendix A, RFC 6070, RFC 8032
 §7.1, RFC 6979 §A.2.5, RFC 3713 appendix A, RFC 6229, RFC 9106 §5, RFC 7914 §12,
-RFC 4226 appendix D, RFC 6238 appendix B, BIP 340's CSV, and the CAVP response
-files where NIST publishes them — and, where a specification publishes none,
+RFC 4226 appendix D, RFC 6238 appendix B, BIP 340's CSV, and NIST's ACVP output
+for the post-quantum schemes — and, where a specification publishes none,
 against signatures produced by a third-party implementation. The curve
 parameters were derived from a third-party library rather than transcribed, and
 checked: the generator on the curve, the order annihilating it.
@@ -191,6 +194,32 @@ and without associated data, and each block cipher at every key length it takes,
 because those are the branches a vector copied straight from a specification
 never reaches.
 
+## Post-quantum
+
+The three FIPS schemes are here in full: `pq/mlkem` for key establishment,
+`pq/mldsa` and `pq/slhdsa` for signatures. Each has its parameter sets behind one
+`Kind`, so a caller names what it wants and the lengths follow from the standard
+rather than from a table of its own.
+
+```moonbit
+// Encapsulate to a key the peer published, and get back the secret and the
+// ciphertext to send. The decapsulation key recovers the same secret from it.
+let key = @mlkem.PrivateKey::generate(@system.source, kind=@mlkem.K768)
+let sent = key.encapsulation_key().encapsulate(@system.source)
+key.decapsulate(sent.ciphertext[:]) == sent.secret  // true
+
+// A signature over a message, with a context that separates this use of the
+// key from any other.
+let signer = @mldsa.PrivateKey::generate(@system.source, kind=@mldsa.D65)
+let sig = signer.sign(b"the quick brown fox"[:], context=b"example"[:])
+signer.public_key().verify(b"the quick brown fox"[:], sig[:], context=b"example"[:])
+```
+
+A ciphertext that was tampered with decapsulates to a secret the sender never
+computed rather than to an error, because FIPS 203 replaces it with one derived
+from the rejection seed; ML-DSA and SLH-DSA refuse a signature that does not
+verify, and neither raises.
+
 ## Randomness
 
 No algorithm package reaches for entropy itself. Every private key type has
@@ -202,9 +231,6 @@ bytes Go's `ecdsa.GenerateKey` sampled and expect the key Go made. An SM2 key is
 drawn from [1, n - 2], as GB/T 32918.1 asks, and a key of n - 1 is refused.
 
 ## What is not here
-
-Post-quantum schemes: the rest of the plan, with the tracking list kept with the
-project.
 
 Certificates and tokens are not cryptography and live in `mooncred`; protocols
 live in `moonhttp`, `moontls` and `moonquic`; encodings live in `moonbase`.

@@ -99,9 +99,10 @@
             <li><a href="#aead"><span class="n">05</span>Encrypting with a tag</a></li>
             <li><a href="#sign"><span class="n">06</span>Signing</a></li>
             <li><a href="#kex"><span class="n">07</span>Agreeing on a secret</a></li>
-            <li><a href="#keys"><span class="n">08</span>Reading a key file</a></li>
-            <li><a href="#random"><span class="n">09</span>Where randomness comes from</a></li>
-            <li><a href="#next"><span class="n">10</span>Where to go next</a></li>
+            <li><a href="#pq"><span class="n">08</span>After the quantum computer</a></li>
+            <li><a href="#keys"><span class="n">09</span>Reading a key file</a></li>
+            <li><a href="#random"><span class="n">10</span>Where randomness comes from</a></li>
+            <li><a href="#next"><span class="n">11</span>Where to go next</a></li>
           </ol>
         </aside>
 
@@ -363,6 +364,61 @@ ccfc261f58193c98ca4ad4a53bbac6f0ee29bc4d48438090446908622ca79af6</div>
             curve, and one of low order, before any arithmetic touches it. Bob
             calling the same function with Alice's public key gets the same
             bytes.
+          </p>
+
+          <h2 id="pq">After the quantum computer</h2>
+          <p>
+            Three schemes resist one, and all three are reached the same way as
+            everything else. ML-KEM establishes a key: the sender encapsulates
+            to the key the peer published, and the holder of the private key
+            recovers the same secret from the ciphertext.
+          </p>
+
+          <div class="listing">
+            <div class="listing-bar"><span>main.mbt</span><span class="spacer"></span><button data-copy>copy</button></div>
+            <!-- nocheck -->
+            <pre><code class="mark">let key = @mlkem.PrivateKey::generate(@system.source, kind=@mlkem.K768)
+let sent = key.encapsulation_key().encapsulate(@system.source)
+println(@base16.encode(key.decapsulate(sent.ciphertext[:])) ==
+        @base16.encode(sent.secret))</code></pre>
+            <div class="out"><b>prints</b>
+true</div>
+          </div>
+
+          <p>
+            A ciphertext that was tampered with does not raise: FIPS 203
+            replaces the secret with one derived from the rejection seed the
+            private key carries, so the answer is wrong rather than absent, and
+            an attacker learns nothing from the difference.
+          </p>
+
+          <p>
+            ML-DSA and SLH-DSA sign. Both take a context — a string that
+            separates one use of a key from another and is signed along with the
+            message — and both take an optional pre-hash for a message that was
+            digested elsewhere.
+          </p>
+
+          <div class="listing">
+            <div class="listing-bar"><span>main.mbt</span><span class="spacer"></span><button data-copy>copy</button></div>
+            <!-- nocheck -->
+            <pre><code class="mark">let signer = @mldsa.PrivateKey::generate(@system.source, kind=@mldsa.D65)
+let sig = signer.sign(b"the quick brown fox"[:], context=b"example"[:])
+println(signer.public_key().verify(b"the quick brown fox"[:], sig[:],
+                                   context=b"example"[:]))
+println(signer.public_key().verify(b"the quick brown fox"[:], sig[:]))</code></pre>
+            <div class="out"><b>prints</b>
+true
+false</div>
+          </div>
+
+          <p>
+            The parameter sets are one <code>Kind</code> per scheme, so the
+            lengths follow from the standard rather than from a table a caller
+            keeps: <code>K768</code> is what TLS uses, <code>D65</code> the
+            middle lattice set, and SLH-DSA's twelve range from
+            <code>Sha2_128s</code> — a seven-kilobyte signature and seconds of
+            work — to <code>Shake_256f</code>, fifty kilobytes in a moment.
           </p>
 
           <h2 id="keys">Reading a key file</h2>
