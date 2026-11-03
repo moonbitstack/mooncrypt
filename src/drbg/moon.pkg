@@ -1,8 +1,10 @@
 // DRBG, NIST SP 800-90A: https://doi.org/10.6028/NIST.SP.800-90A
 //
-// HMAC-DRBG over any hash. It implements `moonseed.Source`, so a key generator
-// or a signing routine that draws from a source can take a seeded, deterministic
-// generator instead of the platform's entropy — and reproduce a test vector.
+// HMAC-DRBG over any hash, and CTR-DRBG over AES-128, AES-192 or AES-256, with
+// or without the derivation function. Each implements `moonseed.Source`, so a
+// key generator or a signing routine that draws from a source can take a seeded,
+// deterministic generator instead of the platform's entropy — and reproduce a
+// test vector.
 import {
   "moonbitstack/moonseed",
   "moonbitstack/mooncrypt/spec",

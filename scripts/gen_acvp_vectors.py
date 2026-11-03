@@ -326,6 +326,47 @@ def slhdsa(cache: pathlib.Path, full: bool):
         write(ROOT / "pq" / "slhdsa" / f"vectors_{name.lower()}_test.mbt", body)
 
 
+# ------------------------------------------------------------------ CTR-DRBG
+
+# The twelve AES groups of ctrDRBG-1.0: three key lengths, the derivation
+# function on and off, prediction resistance on and off. TDES groups are left
+# out — the generator is AES-only.
+
+def ctrdrbg(cache: pathlib.Path, _full: bool):
+    # Every field here is a short hex string (a seed is 48 bytes, a generate
+    # block 512), so each row stays on one line and needs no `h` splitting.
+    def q(text):
+        return '"' + text.lower() + '"'
+
+    pr, nopr = [], []
+    entry = "(String, Bool, String, String, String, String, String, String, String, String)"
+    for group, cases in load(cache, "ctrDRBG-1.0"):
+        if not group["mode"].startswith("AES"):
+            continue
+        kind = '"Aes' + group["mode"].split("-", 1)[1] + '"'
+        df = str(group["derFunc"]).lower()
+        for c in cases:
+            ops = c["otherInput"]
+            head = "(" + ", ".join([
+                kind, df, q(c["entropyInput"]), q(c["nonce"]), q(c.get("persoString", "")),
+            ])
+            if group["predResistance"]:
+                # Two generates, each preceded by a reseed from the entry's own
+                # entropy; the generate itself carries no additional input.
+                e0, a0 = ops[0].get("entropyInput", ""), ops[0].get("additionalInput", "")
+                e1, a1 = ops[1].get("entropyInput", ""), ops[1].get("additionalInput", "")
+                pr.append(f"{head}, {q(e0)}, {q(a0)}, {q(e1)}, {q(a1)}, {q(c['returnedBits'])}),")
+            else:
+                # One explicit reseed, then two generates that carry additional
+                # input only.
+                e0, a0 = ops[0].get("entropyInput", ""), ops[0].get("additionalInput", "")
+                a1, a2 = ops[1].get("additionalInput", ""), ops[2].get("additionalInput", "")
+                nopr.append(f"{head}, {q(e0)}, {q(a0)}, {q(a1)}, {q(a2)}, {q(c['returnedBits'])}),")
+    body = table("ctr_pr", entry, pr)
+    body += table("ctr_nopr", entry, nopr)
+    write(ROOT / "drbg" / "vectors_ctr_test.mbt", body)
+
+
 def param(name: str) -> str:
     """ML-KEM-768 -> K768, ML-DSA-65 -> D65, SLH-DSA-SHA2-128f -> Sha2_128f."""
     if name.startswith("ML-KEM-"):
@@ -343,6 +384,7 @@ def main():
     mlkem(cache, full)
     mldsa(cache, full)
     slhdsa(cache, full)
+    ctrdrbg(cache, full)
 
 
 if __name__ == "__main__":
