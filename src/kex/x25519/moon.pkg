@@ -5,6 +5,7 @@
 import {
   "moonbitstack/moonseed",
   "moonbitstack/mooncrypt/spec",
+  "moonbitstack/mooncrypt/internal/field25519",
 }
 
 import {

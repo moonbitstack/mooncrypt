@@ -7,12 +7,8 @@
 pub let size : Int32 = 32
 
 ///|
-/// The field prime, `2^255 - 19` (RFC 7748 §4.1).
-let prime : BigInt = (1N << 255) - 19N
-
-///|
 /// The ladder constant `(A - 2) / 4`, which is 121665 for Curve25519.
-let a24 : BigInt = 121665N
+let a24 : @field25519.Fe = @field25519.from_bigint(121665N)
 
 ///|
 /// The base point, `u = 9`, little-endian (RFC 7748 §4.1).
@@ -23,79 +19,57 @@ pub let base : Bytes = {
 }
 
 ///|
-/// Little-endian bytes as a field integer.
-fn decode(b : FixedArray[Int32]) -> BigInt {
-  let mut acc = 0N
-  for i = b.length() - 1; i >= 0; i = i - 1 {
-    acc = acc * 256N + BigInt::from_int(b[i])
-  }
-  acc
-}
-
-///|
-/// A field integer as 32 little-endian bytes.
-fn encode(v : BigInt) -> Bytes {
-  let out = Array::make(32, b'\x00')
-  let mut acc = v % prime
+/// The 32 bytes as a field element, high bit masked by the caller.
+fn decode(b : FixedArray[Int32]) -> @field25519.Fe {
+  let raw = FixedArray::make(32, b'\x00')
   for i in 0..<32 {
-    out[i] = (acc % 256N).to_int().to_byte()
-    acc = acc / 256N
+    raw[i] = b[i].to_byte()
   }
-  Bytes::from_array(out)
+  @field25519.from_le_bytes(Bytes::from_array(raw)[:])
 }
 
 ///|
-/// The Montgomery ladder (RFC 7748 §5).
+/// The Montgomery ladder (RFC 7748 §5), over the shared 25519 field.
 ///
-/// Subtractions add the prime first rather than assume a Euclidean remainder,
-/// and the conditional swap is driven by the scalar's clamped bits, so no
-/// bignum bit operations are needed.
-fn ladder(scalar : FixedArray[Int32], u : BigInt) -> BigInt {
-  let p = prime
-  let x1 = u
-  let mut x2 = 1N
-  let mut z2 = 0N
+/// The conditional swap is a mask, not a branch: the scalar's bits are clamped
+/// and secret, so a swap that showed in the timing would show the key.
+fn ladder(scalar : FixedArray[Int32], x1 : @field25519.Fe) -> @field25519.Fe {
+  let mut x2 = @field25519.one
+  let mut z2 = @field25519.from_bigint(0N)
   let mut x3 = x1
-  let mut z3 = 1N
-  let mut swap = 0
+  let mut z3 = @field25519.one
+  let mut swap = 0UL
   for t = 254; t >= 0; t = t - 1 {
-    let bit = (scalar[t / 8] >> (t % 8)) & 1
+    let bit = ((scalar[t / 8] >> (t % 8)) & 1).to_uint64()
     swap = swap ^ bit
-    if swap == 1 {
-      let tx = x2
-      x2 = x3
-      x3 = tx
-      let tz = z2
-      z2 = z3
-      z3 = tz
-    }
+    let mask = 0UL - swap
+    let sx2 = @field25519.select(mask, x3, x2)
+    let sz2 = @field25519.select(mask, z3, z2)
+    let sx3 = @field25519.select(mask, x2, x3)
+    let sz3 = @field25519.select(mask, z2, z3)
+    x2 = sx2
+    z2 = sz2
+    x3 = sx3
+    z3 = sz3
     swap = bit
-    let a = (x2 + z2) % p
-    let aa = a * a % p
-    let b = (x2 + p - z2) % p
-    let bb = b * b % p
-    let e = (aa + p - bb) % p
-    let c = (x3 + z3) % p
-    let d = (x3 + p - z3) % p
-    let da = d * a % p
-    let cb = c * b % p
-    let sum = (da + cb) % p
-    x3 = sum * sum % p
-    let diff = (da + p - cb) % p
-    z3 = x1 * (diff * diff % p) % p
-    x2 = aa * bb % p
-    z2 = e * ((aa + a24 * e) % p) % p
+    let a = @field25519.add(x2, z2)
+    let aa = @field25519.sqr(a)
+    let b = @field25519.sub(x2, z2)
+    let bb = @field25519.sqr(b)
+    let e = @field25519.sub(aa, bb)
+    let c = @field25519.add(x3, z3)
+    let d = @field25519.sub(x3, z3)
+    let da = @field25519.mul(d, a)
+    let cb = @field25519.mul(c, b)
+    x3 = @field25519.sqr(@field25519.add(da, cb))
+    z3 = @field25519.mul(x1, @field25519.sqr(@field25519.sub(da, cb)))
+    x2 = @field25519.mul(aa, bb)
+    z2 = @field25519.mul(e, @field25519.add(aa, @field25519.mul(a24, e)))
   }
-  if swap == 1 {
-    let tx = x2
-    x2 = x3
-    x3 = tx
-    let tz = z2
-    z2 = z3
-    z3 = tz
-  }
-  // x2 / z2 is x2 * z2^(p-2) by Fermat's little theorem.
-  x2 * BigInt::pow(z2, p - 2N, modulus=p) % p
+  let mask = 0UL - swap
+  let fx2 = @field25519.select(mask, x3, x2)
+  let fz2 = @field25519.select(mask, z3, z2)
+  @field25519.mul(fx2, @field25519.inv(fz2))
 }
 
 ///|
@@ -135,7 +109,7 @@ pub fn shared(
     u[i] = point[i].to_int()
   }
   u[31] = u[31] & 127
-  let out = encode(ladder(k, decode(u) % prime))
+  let out = @field25519.to_le_bytes(ladder(k, decode(u)))
   let mut any = 0
   for i in 0..<32 {
     any = any | out[i].to_int()

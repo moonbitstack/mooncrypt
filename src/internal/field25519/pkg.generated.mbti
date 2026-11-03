@@ -1,0 +1,48 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/internal/field25519"
+
+import {
+  "moonbitlang/core/bigint",
+}
+
+// Values
+pub fn add(FixedArray[UInt64], FixedArray[UInt64]) -> FixedArray[UInt64]
+
+pub fn eq(FixedArray[UInt64], FixedArray[UInt64]) -> Bool
+
+pub fn from_bigint(@bigint.BigInt) -> FixedArray[UInt64]
+
+pub fn from_le_bytes(BytesView) -> FixedArray[UInt64]
+
+pub fn inv(FixedArray[UInt64]) -> FixedArray[UInt64]
+
+pub fn is_zero_mask(FixedArray[UInt64]) -> UInt64
+
+pub let limbs : Int32
+
+pub fn mul(FixedArray[UInt64], FixedArray[UInt64]) -> FixedArray[UInt64]
+
+pub let one : FixedArray[UInt64]
+
+pub let p : FixedArray[UInt64]
+
+pub fn pow_8(FixedArray[UInt64]) -> FixedArray[UInt64]
+
+pub fn select(UInt64, FixedArray[UInt64], FixedArray[UInt64]) -> FixedArray[UInt64]
+
+pub fn sqr(FixedArray[UInt64]) -> FixedArray[UInt64]
+
+pub fn sub(FixedArray[UInt64], FixedArray[UInt64]) -> FixedArray[UInt64]
+
+pub fn to_bigint(FixedArray[UInt64]) -> @bigint.BigInt
+
+pub fn to_le_bytes(FixedArray[UInt64]) -> Bytes
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+pub type Fe = FixedArray[UInt64]
+
+// Traits
