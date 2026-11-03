@@ -413,51 +413,89 @@ fn jp_add(a : Jp, b : Jp, f : Field) -> Jp {
 }
 
 ///|
-/// Swap `a` and `b` limb by limb when `mask` is all ones, leaving them alone
-/// when it is zero — no branch either way.
-fn jp_cswap(mask : UInt64, a : Jp, b : Jp, k : Int32) -> Unit {
-  for i in 0..<k {
-    let t = mask & (a.x[i] ^ b.x[i])
-    a.x[i] = a.x[i] ^ t
-    b.x[i] = b.x[i] ^ t
-    let u = mask & (a.y[i] ^ b.y[i])
-    a.y[i] = a.y[i] ^ u
-    b.y[i] = b.y[i] ^ u
-    let w = mask & (a.z[i] ^ b.z[i])
-    a.z[i] = a.z[i] ^ w
-    b.z[i] = b.z[i] ^ w
-  }
+/// All ones when `i == digit`, zero otherwise: the table scan below must not
+/// branch on the digit it is looking for.
+fn digit_mask(i : Int32, digit : Int32) -> UInt64 {
+  let diff = (i ^ digit).to_uint64()
+  ((diff | (0UL - diff)) >> 63) - 1UL
 }
 
 ///|
-/// `[k]P` over the limb field: a Montgomery ladder with a branch-free swap, so
-/// every bit costs one addition and one doubling whatever its value. The loop
-/// runs over the curve's full width, not over `bits(k)`, so the number of
-/// iterations does not follow the scalar either.
+/// `digit·P` for a secret `digit < 16`: the whole table is read and the match
+/// kept with a mask, so the work does not depend on which multiple was asked
+/// for — an indexed read would put the scalar into the cache line pattern.
+fn window_lookup(table : FixedArray[Jp], digit : Int32, f : Field) -> Jp {
+  let out = jp_infinity(f)
+  let k = f.k
+  for i in 0..<16 {
+    // No `if mask != 0`: the branch would be taken exactly once, in the
+    // position of the digit, which is the one thing the scan exists to hide.
+    let mask = digit_mask(i, digit)
+    let e = table.unsafe_get(i)
+    for j in 0..<k {
+      out.x.unsafe_set(
+        j,
+        out.x.unsafe_get(j) ^ (mask & (e.x.unsafe_get(j) ^ out.x.unsafe_get(j))),
+      )
+      out.y.unsafe_set(
+        j,
+        out.y.unsafe_get(j) ^ (mask & (e.y.unsafe_get(j) ^ out.y.unsafe_get(j))),
+      )
+      out.z.unsafe_set(
+        j,
+        out.z.unsafe_get(j) ^ (mask & (e.z.unsafe_get(j) ^ out.z.unsafe_get(j))),
+      )
+    }
+  }
+  out
+}
+
+///|
+/// `[k]P` over the limb field, four bits at a time: each nibble costs four
+/// doublings and one addition against the precomputed small multiples, so a
+/// scalar multiplication is 64 additions and 256 doublings instead of 256 of
+/// each. The loop covers the scalar's full width and the table is scanned
+/// whole, so neither the count nor the sequence of operations follows `k`.
 fn mul_limb(c : Curve, k : BigInt, pt : Point) -> Point {
   let f = field_of(c)
   let size = c.size()
   let scalar = k.to_octets(length=size)
-  let mut r0 = jp_infinity(f)
   let z_one = copy_limbs(f.one, f.k)
-  let mut r1 : Jp = { x: ffrom(pt.x, f), y: ffrom(pt.y, f), z: z_one, }
-  let mut i = size * 8 - 1
-  while i >= 0 {
-    let bit = ((scalar[size - 1 - i / 8].to_int() >> (i % 8)) & 1).to_uint64()
-    let mask = 0UL - bit
-    jp_cswap(mask, r0, r1, f.k)
-    let sum = jp_add(r0, r1, f)
-    let twice = jp_double(r0, f)
-    r0 = twice
-    r1 = sum
-    jp_cswap(mask, r0, r1, f.k)
-    i = i - 1
+  let base : Jp = { x: ffrom(pt.x, f), y: ffrom(pt.y, f), z: z_one, }
+  let table = FixedArray::make(16, jp_infinity(f))
+  for i in 0..<16 {
+    table.unsafe_set(i, jp_infinity(f))
   }
-  if fis_zero(r0.z, f.k) {
+  table.unsafe_set(1, base)
+  // 2P comes from the doubling formula: the addition law leaves the
+  // equal-points case to infinity, which is what the ladder wants and not what
+  // a table wants. From there (i-1)·P and P differ by P, which they never do.
+  if 16 > 2 {
+    table.unsafe_set(2, jp_double(base, f))
+  }
+  for i in 3..<16 {
+    table.unsafe_set(i, jp_add(table.unsafe_get(i - 1), base, f))
+  }
+  let mut acc = jp_infinity(f)
+  for i in 0..<(size * 2) {
+    if i > 0 {
+      for _ in 0..<4 {
+        acc = jp_double(acc, f)
+      }
+    }
+    let byte = scalar.unsafe_get(i / 2).to_int()
+    let digit = if i % 2 == 0 { (byte >> 4) & 0xF } else { byte & 0xF }
+    acc = jp_add(acc, window_lookup(table, digit, f), f)
+  }
+  if fis_zero(acc.z, f.k) {
     return { x: 0, y: 0, zero: true, }
   }
-  let zi = finv(r0.z, f)
+  let zi = finv(acc.z, f)
   let zi2 = fsqr(zi, f)
   let zi3 = fmul(zi2, zi, f)
-  { x: fto(fmul(r0.x, zi2, f), f), y: fto(fmul(r0.y, zi3, f), f), zero: false, }
+  {
+    x: fto(fmul(acc.x, zi2, f), f),
+    y: fto(fmul(acc.y, zi3, f), f),
+    zero: false,
+  }
 }
