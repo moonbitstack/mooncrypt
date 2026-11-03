@@ -354,12 +354,12 @@ fn jp_double_raw(p : Jp, f : Field) -> Jp {
 }
 
 ///|
-/// `2P`, with the point at infinity and the `y = 0` points (the ones of order
-/// two) mapped to infinity by a mask rather than a branch.
+/// `2P`. The doubling is already total on the inputs that occur here: a `z` of
+/// zero stays zero through `z3 = (y+z)^2 - y^2 - z^2`, so the point at infinity
+/// maps to itself without a mask, and a point of order two — the only other
+/// exceptional input — cannot exist on a curve of prime order.
 fn jp_double(p : Jp, f : Field) -> Jp {
-  let raw = jp_double_raw(p, f)
-  let gone = fzero_mask(p.z, f.k) | fzero_mask(p.y, f.k)
-  jp_select(gone, jp_infinity(f), raw, f.k)
+  jp_double_raw(p, f)
 }
 
 ///|

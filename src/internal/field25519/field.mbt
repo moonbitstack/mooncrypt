@@ -112,16 +112,32 @@ fn make() -> Fe {
 }
 
 ///|
-/// `a + b mod p`.
+/// `a + b mod p`, the conditional subtraction done in place: one allocation,
+/// which matters because this is the most-called operation in both curves.
 pub fn add(a : Fe, b : Fe) -> Fe {
-  let r = make()
+  let out = make()
   let mut carry = 0UL
   for i in 0..<8 {
     let s = a[i] + b[i] + carry
-    r[i] = s & 0xFFFFFFFFUL
+    out[i] = s & 0xFFFFFFFFUL
     carry = s >> 32
   }
-  sub_p(r, carry)
+  let mut borrow = 0UL
+  for i in 0..<8 {
+    let d = out[i] - p[i] - borrow
+    out[i] = d & 0xFFFFFFFFUL
+    borrow = d >> 63
+  }
+  // `p` goes back on when the subtraction borrowed with nothing above it.
+  // A mask, not a branch: both limbs are secret.
+  let restore = 0UL - (borrow & (carry ^ 1UL))
+  let mut adding = 0UL
+  for i in 0..<8 {
+    let s = out[i] + (p[i] & restore) + adding
+    out[i] = s & 0xFFFFFFFFUL
+    adding = s >> 32
+  }
+  out
 }
 
 ///|
@@ -142,25 +158,6 @@ pub fn sub(a : Fe, b : Fe) -> Fe {
     carry = s >> 32
   }
   r
-}
-
-///|
-/// Undo the last subtraction when the value is still at least `p`; `extra` is
-/// the carry out of the top limb. Branch-free: the carry chain decides.
-fn sub_p(r : Fe, extra : UInt64) -> Fe {
-  let tmp = make()
-  let mut borrow = 0UL
-  for i in 0..<8 {
-    let d = r[i] - p[i] - borrow
-    tmp[i] = d & 0xFFFFFFFFUL
-    borrow = d >> 63
-  }
-  let use_tmp = (extra ^ borrow) - 1UL
-  let out = make()
-  for i in 0..<8 {
-    out[i] = (tmp[i] & use_tmp) | (r[i] & (use_tmp ^ 0xFFFFFFFFFFFFFFFFUL))
-  }
-  out
 }
 
 ///|
