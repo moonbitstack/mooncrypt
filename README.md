@@ -70,7 +70,7 @@ Import the ones you use. A package nothing imports is not linked, which is what
 | `sum/fnv` | FNV-1 and FNV-1a, 32 and 64 bit | Fowler–Noll–Vo |
 | `sum/xxhash` | XXH32 and XXH64, with a seed | xxHash spec |
 | `sum/murmur3` | MurmurHash3 x86_32 and x64_128 | Appleby |
-| `kdf/hkdf` | HKDF, extract and expand separately | RFC 5869 |
+| `kdf/hkdf` | HKDF, extract and expand separately, the extracted key carrying the digest it was made with | RFC 5869 |
 | `kdf/pbkdf2` | PBKDF2 | RFC 8018 §5.2 |
 | `kdf/scrypt` | scrypt, with presets for interactive and sensitive use, and the parameter check | RFC 7914 |
 | `kdf/argon2` | Argon2d, Argon2i and Argon2id, with secret and associated data | RFC 9106 |
@@ -128,6 +128,15 @@ outcome, not an exceptional one.
 
 Secrets are compared with `@spec.eq`, which reads both inputs to the end. It is
 the only comparison the library offers, so there is no wrong one to reach for.
+
+The arithmetic that touches a secret key is branch-free by construction. AES
+runs the Boyar-Peralta S-box as a fixed circuit over eight 64-bit planes, four
+blocks at a time, with the key schedule on the same path; the curves multiply in
+fixed-width 32-bit limbs, and their ladder reads the scalar at its full width —
+an infinity on either side of an addition, or the carry that decides whether a
+subtraction should be undone, is a mask rather than a comparison. What that does
+not cover is physical attack: cache and power analysis of the hardware itself are
+out of scope here, which is why the blocks are transposed rather than looked up.
 
 ## Configuration
 

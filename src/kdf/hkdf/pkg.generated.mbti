@@ -6,15 +6,18 @@ import {
 }
 
 // Values
-pub fn expand(BytesView, () -> &@spec.Hash, info? : BytesView, len~ : Int32) -> Bytes
+pub fn expand(Prk, info? : BytesView, len~ : Int32) -> Bytes
 
-pub fn extract(BytesView, () -> &@spec.Hash, salt? : BytesView) -> Bytes
+pub fn extract(BytesView, () -> &@spec.Hash, salt? : BytesView) -> Prk
 
 pub fn key(BytesView, () -> &@spec.Hash, salt? : BytesView, info? : BytesView, len~ : Int32) -> Bytes
 
 // Errors
 
 // Types and methods
+type Prk
+pub fn Prk::bytes(Self) -> Bytes
+pub fn Prk::size(Self) -> Int32
 
 // Type aliases
 

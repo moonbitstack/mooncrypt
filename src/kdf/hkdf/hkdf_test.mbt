@@ -40,12 +40,10 @@ test "HKDF-SHA256 matches RFC 5869" {
   ]
   for case in cases {
     let (ikm, salt, info, len, prk, okm) = case
+    let extracted = @hkdf.extract(raw(ikm)[:], sha256, salt=raw(salt)[:])
+    assert_eq(@base16.encode(extracted.bytes()), prk)
     assert_eq(
-      @base16.encode(@hkdf.extract(raw(ikm)[:], sha256, salt=raw(salt)[:])),
-      prk,
-    )
-    assert_eq(
-      @base16.encode(@hkdf.expand(raw(prk)[:], sha256, info=raw(info)[:], len~)),
+      @base16.encode(@hkdf.expand(extracted, info=raw(info)[:], len~)),
       okm,
     )
     assert_eq(
@@ -87,12 +85,10 @@ test "HKDF-SHA1 matches RFC 5869" {
   ]
   for case in cases {
     let (ikm, salt, info, len, prk, okm) = case
+    let extracted = @hkdf.extract(raw(ikm)[:], sha1, salt=raw(salt)[:])
+    assert_eq(@base16.encode(extracted.bytes()), prk)
     assert_eq(
-      @base16.encode(@hkdf.extract(raw(ikm)[:], sha1, salt=raw(salt)[:])),
-      prk,
-    )
-    assert_eq(
-      @base16.encode(@hkdf.expand(raw(prk)[:], sha1, info=raw(info)[:], len~)),
+      @base16.encode(@hkdf.expand(extracted, info=raw(info)[:], len~)),
       okm,
     )
   }
@@ -104,12 +100,12 @@ test "HKDF-SHA1 matches RFC 5869" {
 test "output length is honoured exactly" {
   let prk = @hkdf.extract(b"secret"[:], sha256, salt=b"salt"[:])
   for len in [1, 31, 32, 33, 64, 8160] {
-    assert_eq(@hkdf.expand(prk[:], sha256, len~).length(), len)
+    assert_eq(@hkdf.expand(prk, len~).length(), len)
   }
   // Every shorter output is a prefix of a longer one, which is what lets one
   // secret yield two keys of different sizes.
-  let long = @hkdf.expand(prk[:], sha256, len=64)
-  assert_eq(@hkdf.expand(prk[:], sha256, len=20), long[0:20].to_owned())
+  let long = @hkdf.expand(prk, len=64)
+  assert_eq(@hkdf.expand(prk, len=20), long[0:20].to_owned())
 }
 
 ///|
