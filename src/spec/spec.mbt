@@ -112,6 +112,7 @@ pub(open) trait Verifier {
 
 ///|
 /// A ciphertext that did not authenticate, or a key that cannot be used.
+#derive(Eq, Debug)
 pub(all) suberror Broken {
   /// The authentication tag does not match: the ciphertext, the associated
   /// data, the key or the nonce is not what sealed it.
@@ -123,7 +124,7 @@ pub(all) suberror Broken {
   /// Curve448 point, whose shared secret is all zeroes and so was chosen by the
   /// peer rather than agreed with it.
   Weak
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Broken with Eq::{equal, not_equal}

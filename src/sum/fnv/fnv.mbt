@@ -8,12 +8,13 @@
 /// `_1a` variants xor the byte in before the multiply, which is what gives them
 /// their better avalanche; the `_1` variants are the original and are kept
 /// because existing formats use them.
+#derive(Eq, Debug)
 pub(all) enum Kind {
   Fnv1_32
   Fnv1a_32
   Fnv1_64
   Fnv1a_64
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Kind with Eq::{equal, not_equal}

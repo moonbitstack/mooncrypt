@@ -22,13 +22,14 @@ fn hash_of(name : String) -> () -> &@spec.Hash {
 
 ///|
 /// One vector: a secret, whatever the protocol binds in, and the length asked for.
+#derive(Debug)
 struct Case {
   hash : String
   z : String
   other : String
   len : Int32
   expected : String
-} derive(Debug)
+}
 
 ///|
 /// Lengths are chosen to land on, just under and just over a block boundary for

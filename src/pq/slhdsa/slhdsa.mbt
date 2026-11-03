@@ -9,6 +9,7 @@
 /// message digest a FORS tree covers, how many of them there are, and how big
 /// a hash is allowed to be. The names carry the trade they make — `s` for small
 /// signatures and slow signing, `f` for fast signing and larger signatures.
+#derive(Eq, Debug)
 pub(all) enum Kind {
   Sha2_128s
   Sha2_128f
@@ -22,7 +23,7 @@ pub(all) enum Kind {
   Shake_192f
   Shake_256s
   Shake_256f
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Kind with Eq::{equal, not_equal}
@@ -271,6 +272,7 @@ pub let context_size : Int32 = 255
 
 ///|
 /// A hash function usable as the pre-hash of [`PrivateKey::sign`].
+#derive(Eq, Debug)
 pub(all) enum PreHash {
   Sha2_224
   Sha2_256
@@ -284,7 +286,7 @@ pub(all) enum PreHash {
   Sha3_512
   Shake128
   Shake256
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PreHash with Eq::{equal, not_equal}

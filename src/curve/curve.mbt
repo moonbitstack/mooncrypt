@@ -9,6 +9,7 @@
 /// speak; and the three brainpool curves RFC 5639 defines, which some European
 /// and government profiles require. They differ only in their parameters, so
 /// the arithmetic is written once and each curve is a row in a table.
+#derive(Eq, Debug)
 pub(all) enum Curve {
   P256
   P384
@@ -17,7 +18,7 @@ pub(all) enum Curve {
   BrainpoolP256r1
   BrainpoolP384r1
   BrainpoolP512r1
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Curve with Eq::{equal, not_equal}

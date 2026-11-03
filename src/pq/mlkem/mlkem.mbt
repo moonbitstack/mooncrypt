@@ -8,11 +8,12 @@
 /// and 1568 bytes of encapsulation key — and in the noise width of the first
 /// error term. Everything else, the modulus, the degree and the compression
 /// widths, is shared, which is why they are one type and not three packages.
+#derive(Eq, Debug)
 pub(all) enum Kind {
   K512
   K768
   K1024
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Kind with Eq::{equal, not_equal}

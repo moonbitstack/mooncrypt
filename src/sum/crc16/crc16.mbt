@@ -8,6 +8,7 @@
 /// alone has meant at least four different functions in shipping protocols. The
 /// check value of each is stated on its case so that a reader can tell them
 /// apart at a glance.
+#derive(Eq, Debug)
 pub(all) enum Kind {
   ///
   /// CRC-16/ARC, polynomial `0x8005`, initial `0x0000`, reflected. Check value
@@ -34,7 +35,7 @@ pub(all) enum Kind {
   /// CRC-16/MODBUS, polynomial `0x8005`, initial `0xFFFF`, reflected. Check
   /// value `0x4B37`. The one on a Modbus serial line.
   Modbus
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Kind with Eq::{equal, not_equal}

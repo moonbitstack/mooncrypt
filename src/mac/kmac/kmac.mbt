@@ -4,10 +4,11 @@
 ///|
 /// Which KMAC. The number is the security level in bits and picks the cSHAKE
 /// underneath, so it also sets the largest key that fits in one block.
+#derive(Eq, Debug)
 pub(all) enum Kind {
   Kmac128
   Kmac256
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Kind with Eq::{equal, not_equal}

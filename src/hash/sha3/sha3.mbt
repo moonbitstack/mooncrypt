@@ -8,6 +8,7 @@
 /// with a different rate — a wider rate means fewer rounds of work per byte, so
 /// SHAKE128 is the fastest and the weakest, and the numbers in the names are the
 /// security level in bits, not the output size.
+#derive(Eq, Debug)
 pub(all) enum Kind {
   Sha3_224
   Sha3_256
@@ -15,7 +16,7 @@ pub(all) enum Kind {
   Sha3_512
   Shake128
   Shake256
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Kind with Eq::{equal, not_equal}

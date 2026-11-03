@@ -162,10 +162,11 @@ pub fn explicit(tag_num : Int32, content : Bytes) -> Bytes {
 /// A refused encoding. `Malformed` is a hostile or corrupt certificate; `Unsupported` is
 /// well-formed DER this parser deliberately does not read, and the two are separated so a
 /// caller can log an interop gap without calling it an attack.
+#derive(Eq)
 pub(all) suberror Refused {
   Malformed(String)
   Unsupported(String)
-} derive(Eq)
+}
 
 ///|
 /// DER errors print as the fault they are, so a rejected certificate names its own reason.
@@ -187,10 +188,11 @@ pub(all) struct Tlv {
 
 ///|
 /// A decoded BIT STRING: the content bytes and how many low bits of the last byte are padding.
+#derive(Eq, Debug)
 pub(all) struct Bits {
   bytes : Bytes
   unused : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 /// Whether bit `i` is set, counting from the most significant bit of the first byte — the

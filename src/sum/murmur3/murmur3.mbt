@@ -8,6 +8,7 @@
 /// 32-bit-output variant tuned for 32-bit machines, `x64_128` the 128-bit-output
 /// variant for 64-bit machines. There is also an `x86_128` upstream, left out
 /// because `x64_128` dominates it on the machines anyone runs today.
+#derive(Eq, Debug)
 pub(all) enum Kind {
   ///
   /// `MurmurHash3_x86_32`: 4-byte blocks, one 32-bit lane, 4-byte digest.
@@ -16,7 +17,7 @@ pub(all) enum Kind {
   /// `MurmurHash3_x64_128`: 16-byte blocks, two coupled 64-bit lanes, 16-byte
   /// digest.
   X64_128
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Kind with Eq::{equal, not_equal}

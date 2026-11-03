@@ -11,19 +11,21 @@ let hotp_secret : Bytes = @utf8.encode("12345678901234567890")
 
 ///|
 /// One row of the counter-based table.
+#derive(Debug)
 struct HotpCase {
   counter : UInt64
   expected : String
-} derive(Debug)
+}
 
 ///|
 /// One row of the time-based table, naming the hash because RFC 6238 gives a
 /// separate seed and a separate column for each.
+#derive(Debug)
 struct TotpCase {
   hash : String
   time : UInt64
   expected : String
-} derive(Debug)
+}
 
 ///|
 /// RFC 4226 appendix D.

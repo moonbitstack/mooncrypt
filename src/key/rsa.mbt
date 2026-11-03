@@ -54,10 +54,11 @@ pub fn curve_of_oid(oid : StringView) -> @curve.Curve? {
 
 ///|
 /// An RSA verification key as PKCS#1 holds it: two integers.
+#derive(Eq)
 pub(all) struct RsaPublic {
   modulus : BigInt
   exponent : BigInt
-} derive(Eq)
+}
 
 ///|
 /// An RSA signing key as PKCS#1 holds it.
@@ -67,6 +68,7 @@ pub(all) struct RsaPublic {
 /// full-size one. They are carried rather than recomputed because a format that
 /// stores them would lose information otherwise, and because computing them back
 /// from silence costs two big-integer factorisations per load.
+#derive(Eq)
 pub(all) struct RsaPrivate {
   modulus : BigInt
   public_exponent : BigInt
@@ -76,7 +78,7 @@ pub(all) struct RsaPrivate {
   exponent1 : BigInt
   exponent2 : BigInt
   coefficient : BigInt
-} derive(Eq)
+}
 
 ///|
 /// The PKCS#1 `RSAPublicKey` of RFC 8017 §A.1.1.

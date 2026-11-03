@@ -4,10 +4,11 @@
 ///|
 /// Which BLAKE2. `b` is the 64-bit variant and `s` the 32-bit one; the digest
 /// length, the salt length and the personalisation length all follow from that.
+#derive(Eq, Debug)
 pub(all) enum Kind {
   Blake2b
   Blake2s
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Kind with Eq::{equal, not_equal}

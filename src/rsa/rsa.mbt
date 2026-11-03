@@ -8,13 +8,14 @@
 /// the scheme cannot be written over an arbitrary hash the way HMAC can: only a
 /// digest with a registered identifier is signable. That constraint is this
 /// enum.
+#derive(Eq, Debug)
 pub(all) enum Digest {
   Sha1
   Sha224
   Sha256
   Sha384
   Sha512
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Digest with Eq::{equal, not_equal}
@@ -29,12 +30,13 @@ pub extend Digest with Debug::{to_repr}
 /// and almost every certificate in existence carries. `Pss` is the probabilistic
 /// scheme of §9.1, which JOSE calls PS256 and which new designs should prefer —
 /// its security rests on a proof rather than on the absence of a known attack.
+#derive(Eq, Debug)
 pub(all) enum Scheme {
   Pkcs1
   /// The salt length in bytes. RFC 8017 recommends the digest's own length;
   /// zero is permitted and makes the signature deterministic.
   Pss(salt~ : Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Scheme with Eq::{equal, not_equal}

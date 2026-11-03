@@ -8,6 +8,7 @@
 /// IEEE one is the one on Ethernet and in zip files, and the Castagnoli one has
 /// better distance properties for the short blocks a filesystem or a storage
 /// protocol writes.
+#derive(Eq, Debug)
 pub(all) enum Kind {
   ///
   /// The IEEE 802.3 polynomial, `0x04C11DB7`, reflected. Ethernet, zip, PNG.
@@ -15,7 +16,7 @@ pub(all) enum Kind {
   ///
   /// The Castagnoli polynomial, `0x1EDC6F41`, reflected. iSCSI, ext4, Btrfs.
   Castagnoli
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Kind with Eq::{equal, not_equal}

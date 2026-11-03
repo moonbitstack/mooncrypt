@@ -7,6 +7,7 @@
 /// The two are not a truncation of each other: the 64-bit one multiplies 64-bit
 /// words and rotates by different amounts, so XXH64 of a message says nothing
 /// about its XXH32.
+#derive(Eq, Debug)
 pub(all) enum Kind {
   ///
   /// XXH32: four 32-bit lanes over 16-byte stripes.
@@ -14,7 +15,7 @@ pub(all) enum Kind {
   ///
   /// XXH64: four 64-bit lanes over 32-byte stripes.
   Xxh64
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Kind with Eq::{equal, not_equal}

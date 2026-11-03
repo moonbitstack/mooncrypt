@@ -24,6 +24,7 @@ let version : Int32 = 19
 ///|
 /// Which of the three functions to run. They differ only in where the index of
 /// the reference block comes from.
+#derive(Eq, Debug)
 pub(all) enum Kind {
   ///
   /// Addresses are read out of the last block written. Fastest, and the only
@@ -40,7 +41,7 @@ pub(all) enum Kind {
   /// after that is data-dependent. RFC 9106 §4 recommends this as the default
   /// because it costs almost nothing and closes the cheap attacks.
   Argon2id
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Kind with Eq::{equal, not_equal}
@@ -81,11 +82,12 @@ pub fn Kind::name(self : Kind) -> String {
 /// The tag length is not here: it is an argument to the derivation, because two
 /// calls that differ only in how long an output they want are still the same
 /// function with the same cost.
+#derive(Eq, Debug)
 pub(all) struct Params {
   memory : Int32
   passes : Int32
   lanes : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Params with Eq::{equal, not_equal}

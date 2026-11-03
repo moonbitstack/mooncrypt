@@ -8,11 +8,12 @@
 /// `128 * r * n` bytes; `r` is the block size divided by 128; and `p` is how
 /// many of those passes run in parallel, which multiplies the time but not the
 /// memory. Doubling `n` doubles both, which is why it is the knob to turn.
+#derive(Eq, Debug)
 pub(all) struct Params {
   n : Int32
   r : Int32
   p : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Params with Eq::{equal, not_equal}

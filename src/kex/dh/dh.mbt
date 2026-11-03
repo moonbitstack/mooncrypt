@@ -14,13 +14,14 @@ pub let generator : Int32 = 2
 /// They differ only in size, and the size is the whole choice: a larger group is
 /// slower and buys a larger margin against a discrete logarithm. `ffdhe2048` is
 /// the smallest the RFC defines and the one TLS picks when it has to.
+#derive(Eq, Debug)
 pub(all) enum Group {
   Ffdhe2048
   Ffdhe3072
   Ffdhe4096
   Ffdhe6144
   Ffdhe8192
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Group with Eq::{equal, not_equal}

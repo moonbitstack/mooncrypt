@@ -8,11 +8,12 @@
 /// a wider masking range and a challenge with more non-zero coefficients. They
 /// are one type because every one of those is a table entry, not a different
 /// algorithm.
+#derive(Eq, Debug)
 pub(all) enum Kind {
   D44
   D65
   D87
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Kind with Eq::{equal, not_equal}
@@ -338,6 +339,7 @@ pub fn PublicKey::verify(
 /// The list is the identity of the algorithm as well as its name: the object
 /// identifier that goes in front of the digest is `2.16.840.1.101.3.4.2.x`
 /// with `x` the position of the variant here, so the two cannot drift apart.
+#derive(Eq, Debug)
 pub(all) enum PreHash {
   Sha2_224
   Sha2_256
@@ -351,7 +353,7 @@ pub(all) enum PreHash {
   Sha3_512
   Shake128
   Shake256
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PreHash with Eq::{equal, not_equal}

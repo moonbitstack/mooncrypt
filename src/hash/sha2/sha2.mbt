@@ -8,6 +8,7 @@
 /// SHA-512 with a different initial vector and a truncated digest, which is why
 /// they are not simply SHA-512 cut short — cutting SHA-512 short would leave the
 /// discarded half recoverable in a length-extension.
+#derive(Eq, Debug)
 pub(all) enum Kind {
   Sha224
   Sha256
@@ -15,7 +16,7 @@ pub(all) enum Kind {
   Sha512
   Sha512_224
   Sha512_256
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Kind with Eq::{equal, not_equal}
