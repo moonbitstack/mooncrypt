@@ -203,11 +203,28 @@ let two_255 : BigInt = BigInt::from_string(
 )
 
 ///|
-/// A point in affine coordinates. The twisted-Edwards addition law is complete —
-/// identity `(0, 1)`, no exceptional cases — so there is no infinity to carry.
+/// `2d`, the constant the extended addition law wants.
+let two_d : BigInt = mod_p(d * (2 : BigInt))
+
+///|
+/// A point in affine coordinates: the form a key is encoded in and returned in.
+/// The twisted-Edwards addition law is complete — identity `(0, 1)`, no
+/// exceptional cases — so there is no infinity to carry.
 priv struct Point {
   x : BigInt
   y : BigInt
+}
+
+///|
+/// The same point in extended coordinates, `x = X/Z`, `y = Y/Z`, `T = XY/Z`.
+/// Carrying `Z` is what lets a scalar multiplication go through 255 doublings
+/// without one field inversion apiece; the single inversion happens on the way
+/// back to affine.
+priv struct Ext {
+  x : BigInt
+  y : BigInt
+  z : BigInt
+  t : BigInt
 }
 
 ///|
@@ -263,27 +280,65 @@ fn x_of(y : BigInt) -> BigInt {
 }
 
 ///|
+fn to_ext(p : Point) -> Ext {
+  { x: p.x, y: p.y, z: (1 : BigInt), t: mod_p(p.x * p.y), }
+}
+
+///|
+fn to_affine(p : Ext) -> Point {
+  let zi = inv(p.z)
+  { x: mod_p(p.x * zi), y: mod_p(p.y * zi), }
+}
+
+///|
+/// `add-2008-hwcd-3` for `a = -1`: one law for every pair of points, including
+/// a point with itself, so there is no special case to get wrong.
+fn ext_add(a : Ext, b : Ext) -> Ext {
+  let aa = mod_p((a.y - a.x) * (b.y - b.x))
+  let bb = mod_p((a.y + a.x) * (b.y + b.x))
+  let cc = mod_p(a.t * two_d * b.t)
+  let dd = mod_p(2 * a.z * b.z)
+  let e = mod_p(bb - aa)
+  let f = mod_p(dd - cc)
+  let g = mod_p(dd + cc)
+  let h = mod_p(bb + aa)
+  { x: mod_p(e * f), y: mod_p(g * h), z: mod_p(f * g), t: mod_p(e * h), }
+}
+
+///|
+/// `dbl-2008-hwcd`, which is cheaper than the unified law on the half of the
+/// steps that only need a doubling.
+fn ext_double(a : Ext) -> Ext {
+  let aa = mod_p(a.x * a.x)
+  let bb = mod_p(a.y * a.y)
+  let cc = mod_p(2 * a.z * a.z)
+  let dd = mod_p(p - aa)
+  let xy = mod_p(a.x + a.y)
+  let e = mod_p(xy * xy - aa - bb)
+  let g = mod_p(dd + bb)
+  let f = mod_p(g - cc)
+  let h = mod_p(dd - bb)
+  { x: mod_p(e * f), y: mod_p(g * h), z: mod_p(f * g), t: mod_p(e * h), }
+}
+
+///|
 fn add(a : Point, b : Point) -> Point {
-  let dxy = mod_p(d * a.x * b.x * a.y * b.y)
-  {
-    x: mod_p((a.x * b.y + b.x * a.y) * inv(mod_p(1 + dxy))),
-    y: mod_p((a.y * b.y + a.x * b.x) * inv(mod_p(1 - dxy))),
-  }
+  to_affine(ext_add(to_ext(a), to_ext(b)))
 }
 
 ///|
 fn mul(e : BigInt, pt : Point) -> Point {
-  let mut acc : Point = { x: 0, y: 1, }
-  let mut addend = pt
+  let mut acc = to_ext({ x: 0, y: 1, })
+  let mut addend = to_ext(pt)
   let mut k = e
   while k > (0 : BigInt) {
     if k % 2 == (1 : BigInt) {
-      acc = add(acc, addend)
+      acc = ext_add(acc, addend)
     }
-    addend = add(addend, addend)
+    addend = ext_double(addend)
     k = k / 2
   }
-  acc
+  to_affine(acc)
 }
 
 ///|
