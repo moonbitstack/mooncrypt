@@ -249,92 +249,14 @@ pub fn add(c : Curve, a : Point, b : Point) -> Point {
 }
 
 ///|
-/// A point in Jacobian coordinates, `x = X/Z²` and `y = Y/Z³`; `Z = 0` is the
-/// point at infinity. A scalar multiplication pays one inversion at the end
-/// instead of one per step.
-priv struct Jacobian {
-  x : BigInt
-  y : BigInt
-  z : BigInt
-}
-
-///|
-/// `dbl-2007-bl` from the Explicit-Formulas Database, valid for any `a`.
-fn jdouble(c : Curve, p : Jacobian) -> Jacobian {
-  if p.z == (0 : BigInt) || p.y == (0 : BigInt) {
-    return { x: 1, y: 1, z: 0, }
-  }
-  let q = params(c)
-  let xx = mod_p(c, p.x * p.x)
-  let yy = mod_p(c, p.y * p.y)
-  let yyyy = mod_p(c, yy * yy)
-  let zz = mod_p(c, p.z * p.z)
-  let s = mod_p(c, 2 * ((p.x + yy) * (p.x + yy) - xx - yyyy))
-  let m = mod_p(c, 3 * xx + q.a * zz * zz)
-  let t = mod_p(c, m * m - 2 * s)
-  {
-    x: t,
-    y: mod_p(c, m * (s - t) - 8 * yyyy),
-    z: mod_p(c, (p.y + p.z) * (p.y + p.z) - yy - zz),
-  }
-}
-
-///|
-/// `add-2007-bl` from the Explicit-Formulas Database.
-fn jadd(c : Curve, a : Jacobian, b : Jacobian) -> Jacobian {
-  if a.z == (0 : BigInt) {
-    return b
-  }
-  if b.z == (0 : BigInt) {
-    return a
-  }
-  let z1z1 = mod_p(c, a.z * a.z)
-  let z2z2 = mod_p(c, b.z * b.z)
-  let u1 = mod_p(c, a.x * z2z2)
-  let u2 = mod_p(c, b.x * z1z1)
-  let s1 = mod_p(c, a.y * b.z * z2z2)
-  let s2 = mod_p(c, b.y * a.z * z1z1)
-  let h = mod_p(c, u2 - u1)
-  let r = mod_p(c, 2 * (s2 - s1))
-  if h == (0 : BigInt) {
-    return if r == (0 : BigInt) { jdouble(c, a) } else { { x: 1, y: 1, z: 0, } }
-  }
-  let i = mod_p(c, 4 * h * h)
-  let j = mod_p(c, h * i)
-  let v = mod_p(c, u1 * i)
-  let x = mod_p(c, r * r - j - 2 * v)
-  {
-    x,
-    y: mod_p(c, r * (v - x) - 2 * s1 * j),
-    z: mod_p(c, ((a.z + b.z) * (a.z + b.z) - z1z1 - z2z2) * h),
-  }
-}
-
-///|
-/// `[k]P`. A Montgomery ladder: every bit costs one addition and one doubling,
-/// whatever its value, so the sequence of operations does not spell out `k`.
+/// `[k]P`. The scalar multiplication runs in fixed-width 32-bit limbs with a
+/// Montgomery ladder and a branch-free swap, so every bit costs one addition
+/// and one doubling whatever its value; see [`mul_limb`] for the field.
 pub fn mul(c : Curve, k : BigInt, pt : Point) -> Point {
   if pt.zero {
     return pt
   }
-  let mut r0 : Jacobian = { x: 1, y: 1, z: 0, }
-  let mut r1 : Jacobian = { x: pt.x, y: pt.y, z: 1, }
-  for i = bits(k) - 1; i >= 0; i = i - 1 {
-    if (k >> i) % 2 == (1 : BigInt) {
-      r0 = jadd(c, r0, r1)
-      r1 = jdouble(c, r1)
-    } else {
-      r1 = jadd(c, r0, r1)
-      r0 = jdouble(c, r0)
-    }
-  }
-  if r0.z == (0 : BigInt) {
-    return { x: 0, y: 0, zero: true, }
-  }
-  let p = params(c).p
-  let zi = inv(r0.z, p)
-  let zi2 = mod_p(c, zi * zi)
-  { x: mod_p(c, r0.x * zi2), y: mod_p(c, r0.y * zi2 * zi), zero: false, }
+  mul_limb(c, k, pt)
 }
 
 ///|
