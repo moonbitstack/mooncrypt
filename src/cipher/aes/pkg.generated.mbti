@@ -12,8 +12,8 @@ pub let block : Int32
 
 // Types and methods
 pub struct Cipher {
-  schedule : FixedArray[Byte]
   rounds : Int32
+  enc : FixedArray[UInt64]
 }
 pub fn Cipher::block(Self) -> Int32
 pub fn Cipher::decrypt(Self, BytesView) -> Bytes

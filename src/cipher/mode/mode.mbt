@@ -186,17 +186,47 @@ fn bump(block : FixedArray[Byte]) -> Unit {
 pub fn Ctr::apply(self : Ctr, data : BytesView) -> Bytes {
   let size = self.cipher.block()
   let out : FixedArray[Byte] = FixedArray::make(data.length(), b'\x00')
-  for i in 0..<data.length() {
-    if self.used == size {
-      let fresh = self.cipher.encrypt(Bytes::from_array(self.counter))
-      for k in 0..<size {
-        self.stream[k] = fresh[k]
-      }
-      self.used = 0
-      bump(self.counter)
-    }
+  let mut i = 0
+  // First drain whatever is left of the last keystream block.
+  while i < data.length() && self.used < size {
     out[i] = data[i] ^ self.stream[self.used]
     self.used = self.used + 1
+    i = i + 1
+  }
+  // Then whole blocks, sixteen at a time, so the four-lane core is fed a batch.
+  while i + size <= data.length() {
+    let batch = if (data.length() - i) / size >= 16 {
+      16
+    } else {
+      (data.length() - i) / size
+    }
+    let ctr = FixedArray::make(batch * size, b'\x00')
+    for b in 0..<batch {
+      for k in 0..<size {
+        ctr[b * size + k] = self.counter[k]
+      }
+      bump(self.counter)
+    }
+    let ks = self.cipher.encrypt_blocks(ctr.unsafe_reinterpret_as_bytes()[:])
+    let n = batch * size
+    for j in 0..<n {
+      out[i + j] = data[i + j] ^ ks[j]
+    }
+    i = i + n
+  }
+  // A trailing partial block goes through the streaming buffer.
+  if i < data.length() {
+    let fresh = self.cipher.encrypt(Bytes::from_array(self.counter))
+    for k in 0..<size {
+      self.stream[k] = fresh[k]
+    }
+    self.used = 0
+    bump(self.counter)
+    while i < data.length() {
+      out[i] = data[i] ^ self.stream[self.used]
+      self.used = self.used + 1
+      i = i + 1
+    }
   }
   Bytes::from_array(out)
 }

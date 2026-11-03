@@ -1499,7 +1499,7 @@
 <div class="pkg-head"><span class="no">01</span><h2>aes</h2><span class="path">moonbitstack/mooncrypt/cipher/aes</span></div><p class="pkg-ref">AES, FIPS 197: https://doi.org/10.6028/NIST.FIPS.197-upd1</p><p class="pkg-note">All three key lengths. The key is the only thing that varies, so there is no variant to name: the length says which one it is.</p>
 <div class="item" id="cipher-aes-cipher">
 <div class="name"><span class="kind">type</span>Cipher</div>
-<div class="body"><div class="sig">pub struct Cipher {</div><p>An expanded key.</p><p>The schedule is held in a [`FixedArray`] so it can be erased; see [`@spec.wipe`] for why that matters and what it does not promise.</p><div class="sig">implements <code>@spec.Block</code></div></div>
+<div class="body"><div class="sig">pub struct Cipher {</div><p>An expanded key, in the bit-plane layout the bitsliced core reads.</p><p>It is held in a [`FixedArray`] so it can be erased; see [`@spec.wipe`] for what that is worth and what it does not promise.</p><div class="sig">implements <code>@spec.Block</code></div></div>
 </div>
 <div class="item" id="cipher-aes-block">
 <div class="name"><span class="kind">let</span>block</div>
@@ -1511,7 +1511,7 @@
 </div>
 <div class="item" id="cipher-aes-cipher-decrypt">
 <div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>decrypt</div>
-<div class="body"><div class="sig">pub fn Cipher::decrypt(Self, BytesView) -&gt; Bytes</div><p>Decrypt one block (FIPS 197 §5.3 InvCipher).</p></div>
+<div class="body"><div class="sig">pub fn Cipher::decrypt(Self, BytesView) -&gt; Bytes</div><p>Decrypt one block.</p></div>
 </div>
 <div class="item" id="cipher-aes-cipher-decrypt-blocks">
 <div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>decrypt_blocks</div>
@@ -1519,7 +1519,7 @@
 </div>
 <div class="item" id="cipher-aes-cipher-encrypt">
 <div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>encrypt</div>
-<div class="body"><div class="sig">pub fn Cipher::encrypt(Self, BytesView) -&gt; Bytes</div><p>Encrypt one block (FIPS 197 §5.1 Cipher).</p><p>The state is column-major: byte `k` is row `k % 4`, column `k / 4`.</p></div>
+<div class="body"><div class="sig">pub fn Cipher::encrypt(Self, BytesView) -&gt; Bytes</div><p>Encrypt one block.</p><p>The state is transposed into eight bit planes and advanced by the bitsliced core, which always moves four blocks' worth of bits; the other three lanes are zero and discarded. A caller encrypting many blocks at once should use [`encrypt_blocks`], where those lanes carry real data.</p></div>
 </div>
 <div class="item" id="cipher-aes-cipher-encrypt-blocks">
 <div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>encrypt_blocks</div>

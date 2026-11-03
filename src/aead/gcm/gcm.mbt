@@ -244,19 +244,30 @@ fn Gcm::start(self : Gcm, nonce : BytesView) -> FixedArray[Byte] {
 /// CTR-mode keystream XOR, starting from J0 incremented once — the data counter
 /// begins at J0+1 (SP 800-38D §7.1 step 3).
 fn Gcm::gctr(self : Gcm, j0 : FixedArray[Byte], input : BytesView) -> Bytes {
+  let total = input.length()
   let counter = FixedArray::make(16, b'\x00')
   FixedArray::unsafe_blit(counter, 0, j0, 0, 16)
   inc32(counter)
-  let out = FixedArray::make(input.length(), b'\x00')
+  let out = FixedArray::make(total, b'\x00')
   let mut off = 0
-  while off < input.length() {
-    let ks = self.cipher.encrypt(counter.unsafe_reinterpret_as_bytes()[:])
-    let n = @cmp.minimum(input.length() - off, 16)
+  while off < total {
+    let remaining = total - off
+    // Sixteen counter blocks at a time, so the four-lane bitsliced core is fed
+    // a whole batch rather than a block per call.
+    let blocks = if remaining >= 256 { 16 } else { (remaining + 15) / 16 }
+    let batch = FixedArray::make(blocks * 16, b'\x00')
+    for b in 0..<blocks {
+      for i in 0..<16 {
+        batch[b * 16 + i] = counter[i]
+      }
+      inc32(counter)
+    }
+    let ks = self.cipher.encrypt_blocks(batch.unsafe_reinterpret_as_bytes()[:])
+    let n = if remaining >= blocks * 16 { blocks * 16 } else { remaining }
     for j in 0..<n {
       out[off + j] = input[off + j] ^ ks[j]
     }
-    inc32(counter)
-    off = off + 16
+    off = off + blocks * 16
   }
   out.unsafe_reinterpret_as_bytes()
 }

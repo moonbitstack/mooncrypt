@@ -5,7 +5,6 @@
 // any length, and the tag lengths SP 800-38D names.
 import {
   "moonbitstack/mooncrypt/spec",
-  "moonbitlang/core/cmp",
 }
 
 import {
