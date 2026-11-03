@@ -51,5 +51,147 @@ def main():
         print(f"wrote {len(rows)} vectors to {out}")
 
 
+BRAINPOOL = {
+    "brainpoolP256r1": ("BrainpoolP256r1", 32),
+    "brainpoolP384r1": ("BrainpoolP384r1", 48),
+    "brainpoolP512r1": ("BrainpoolP512r1", 64),
+}
+
+# p, a, b of each curve (RFC 5639 §3.2–3.4), to tell a point that is genuinely
+# off the curve from one whose invalidity is only in the DER envelope.
+PARAMS = {
+    32: (
+        "A9FB57DBA1EEA9BC3E660A909D838D726E3BF623D52620282013481D1F6E5377",
+        "7D5A0975FC2C3057EEF67530417AFFE7FB8055C126DC5C6CE94A4B44F330B5D9",
+        "26DC5C6CE94A4B44F330B5D9BBD77CBF958416295CF7E1CE6BCCDC18FF8C07B6",
+    ),
+    48: (
+        "8CB91E82A3386D280F5D6F7E50E641DF152F7109ED5456B412B1DA197FB71123ACD3A729901D1A71874700133107EC53",
+        "7BC382C63D8C150C3C72080ACE05AFA0C2BEA28E4FB22787139165EFBA91F90F8AA5814A503AD4EB04A8C7DD22CE2826",
+        "04A8C7DD22CE28268B39B55416F0447C2FB77DE107DCD2A62E880EA53EEB62D57CB4390295DBC9943AB78696FA504C11",
+    ),
+    64: (
+        "AADD9DB8DBE9C48B3FD4E6AE33C9FC07CB308DB3B3C9D20ED6639CCA703308717D4D9B009BC66842AECDA12AE6A380E62881FF2F2D82C68528AA6056583A48F3",
+        "7830A3318B603B89E2327145AC234CC594CBDD8D3DF91610A83441CAEA9863BC2DED5D5AA8253AA10A2EF1C98B9AC8B57F1117A72BF2C7B9E7C1AC4D77FC94CA",
+        "3DF91610A83441CAEA9863BC2DED5D5AA8253AA10A2EF1C98B9AC8B57F1117A72BF2C7B9E7C1AC4D77FC94CADC083E67984050B75EBAE5DD2809BD638016F723",
+    ),
+}
+
+
+def on_curve(point_hex, size):
+    p, a, coef_b = (int(v, 16) for v in PARAMS[size])
+    raw = bytes.fromhex(point_hex)
+    if point_hex[:2] in ("02", "03") and len(raw) == 1 + size:
+        # Decompress: every brainpool prime is 3 mod 4.
+        x = int.from_bytes(raw[1:], "big")
+        y2 = (pow(x, 3, p) + a * x + coef_b) % p
+        y = pow(y2, (p + 1) // 4, p)
+        return (y * y - y2) % p == 0
+    if point_hex[:2] == "04" and len(raw) == 1 + 2 * size:
+        x = int.from_bytes(raw[1:1 + size], "big")
+        y = int.from_bytes(raw[1 + size:], "big")
+        return (y * y - x * x * x - a * x - coef_b) % p == 0
+    return False
+
+
+def sec1_point(public_hex, size):
+    """The raw `04 || X || Y` point out of a DER SubjectPublicKeyInfo, or None.
+
+    Wycheproof wraps the peer key in SPKI here; the library reads SEC 1 points,
+    so the BIT STRING is unwrapped. A case whose wrapper does not parse is left
+    as the original bytes, which the decoder then refuses."""
+    b = bytes.fromhex(public_hex)
+    try:
+        i = 0
+
+        def length():
+            nonlocal i
+            n = b[i]
+            i += 1
+            if n & 0x80:
+                k = n & 0x7F
+                n = int.from_bytes(b[i:i + k], "big")
+                i += k
+            return n
+
+        assert b[i] == 0x30
+        i += 1
+        length()  # outer SEQUENCE
+        assert b[i] == 0x30
+        i += 1
+        n = length()
+        i += n  # AlgorithmIdentifier
+        assert b[i] == 0x03
+        i += 1
+        n = length()
+        content = b[i:i + n]
+        point = content[1:]  # strip the unused-bits count
+        assert len(point) == 1 + 2 * size and point[0] == 0x04
+        return point.hex()
+    except Exception:
+        return None
+
+
+def brainpool_ecdh(src):
+    """The three brainpool curves' ECDH vectors, which the CRC curve table does
+    not share with the NIST primes, so they live in their own table.
+
+    Wycheproof wraps the peer key in a DER SubjectPublicKeyInfo and marks a case
+    invalid for reasons the DER carries — a wrong curve OID, a different cofactor
+    — even when the point itself is a valid point on the named curve. This API
+    takes a raw point and a fixed curve, so those envelope-only cases are left
+    out; the ones whose point is off the curve or whose encoding does not parse
+    are kept, because the decoder must refuse exactly those."""
+    rows, skipped = [], 0
+    for name, (curve, size) in BRAINPOOL.items():
+        data = json.loads((src / f"ecdh_{name}_test.json").read_text(encoding="utf-8"))
+        for group in data["testGroups"]:
+            for t in group["tests"]:
+                verdict = {"valid": "Valid", "invalid": "Invalid", "acceptable": "Either"}[
+                    t["result"]
+                ]
+                point = sec1_point(t["public"], size)
+                if verdict == "Valid":
+                    assert point is not None and on_curve(point, size), (name, t["tcId"])
+                elif verdict == "Invalid" and point is not None and on_curve(point, size):
+                    skipped += 1
+                    continue
+                elif verdict == "Either" and (point is None or not t["shared"]):
+                    skipped += 1
+                    continue
+                raw_priv = t["private"]
+                value = int(raw_priv, 16) if raw_priv else 0
+                # Wycheproof prints the scalar at its natural width; the library
+                # wants it fixed-width. Left-pad when it fits, keep it padded-out
+                # otherwise so the length check refuses it.
+                scale = format(value, "0%dx" % (2 * size)) if value < (1 << (8 * size)) else raw_priv
+                rows.append(
+                    f'  (@curve.{curve}, {t["tcId"]}, "{scale}", '
+                    f'"{point or t["public"]}", "{t["shared"] or ""}", {verdict}),'
+                )
+    text = [
+        "// Generated by scripts/gen_wycheproof.py from Wycheproof's ecdh_brainpool*_test.json;",
+        "// rerun it rather than editing.",
+        f"// {SOURCE}",
+        "//",
+        "// Cases whose invalidity is only in the DER wrapper (a wrong curve OID,",
+        "// another cofactor) are not here: the exchange takes a raw point and a",
+        "// named curve, so the wrapper never reaches it.",
+        "",
+        "///|",
+        "/// (curve, tcId, private, public, shared, verdict)",
+        "let brainpool_cases : Array[(@ecdh.Curve, Int32, String, String, String, Verdict)] = [",
+        *rows,
+        "]",
+        "",
+    ]
+    out = ROOT / "kex" / "ecdh" / "vectors_brainpool_test.mbt"
+    out.write_text("\n".join(text), encoding="utf-8", newline="\n")
+    print(f"wrote {len(rows)} brainpool vectors to {out} ({skipped} envelope-only cases left out)")
+
+
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 2 and sys.argv[2] == "--brainpool":
+        brainpool_ecdh(pathlib.Path(sys.argv[1]))
+    else:
+        main()
