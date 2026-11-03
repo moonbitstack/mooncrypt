@@ -76,11 +76,11 @@ Import the ones you use. A package nothing imports is not linked, which is what
 | `kdf/argon2` | Argon2d, Argon2i and Argon2id, with secret and associated data | RFC 9106 |
 | `kdf/bcrypt` | bcrypt, the `$2b$` text format and a constant-time verify | Provos & Mazières 1999 |
 | `kdf/concat` | The Concat KDF, as a NIST key agreement derives from a shared secret | SP 800-56A §5.8.1 |
-| `drbg` | HMAC-DRBG, a seeded deterministic generator that is also a `moonseed` `Source`, so a key type can draw from it | SP 800-90A |
+| `drbg` | HMAC-DRBG over any hash, and CTR-DRBG over AES-128, AES-192 or AES-256 with or without the derivation function; each is a `moonseed` `Source`, so a key type can draw from it | SP 800-90A |
 | `curve` | The curves an EC key can live on — P-256, P-384, P-521, secp256k1 and brainpoolP256r1/P384r1/P512r1 — and their coordinate width; `sign/ecdsa` and `kex/ecdh` re-export it, import it to name a curve | FIPS 186-4, SEC 2, RFC 5639 |
 | `sign/ed25519` | Ed25519 | RFC 8032 |
 | `sign/ed448` | Ed448, with context and the prehash form | RFC 8032 |
-| `sign/ecdsa` | ECDSA over P-256, P-384, P-521 and secp256k1, with RFC 6979 nonces | FIPS 186-4, RFC 6979 |
+| `sign/ecdsa` | ECDSA over P-256, P-384, P-521, secp256k1 and the three brainpool curves, with RFC 6979 nonces | FIPS 186-4, RFC 6979, RFC 5639 |
 | `sign/schnorr` | Schnorr over secp256k1, x-only keys and all | BIP 340 |
 | `sign/sm2` | SM2, with the signer identity mixed into the hash | GB/T 32918.2-2016 |
 | `sign/dsa` | DSA over FIPS 186-4 domains, with RFC 6979 nonces | FIPS 186-4, RFC 6979 |
@@ -103,7 +103,7 @@ Import the ones you use. A package nothing imports is not linked, which is what
 | `aead/stream` | STREAM chunked AEAD over ChaCha20-Poly1305, as the age format encrypts a payload | age v1 (STREAM) |
 | `kex/x25519` | X25519, with a low-order point refused | RFC 7748 |
 | `kex/x448` | X448, with the same refusal | RFC 7748 |
-| `kex/ecdh` | ECDH over P-256, P-384, P-521 and secp256k1, with an off-curve point refused | SEC 1 §3.3.1 |
+| `kex/ecdh` | ECDH over P-256, P-384, P-521, secp256k1 and the three brainpool curves, with an off-curve point refused | SEC 1 §3.3.1, RFC 5639, RFC 8734 |
 | `kex/dh` | Finite-field Diffie-Hellman over the five ffdhe groups, with a range check on the peer's share | RFC 7919 |
 | `pq/mlkem` | ML-KEM-512, -768 and -1024: the key encapsulation behind TLS's hybrid group, with both key checks and the implicit rejection | FIPS 203 |
 | `pq/mldsa` | ML-DSA-44, -65 and -87, with contexts, the pre-hash form and the internal interface | FIPS 204 |
@@ -132,7 +132,7 @@ the only comparison the library offers, so there is no wrong one to reach for.
 ## Configuration
 
 Everything a caller chooses is already an argument: `kind` picks the SHA-2, SHA-3,
-BLAKE2, KMAC or xxHash variant, `curve` the ECDSA curve, `digest` and `scheme`
+BLAKE2, KMAC, xxHash or CTR-DRBG variant, `curve` the ECDSA curve, `digest` and `scheme`
 the RSA padding and its hash, `salt` and `info` the HKDF inputs, `params` the
 scrypt and Argon2 cost, `cost` bcrypt's, `tag` the CCM, SIV and GMAC tag length,
 `group` the RFC 7919 group, `digits` the one-time password length, and
@@ -173,9 +173,11 @@ usefully catch.
 Every algorithm is tested against the vectors its specification publishes —
 FIPS 180-4's worked examples, RFC 4231, RFC 5869 appendix A, RFC 6070, RFC 8032
 §7.1, RFC 6979 §A.2.5, RFC 3713 appendix A, RFC 6229, RFC 9106 §5, RFC 7914 §12,
-RFC 4226 appendix D, RFC 6238 appendix B, BIP 340's CSV, and NIST's ACVP output
-for the post-quantum schemes — and, where a specification publishes none,
-against signatures produced by a third-party implementation. The curve
+RFC 4226 appendix D, RFC 6238 appendix B, RFC 8734 appendix A, BIP 340's CSV, and
+NIST's ACVP output for the post-quantum schemes and the CTR-DRBG — and, where a
+specification publishes none, against signatures produced by a third-party
+implementation. The brainpool curves are checked against Wycheproof's ECDH
+vectors as well. The curve
 parameters were derived from a third-party library rather than transcribed, and
 checked: the generator on the curve, the order annihilating it.
 
