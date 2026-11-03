@@ -1,0 +1,73 @@
+name: Full post-quantum replay
+
+# The committed vectors are a subsample for SLH-DSA: a signature there is up to
+# fifty kilobytes and one of the slow parameter sets takes seconds to produce
+# it, so replaying all of them on every push would dominate the suite. This job
+# regenerates the vectors with `--full` and replays them on a schedule instead,
+# which is what the vector tables would look like if size were free. Nothing it
+# writes is committed: the point is to prove the sample still stands for the
+# whole set.
+
+on:
+  schedule:
+    # The first and the fifteenth, at 04:00 UTC.
+    - cron: "0 4 1,15 * *"
+  workflow_dispatch:
+
+jobs:
+  replay:
+    permissions:
+      contents: read
+    runs-on: ubuntu-26.04
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: install
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> $GITHUB_PATH
+
+      - name: post install
+        run: |
+          moon version --all
+          moon update
+
+      - name: fetch the ACVP families
+        run: |
+          set -eu
+          root=https://raw.githubusercontent.com/usnistgov/ACVP-Server/master/gen-val/json-files
+          mkdir -p "$RUNNER_TEMP/acvp"
+          for family in \
+            ML-KEM-keyGen-FIPS203 ML-KEM-encapDecap-FIPS203 \
+            ML-DSA-keyGen-FIPS204 ML-DSA-sigGen-FIPS204 ML-DSA-sigVer-FIPS204 \
+            SLH-DSA-keyGen-FIPS205 SLH-DSA-sigGen-FIPS205 SLH-DSA-sigVer-FIPS205 \
+            ctrDRBG-1.0
+          do
+            for kind in prompt expectedResults; do
+              curl -fsSL "$root/$family/$kind.json" \
+                -o "$RUNNER_TEMP/acvp/$family.$kind.json"
+            done
+          done
+          ls -l "$RUNNER_TEMP/acvp"
+
+      - name: regenerate every vector table with --full
+        run: python3 scripts/gen_acvp_vectors.py "$RUNNER_TEMP/acvp" --full
+
+      - name: the generator only writes vector tables
+        run: |
+          unexpected=$(git status --porcelain | grep -v 'src/pq/.*/vectors_.*\.mbt$' | grep -v 'src/drbg/vectors_.*\.mbt$' || true)
+          if [ -n "$unexpected" ]; then
+            echo "the generator touched something other than its own output:"
+            echo "$unexpected"
+            exit 1
+          fi
+
+      - name: replay
+        run: |
+          moon test --target native -p moonbitstack/mooncrypt/pq/mlkem
+          moon test --target native -p moonbitstack/mooncrypt/pq/mldsa
+          moon test --target native -p moonbitstack/mooncrypt/pq/slhdsa
+          moon test --target native -p moonbitstack/mooncrypt/drbg
