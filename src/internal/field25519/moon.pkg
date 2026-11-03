@@ -1,0 +1,5 @@
+// The prime field of Curve25519 and Ed25519, `GF(2^255 - 19)`, in 32-bit limbs
+// with Montgomery multiplication.
+//
+// Internal: `kex/x25519` and `sign/ed25519` are the two curves over it, and
+// neither exposes a bare field element.

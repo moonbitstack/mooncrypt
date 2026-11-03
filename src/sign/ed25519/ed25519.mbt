@@ -168,21 +168,21 @@ pub impl @spec.Verifier for PublicKey with fn verify(
 // ------------------------------------------------------------------ the curve
 
 ///|
-/// `p = 2^255 - 19`, the field prime.
-let p : BigInt = BigInt::from_string(
-  "7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFED",
-  radix=16,
-)
-
-///|
 /// The curve coefficient `d = -121665/121666`.
-let d : BigInt = BigInt::from_string(
-  "52036CEE2B6FFE738CC740797779E89800700A4D4141D8AB75EB4DCA135978A3",
-  radix=16,
+let d : @field25519.Fe = @field25519.from_bigint(
+  BigInt::from_string(
+    "52036CEE2B6FFE738CC740797779E89800700A4D4141D8AB75EB4DCA135978A3",
+    radix=16,
+  ),
 )
 
 ///|
-/// The order of the base point's subgroup.
+/// `2d`, the constant the extended addition law wants.
+let two_d : @field25519.Fe = @field25519.add(d, d)
+
+///|
+/// The order of the base point's subgroup. Scalar arithmetic stays in `BigInt`:
+/// it is a handful of operations per signature, not the inner loop.
 let l : BigInt = BigInt::from_string(
   "1000000000000000000000000000000014DEF9DEA2F79CD65812631A5CF5D3ED",
   radix=16,
@@ -190,29 +190,24 @@ let l : BigInt = BigInt::from_string(
 
 ///|
 /// A square root of -1, which decompression needs because `p ≡ 5 (mod 8)`.
-let sqrt_m1 : BigInt = BigInt::from_string(
-  "2B8324804FC1DF0B2B4D00993DFBD7A72F431806AD2FE478C4EE1B274A0EA0B0",
-  radix=16,
+let sqrt_m1 : @field25519.Fe = @field25519.from_bigint(
+  BigInt::from_string(
+    "2B8324804FC1DF0B2B4D00993DFBD7A72F431806AD2FE478C4EE1B274A0EA0B0",
+    radix=16,
+  ),
 )
 
 ///|
-/// 2^255, for masking a compressed point's sign bit away.
-let two_255 : BigInt = BigInt::from_string(
-  "8000000000000000000000000000000000000000000000000000000000000000",
-  radix=16,
-)
-
-///|
-/// `2d`, the constant the extended addition law wants.
-let two_d : BigInt = mod_p(d * (2 : BigInt))
+/// The field's zero.
+let zero : @field25519.Fe = @field25519.from_bigint(0N)
 
 ///|
 /// A point in affine coordinates: the form a key is encoded in and returned in.
 /// The twisted-Edwards addition law is complete — identity `(0, 1)`, no
 /// exceptional cases — so there is no infinity to carry.
 priv struct Point {
-  x : BigInt
-  y : BigInt
+  x : @field25519.Fe
+  y : @field25519.Fe
 }
 
 ///|
@@ -221,32 +216,26 @@ priv struct Point {
 /// without one field inversion apiece; the single inversion happens on the way
 /// back to affine.
 priv struct Ext {
-  x : BigInt
-  y : BigInt
-  z : BigInt
-  t : BigInt
+  x : @field25519.Fe
+  y : @field25519.Fe
+  z : @field25519.Fe
+  t : @field25519.Fe
 }
 
 ///|
 let base : Point = {
-  x: BigInt::from_string(
-    "216936D3CD6E53FEC0A4E231FDD6DC5C692CC7609525A7B2C9562D608F25D51A",
-    radix=16,
+  x: @field25519.from_bigint(
+    BigInt::from_string(
+      "216936D3CD6E53FEC0A4E231FDD6DC5C692CC7609525A7B2C9562D608F25D51A",
+      radix=16,
+    ),
   ),
-  y: BigInt::from_string(
-    "6666666666666666666666666666666666666666666666666666666666666658",
-    radix=16,
+  y: @field25519.from_bigint(
+    BigInt::from_string(
+      "6666666666666666666666666666666666666666666666666666666666666658",
+      radix=16,
+    ),
   ),
-}
-
-///|
-fn mod_p(a : BigInt) -> BigInt {
-  let m = a % p
-  if m < (0 : BigInt) {
-    m + p
-  } else {
-    m
-  }
 }
 
 ///|
@@ -260,85 +249,139 @@ fn mod_l(a : BigInt) -> BigInt {
 }
 
 ///|
-fn inv(a : BigInt) -> BigInt {
-  mod_p(a).pow(p - 2, modulus=p)
+fn is_odd(a : @field25519.Fe) -> Bool {
+  (@field25519.to_le_bytes(a)[0].to_int() & 1) == 1
 }
 
 ///|
 /// Recover `x` from `y`: `x² = (y² - 1)/(d·y² + 1)`, taking the even root.
-fn x_of(y : BigInt) -> BigInt {
-  let yy = mod_p(y * y)
-  let xx = mod_p((yy - 1) * inv(mod_p(d * yy + 1)))
-  let mut x = xx.pow((p + 3) / 8, modulus=p)
-  if mod_p(x * x - xx) != (0 : BigInt) {
-    x = mod_p(x * sqrt_m1)
+fn x_of(y : @field25519.Fe) -> @field25519.Fe {
+  let yy = @field25519.sqr(y)
+  let yy1 = @field25519.sub(yy, @field25519.one)
+  let dy1 = @field25519.add(@field25519.mul(d, yy), @field25519.one)
+  let xx = @field25519.mul(yy1, @field25519.inv(dy1))
+  let mut x = @field25519.pow_8(xx)
+  if !@field25519.eq(@field25519.sqr(x), xx) {
+    x = @field25519.mul(x, sqrt_m1)
   }
-  if x % 2 != (0 : BigInt) {
-    x = p - x
+  if is_odd(x) {
+    x = @field25519.sub(zero, x)
   }
   x
 }
 
 ///|
 fn to_ext(p : Point) -> Ext {
-  { x: p.x, y: p.y, z: (1 : BigInt), t: mod_p(p.x * p.y), }
+  { x: p.x, y: p.y, z: @field25519.one, t: @field25519.mul(p.x, p.y), }
 }
 
 ///|
 fn to_affine(p : Ext) -> Point {
-  let zi = inv(p.z)
-  { x: mod_p(p.x * zi), y: mod_p(p.y * zi), }
+  let zi = @field25519.inv(p.z)
+  { x: @field25519.mul(p.x, zi), y: @field25519.mul(p.y, zi), }
+}
+
+///|
+fn identity() -> Ext {
+  { x: zero, y: @field25519.one, z: @field25519.one, t: zero, }
 }
 
 ///|
 /// `add-2008-hwcd-3` for `a = -1`: one law for every pair of points, including
 /// a point with itself, so there is no special case to get wrong.
 fn ext_add(a : Ext, b : Ext) -> Ext {
-  let aa = mod_p((a.y - a.x) * (b.y - b.x))
-  let bb = mod_p((a.y + a.x) * (b.y + b.x))
-  let cc = mod_p(a.t * two_d * b.t)
-  let dd = mod_p(2 * a.z * b.z)
-  let e = mod_p(bb - aa)
-  let f = mod_p(dd - cc)
-  let g = mod_p(dd + cc)
-  let h = mod_p(bb + aa)
-  { x: mod_p(e * f), y: mod_p(g * h), z: mod_p(f * g), t: mod_p(e * h), }
+  let aa = @field25519.mul(@field25519.sub(a.y, a.x), @field25519.sub(b.y, b.x))
+  let bb = @field25519.mul(@field25519.add(a.y, a.x), @field25519.add(b.y, b.x))
+  let cc = @field25519.mul(@field25519.mul(a.t, two_d), b.t)
+  let dd = @field25519.mul(@field25519.add(a.z, a.z), b.z)
+  let e = @field25519.sub(bb, aa)
+  let f = @field25519.sub(dd, cc)
+  let g = @field25519.add(dd, cc)
+  let h = @field25519.add(bb, aa)
+  {
+    x: @field25519.mul(e, f),
+    y: @field25519.mul(g, h),
+    z: @field25519.mul(f, g),
+    t: @field25519.mul(e, h),
+  }
 }
 
 ///|
 /// `dbl-2008-hwcd`, which is cheaper than the unified law on the half of the
 /// steps that only need a doubling.
 fn ext_double(a : Ext) -> Ext {
-  let aa = mod_p(a.x * a.x)
-  let bb = mod_p(a.y * a.y)
-  let cc = mod_p(2 * a.z * a.z)
-  let dd = mod_p(p - aa)
-  let xy = mod_p(a.x + a.y)
-  let e = mod_p(xy * xy - aa - bb)
-  let g = mod_p(dd + bb)
-  let f = mod_p(g - cc)
-  let h = mod_p(dd - bb)
-  { x: mod_p(e * f), y: mod_p(g * h), z: mod_p(f * g), t: mod_p(e * h), }
+  let aa = @field25519.sqr(a.x)
+  let bb = @field25519.sqr(a.y)
+  let cc = @field25519.add(@field25519.sqr(a.z), @field25519.sqr(a.z))
+  let dd = @field25519.sub(zero, aa)
+  let xy = @field25519.add(a.x, a.y)
+  let e = @field25519.sub(@field25519.sub(@field25519.sqr(xy), aa), bb)
+  let g = @field25519.add(dd, bb)
+  let f = @field25519.sub(g, cc)
+  let h = @field25519.sub(dd, bb)
+  {
+    x: @field25519.mul(e, f),
+    y: @field25519.mul(g, h),
+    z: @field25519.mul(f, g),
+    t: @field25519.mul(e, h),
+  }
+}
+
+///|
+fn ext_select(mask : UInt64, a : Ext, b : Ext) -> Ext {
+  {
+    x: @field25519.select(mask, a.x, b.x),
+    y: @field25519.select(mask, a.y, b.y),
+    z: @field25519.select(mask, a.z, b.z),
+    t: @field25519.select(mask, a.t, b.t),
+  }
+}
+
+///|
+/// `digit·P` for a secret `digit < 16`: the whole table is read and the match
+/// kept with a mask, so the work does not depend on the digit.
+fn window_lookup(table : FixedArray[Ext], digit : Int32, start : Ext) -> Ext {
+  let mut slot = start
+  for i in 0..<16 {
+    let diff = (i ^ digit).to_uint64()
+    let mask = ((diff | (0UL - diff)) >> 63) - 1UL
+    slot = ext_select(mask, table[i], slot)
+  }
+  slot
+}
+
+///|
+/// `[e]P`, four bits at a time and over the scalar's full width: 64 additions
+/// against a table of the sixteen small multiples instead of 255 steps of a
+/// double-and-add, and neither the count nor the table access follows `e`.
+fn mul(e : BigInt, pt : Point) -> Point {
+  let base_e = to_ext(pt)
+  let table = FixedArray::make(16, identity())
+  table[0] = identity()
+  table[1] = base_e
+  for i in 2..<16 {
+    table[i] = ext_add(table[i - 1], base_e)
+  }
+  let bytes = e.to_octets(length=32)
+  let mut acc = identity()
+  let mut slot = identity()
+  for i in 0..<64 {
+    if i > 0 {
+      for _ in 0..<4 {
+        acc = ext_double(acc)
+      }
+    }
+    let byte = bytes[i / 2].to_int()
+    let digit = if i % 2 == 0 { (byte >> 4) & 0xF } else { byte & 0xF }
+    slot = window_lookup(table, digit, slot)
+    acc = ext_add(acc, slot)
+  }
+  to_affine(acc)
 }
 
 ///|
 fn add(a : Point, b : Point) -> Point {
   to_affine(ext_add(to_ext(a), to_ext(b)))
-}
-
-///|
-fn mul(e : BigInt, pt : Point) -> Point {
-  let mut acc = to_ext({ x: 0, y: 1, })
-  let mut addend = to_ext(pt)
-  let mut k = e
-  while k > (0 : BigInt) {
-    if k % 2 == (1 : BigInt) {
-      acc = ext_add(acc, addend)
-    }
-    addend = ext_double(addend)
-    k = k / 2
-  }
-  to_affine(acc)
 }
 
 ///|
@@ -364,24 +407,30 @@ fn le_bytes(n : BigInt, length : Int32) -> Bytes {
 
 ///|
 fn encode(pt : Point) -> Bytes {
-  let be = mod_p(pt.y).to_octets(length=32)
-  let out : Array[Byte] = []
-  for i = 31; i >= 1; i = i - 1 {
-    out.push(be[i])
+  let out = @field25519.to_le_bytes(pt.y)
+  let bytes = FixedArray::make(32, b'\x00')
+  for i in 0..<32 {
+    bytes[i] = out[i]
   }
-  let sign = if mod_p(pt.x) % 2 == (1 : BigInt) { 0x80 } else { 0 }
-  out.push((be[0].to_int() | sign).to_byte())
-  Bytes::from_array(out)
+  let sign = if is_odd(pt.x) { 0x80 } else { 0 }
+  bytes[31] = (bytes[31].to_int() | sign).to_byte()
+  Bytes::from_array(bytes)
 }
 
 ///|
 fn decode(s : BytesView) -> Point {
-  let y = le_int(s) % two_255
-  let mut x = x_of(y)
-  let sign = (s[31].to_int() >> 7) & 1
-  let parity = if x % 2 == (1 : BigInt) { 1 } else { 0 }
-  if parity != sign {
-    x = p - x
+  let raw = FixedArray::make(32, b'\x00')
+  for i in 0..<32 {
+    raw[i] = s[i]
+  }
+  let sign = (raw[31].to_int() >> 7) & 1
+  raw[31] = (raw[31].to_int() & 0x7F).to_byte()
+  let y = @field25519.from_le_bytes(Bytes::from_array(raw)[:])
+  let even = x_of(y)
+  let x = if is_odd(even).to_int() != sign {
+    @field25519.sub(zero, even)
+  } else {
+    even
   }
   { x, y, }
 }
