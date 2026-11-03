@@ -2,6 +2,7 @@
 package "moonbitstack/mooncrypt/drbg"
 
 import {
+  "moonbitlang/core/debug",
   "moonbitstack/mooncrypt/spec",
   "moonbitstack/moonseed",
 }
@@ -12,6 +13,8 @@ import {
 
 // Types and methods
 pub struct CtrDrbg {
+  kind : Kind
+  derivation : Bool
   mut key : FixedArray[Byte]
   mut v : FixedArray[Byte]
   mut reseed_counter : UInt64
@@ -19,7 +22,8 @@ pub struct CtrDrbg {
 pub fn CtrDrbg::fill(Self, FixedArray[Byte]) -> Unit raise @moonseed.Unavailable
 pub fn CtrDrbg::generate(Self, Int32) -> Bytes
 pub fn CtrDrbg::generate_with(Self, Int32, additional~ : BytesView) -> Bytes
-pub fn CtrDrbg::new(entropy~ : BytesView, nonce~ : BytesView, personalization~ : BytesView) -> Self
+pub fn CtrDrbg::kind(Self) -> Kind
+pub fn CtrDrbg::new(entropy~ : BytesView, nonce~ : BytesView, personalization~ : BytesView, kind? : Kind, derivation? : Bool) -> Self
 pub fn CtrDrbg::reseed(Self, entropy~ : BytesView, additional~ : BytesView) -> Unit
 pub fn CtrDrbg::reseed_counter(Self) -> UInt64
 pub impl @moonseed.Source for CtrDrbg
@@ -47,6 +51,17 @@ pub fn HmacDrbg::reseed(Self, entropy~ : BytesView, additional~ : BytesView) -> 
 pub fn HmacDrbg::reseed_counter(Self) -> UInt64
 pub fn HmacDrbg::wipe(Self) -> Unit
 pub impl @moonseed.Source for HmacDrbg
+
+#derive(Eq, @debug.Debug)
+pub(all) enum Kind {
+  Aes128
+  Aes192
+  Aes256
+}
+pub fn Kind::equal(Self, Self) -> Bool
+pub fn Kind::not_equal(Self, Self) -> Bool
+pub fn Kind::size(Self) -> Int32
+pub fn Kind::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

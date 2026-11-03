@@ -10,6 +10,7 @@ import {
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) enum Curve {
   P256
   P384
@@ -18,7 +19,7 @@ pub(all) enum Curve {
   BrainpoolP256r1
   BrainpoolP384r1
   BrainpoolP512r1
-} derive(Eq, @debug.Debug)
+}
 pub fn Curve::equal(Self, Self) -> Bool
 pub fn Curve::not_equal(Self, Self) -> Bool
 pub fn Curve::size(Self) -> Int32

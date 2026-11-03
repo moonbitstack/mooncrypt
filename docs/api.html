@@ -74,7 +74,7 @@
         <h1>Every package, in order</h1>
         <p class="lede">
           Generated from each package's interface file and the comments above its
-          declarations. 697 public declarations across 64
+          declarations. 700 public declarations across 64
           packages.
         </p>
       </div>
@@ -184,7 +184,7 @@
   Tag
   Size(want~ : Int32, got~ : Int32)
   Weak
-} derive(Eq, @debug.Debug)</div><p>A ciphertext that did not authenticate, or a key that cannot be used.</p></div>
+}</div></div>
 </div>
 <div class="item" id="spec-digest">
 <div class="name"><span class="kind">fn</span>digest</div>
@@ -208,7 +208,7 @@
 <div class="body"><div class="sig">pub(all) enum Kind {
   Blake2b
   Blake2s
-} derive(Eq, @debug.Debug)</div><p>Which BLAKE2. `b` is the 64-bit variant and `s` the 32-bit one; the digest length, the salt length and the personalisation length all follow from that.</p></div>
+}</div></div>
 </div>
 <div class="item" id="hash-blake2-hasher-block">
 <div class="name"><span class="kind">fn</span><span class="dim">Hasher::</span>block</div>
@@ -426,7 +426,7 @@
   Sha512
   Sha512_224
   Sha512_256
-} derive(Eq, @debug.Debug)</div><p>Which member of the SHA-2 family.</p><p>The six are one design at two word widths. `Sha512_224` and `Sha512_256` are SHA-512 with a different initial vector and a truncated digest, which is why they are not simply SHA-512 cut short — cutting SHA-512 short would leave the discarded half recoverable in a length-extension.</p></div>
+}</div></div>
 </div>
 <div class="item" id="hash-sha2-hasher-block">
 <div class="name"><span class="kind">fn</span><span class="dim">Hasher::</span>block</div>
@@ -476,7 +476,7 @@
   Sha3_512
   Shake128
   Shake256
-} derive(Eq, @debug.Debug)</div><p>Which member of the Keccak family.</p><p>The four SHA-3 lengths and the two SHAKE lengths are the same permutation with a different rate — a wider rate means fewer rounds of work per byte, so SHAKE128 is the fastest and the weakest, and the numbers in the names are the security level in bits, not the output size.</p></div>
+}</div></div>
 </div>
 <div class="item" id="hash-sha3-hasher-block">
 <div class="name"><span class="kind">fn</span><span class="dim">Hasher::</span>block</div>
@@ -770,7 +770,7 @@
 <div class="body"><div class="sig">pub(all) enum Kind {
   Kmac128
   Kmac256
-} derive(Eq, @debug.Debug)</div><p>Which KMAC. The number is the security level in bits and picks the cSHAKE underneath, so it also sets the largest key that fits in one block.</p></div>
+}</div></div>
 </div>
 <div class="item" id="mac-kmac-kind-block">
 <div class="name"><span class="kind">fn</span><span class="dim">Kind::</span>block</div>
@@ -955,7 +955,7 @@
   Kermit
   X25
   Modbus
-} derive(Eq, @debug.Debug)</div><p>Which CRC-16.</p><p>Named after the catalogue, which is the only way to be unambiguous: "CRC-16" alone has meant at least four different functions in shipping protocols. The check value of each is stated on its case so that a reader can tell them apart at a glance.</p></div>
+}</div></div>
 </div>
 <div class="item" id="sum-crc16-crc16-block">
 <div class="name"><span class="kind">fn</span><span class="dim">Crc16::</span>block</div>
@@ -1013,7 +1013,7 @@
 <div class="body"><div class="sig">pub(all) enum Kind {
   Ieee
   Castagnoli
-} derive(Eq, @debug.Debug)</div><p>Which CRC-32.</p><p>The two differ only in the polynomial, but they detect different faults: the IEEE one is the one on Ethernet and in zip files, and the Castagnoli one has better distance properties for the short blocks a filesystem or a storage protocol writes.</p></div>
+}</div></div>
 </div>
 <div class="item" id="sum-crc32-crc32-block">
 <div class="name"><span class="kind">fn</span><span class="dim">Crc32::</span>block</div>
@@ -1073,7 +1073,7 @@
   Fnv1a_32
   Fnv1_64
   Fnv1a_64
-} derive(Eq, @debug.Debug)</div><p>Which FNV.</p><p>Two widths and two orderings, and all four produce different answers. The `_1a` variants xor the byte in before the multiply, which is what gives them their better avalanche; the `_1` variants are the original and are kept because existing formats use them.</p></div>
+}</div></div>
 </div>
 <div class="item" id="sum-fnv-fnv-block">
 <div class="name"><span class="kind">fn</span><span class="dim">Fnv::</span>block</div>
@@ -1131,7 +1131,7 @@
 <div class="body"><div class="sig">pub(all) enum Kind {
   X86_32
   X64_128
-} derive(Eq, @debug.Debug)</div><p>Which MurmurHash3.</p><p>The names are the ones the reference implementation uses: `x86_32` is the 32-bit-output variant tuned for 32-bit machines, `x64_128` the 128-bit-output variant for 64-bit machines. There is also an `x86_128` upstream, left out because `x64_128` dominates it on the machines anyone runs today.</p></div>
+}</div></div>
 </div>
 <div class="item" id="sum-murmur3-kind-block">
 <div class="name"><span class="kind">fn</span><span class="dim">Kind::</span>block</div>
@@ -1189,7 +1189,7 @@
 <div class="body"><div class="sig">pub(all) enum Kind {
   Xxh32
   Xxh64
-} derive(Eq, @debug.Debug)</div><p>Which xxHash.</p><p>The two are not a truncation of each other: the 64-bit one multiplies 64-bit words and rotates by different amounts, so XXH64 of a message says nothing about its XXH32.</p></div>
+}</div></div>
 </div>
 <div class="item" id="sum-xxhash-kind-block">
 <div class="name"><span class="kind">fn</span><span class="dim">Kind::</span>block</div>
@@ -1246,7 +1246,7 @@
   memory : Int32
   passes : Int32
   lanes : Int32
-} derive(Eq, @debug.Debug)</div><p>The three numbers a derivation is defined by.</p><p>`memory` is in kibibytes, and it is what the function is really about: the derivation allocates that much and reads it back in a password-dependent order, so an attacker who cannot afford the memory cannot compute the hash cheaply at all. `passes` multiplies the time without changing the memory. `lanes` is how many independent chains are kept; it is the only knob that helps when the work runs on a GPU, and each lane needs eight blocks.</p><p>The tag length is not here: it is an argument to the derivation, because two calls that differ only in how long an output they want are still the same function with the same cost.</p></div>
+}</div></div>
 </div>
 <div class="item" id="kdf-argon2-kind">
 <div class="name"><span class="kind">type</span>Kind</div>
@@ -1254,7 +1254,7 @@
   Argon2d
   Argon2i
   Argon2id
-} derive(Eq, @debug.Debug)</div><p>Which of the three functions to run. They differ only in where the index of the reference block comes from.</p></div>
+}</div></div>
 </div>
 <div class="item" id="kdf-argon2-interactive">
 <div class="name"><span class="kind">let</span>interactive</div>
@@ -1365,7 +1365,7 @@
   n : Int32
   r : Int32
   p : Int32
-} derive(Eq, @debug.Debug)</div><p>The three numbers a scrypt derivation is defined by.</p><p>`n` is the number of blocks the inner loop keeps, so the memory it takes is `128 * r * n` bytes; `r` is the block size divided by 128; and `p` is how many of those passes run in parallel, which multiplies the time but not the memory. Doubling `n` doubles both, which is why it is the knob to turn.</p></div>
+}</div></div>
 </div>
 <div class="item" id="kdf-scrypt-interactive">
 <div class="name"><span class="kind">let</span>interactive</div>
@@ -1391,14 +1391,22 @@
 <h2 id="drbg"><span class="no">06</span> Randomness</h2>
 <p class="lede">Deterministic generators seeded from an entropy source</p>
 <section class="pkg">
-<div class="pkg-head"><span class="no">01</span><h2>drbg</h2><span class="path">moonbitstack/mooncrypt/drbg</span></div><p class="pkg-ref">DRBG, NIST SP 800-90A: https://doi.org/10.6028/NIST.SP.800-90A</p><p class="pkg-note">HMAC-DRBG over any hash. It implements `moonseed.Source`, so a key generator or a signing routine that draws from a source can take a seeded, deterministic generator instead of the platform's entropy — and reproduce a test vector.</p>
+<div class="pkg-head"><span class="no">01</span><h2>drbg</h2><span class="path">moonbitstack/mooncrypt/drbg</span></div><p class="pkg-ref">DRBG, NIST SP 800-90A: https://doi.org/10.6028/NIST.SP.800-90A</p><p class="pkg-note">HMAC-DRBG over any hash, and CTR-DRBG over AES-128, AES-192 or AES-256, with or without the derivation function. Each implements `moonseed.Source`, so a key generator or a signing routine that draws from a source can take a seeded, deterministic generator instead of the platform's entropy — and reproduce a test vector.</p>
 <div class="item" id="drbg-ctrdrbg">
 <div class="name"><span class="kind">type</span>CtrDrbg</div>
-<div class="body"><div class="sig">pub struct CtrDrbg {</div><p>A CTR-DRBG over AES-256.</p><div class="sig">implements <code>@moonseed.Source</code></div></div>
+<div class="body"><div class="sig">pub struct CtrDrbg {</div><p>A CTR-DRBG over AES-128, AES-192 or AES-256, with or without the derivation function (§10.2.1).</p><div class="sig">implements <code>@moonseed.Source</code></div></div>
 </div>
 <div class="item" id="drbg-hashdrbg">
 <div class="name"><span class="kind">type</span>HashDrbg</div>
 <div class="body"><div class="sig">pub struct HashDrbg {</div><p>Hash-DRBG (SP 800-90A §10.1.1): a deterministic generator whose state is a seed `V` and a constant `C`, advanced by adding hash outputs into `V`.</p><div class="sig">implements <code>@moonseed.Source</code></div></div>
+</div>
+<div class="item" id="drbg-kind">
+<div class="name"><span class="kind">type</span>Kind</div>
+<div class="body"><div class="sig">pub(all) enum Kind {
+  Aes128
+  Aes192
+  Aes256
+}</div></div>
 </div>
 <div class="item" id="drbg-ctrdrbg-fill">
 <div class="name"><span class="kind">fn</span><span class="dim">CtrDrbg::</span>fill</div>
@@ -1410,15 +1418,19 @@
 </div>
 <div class="item" id="drbg-ctrdrbg-generate-with">
 <div class="name"><span class="kind">fn</span><span class="dim">CtrDrbg::</span>generate_with</div>
-<div class="body"><div class="sig">pub fn CtrDrbg::generate_with(Self, Int32, additional~ : BytesView) -&gt; Bytes</div><p>Draw `n` bytes with an additional input (§10.2.1.5).</p></div>
+<div class="body"><div class="sig">pub fn CtrDrbg::generate_with(Self, Int32, additional~ : BytesView) -&gt; Bytes</div><p>Draw `n` bytes with an additional input (§10.2.1.5).</p><p>The additional input is processed before the keystream, and the processed value — zeroes when there is none — is folded back into the state afterwards, so producing output always advances Key and V.</p></div>
+</div>
+<div class="item" id="drbg-ctrdrbg-kind">
+<div class="name"><span class="kind">fn</span><span class="dim">CtrDrbg::</span>kind</div>
+<div class="body"><div class="sig">pub fn CtrDrbg::kind(Self) -&gt; Kind</div><p>The block cipher the generator runs on.</p></div>
 </div>
 <div class="item" id="drbg-ctrdrbg-new">
 <div class="name"><span class="kind">fn</span><span class="dim">CtrDrbg::</span>new</div>
-<div class="body"><div class="sig">pub fn CtrDrbg::new(entropy~ : BytesView, nonce~ : BytesView, personalization~ : BytesView) -&gt; Self</div><p>Seed the generator from an entropy input, a nonce and a personalization string (§10.2.1.3).</p></div>
+<div class="body"><div class="sig">pub fn CtrDrbg::new(entropy~ : BytesView, nonce~ : BytesView, personalization~ : BytesView, kind? : Kind, derivation? : Bool) -&gt; Self</div><p>Seed the generator from an entropy input, a nonce and a personalization string (§10.2.1.3).</p><p>Without the derivation function the entropy input must already be the seed length — key length plus one block — which is what full-entropy instantiation requires; only the personalization string is folded in, and the nonce is not used. With it, the three are concatenated and stretched to the seed length.</p></div>
 </div>
 <div class="item" id="drbg-ctrdrbg-reseed">
 <div class="name"><span class="kind">fn</span><span class="dim">CtrDrbg::</span>reseed</div>
-<div class="body"><div class="sig">pub fn CtrDrbg::reseed(Self, entropy~ : BytesView, additional~ : BytesView) -&gt; Unit</div><p>Reseed from fresh entropy (§10.2.1.4).</p></div>
+<div class="body"><div class="sig">pub fn CtrDrbg::reseed(Self, entropy~ : BytesView, additional~ : BytesView) -&gt; Unit</div><p>Reseed from fresh entropy (§10.2.1.4). Without the derivation function the entropy input must be the seed length and the additional input is folded in by XOR.</p></div>
 </div>
 <div class="item" id="drbg-ctrdrbg-reseed-counter">
 <div class="name"><span class="kind">fn</span><span class="dim">CtrDrbg::</span>reseed_counter</div>
@@ -1475,6 +1487,10 @@
 <div class="item" id="drbg-hmacdrbg-wipe">
 <div class="name"><span class="kind">fn</span><span class="dim">HmacDrbg::</span>wipe</div>
 <div class="body"><div class="sig">pub fn HmacDrbg::wipe(Self) -&gt; Unit</div><p>Erase the state. See [`@spec.wipe`] for what that is worth.</p></div>
+</div>
+<div class="item" id="drbg-kind-size">
+<div class="name"><span class="kind">fn</span><span class="dim">Kind::</span>size</div>
+<div class="body"><div class="sig">pub fn Kind::size(Self) -&gt; Int32</div><p>The key length in bytes: 16, 24 or 32.</p></div>
 </div>
 </section>
 <h2 id="cipher"><span class="no">07</span> Block ciphers</h2>
@@ -2119,14 +2135,14 @@
   Sha256
   Sha384
   Sha512
-} derive(Eq, @debug.Debug)</div><p>Which digest a signature is taken over.</p><p>PKCS#1 v1.5 embeds an ASN.1 algorithm identifier in the block it signs, so the scheme cannot be written over an arbitrary hash the way HMAC can: only a digest with a registered identifier is signable. That constraint is this enum.</p></div>
+}</div></div>
 </div>
 <div class="item" id="rsa-scheme">
 <div class="name"><span class="kind">type</span>Scheme</div>
 <div class="body"><div class="sig">pub(all) enum Scheme {
   Pkcs1
   Pss(salt~ : Int32)
-} derive(Eq, @debug.Debug)</div><p>Which padding a signature uses.</p><p>`Pkcs1` is the deterministic block of RFC 8017 §9.2, which JOSE calls RS256 and almost every certificate in existence carries. `Pss` is the probabilistic scheme of §9.1, which JOSE calls PS256 and which new designs should prefer — its security rests on a proof rather than on the absence of a known attack.</p></div>
+}</div></div>
 </div>
 <div class="item" id="rsa-privatekey-decrypt">
 <div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>decrypt</div>
@@ -2574,7 +2590,7 @@
   Ffdhe4096
   Ffdhe6144
   Ffdhe8192
-} derive(Eq, @debug.Debug)</div><p>One of the five finite-field groups of RFC 7919.</p><p>They differ only in size, and the size is the whole choice: a larger group is slower and buys a larger margin against a discrete logarithm. `ffdhe2048` is the smallest the RFC defines and the one TLS picks when it has to.</p></div>
+}</div></div>
 </div>
 <div class="item" id="kex-dh-generator">
 <div class="name"><span class="kind">let</span>generator</div>
@@ -2712,7 +2728,7 @@
   D44
   D65
   D87
-} derive(Eq, @debug.Debug)</div><p>Which ML-DSA parameter set.</p><p>The three move together: more rows in the matrix, more noise in the secret, a wider masking range and a challenge with more non-zero coefficients. They are one type because every one of those is a table entry, not a different algorithm.</p></div>
+}</div></div>
 </div>
 <div class="item" id="pq-mldsa-prehash">
 <div class="name"><span class="kind">type</span>PreHash</div>
@@ -2729,7 +2745,7 @@
   Sha3_512
   Shake128
   Shake256
-} derive(Eq, @debug.Debug)</div><p>A hash function usable as the pre-hash of [`PrivateKey::sign`], which is the twelve FIPS 204 §5.4 allows.</p><p>The list is the identity of the algorithm as well as its name: the object identifier that goes in front of the digest is `2.16.840.1.101.3.4.2.x` with `x` the position of the variant here, so the two cannot drift apart.</p></div>
+}</div></div>
 </div>
 <div class="item" id="pq-mldsa-context-size">
 <div class="name"><span class="kind">let</span>context_size</div>
@@ -2823,7 +2839,7 @@
   K512
   K768
   K1024
-} derive(Eq, @debug.Debug)</div><p>Which ML-KEM parameter set.</p><p>The three differ in the rank of the module — 2, 3 and 4 rows, so 800, 1184 and 1568 bytes of encapsulation key — and in the noise width of the first error term. Everything else, the modulus, the degree and the compression widths, is shared, which is why they are one type and not three packages.</p><div class="sig">implements <code>@spec.Kem</code></div></div>
+}</div><div class="sig">implements <code>@spec.Kem</code></div></div>
 </div>
 <div class="item" id="pq-mlkem-kind-ciphertext">
 <div class="name"><span class="kind">fn</span><span class="dim">Kind::</span>ciphertext</div>
@@ -2919,7 +2935,7 @@
   Shake_192f
   Shake_256s
   Shake_256f
-} derive(Eq, @debug.Debug)</div><p>Which SLH-DSA parameter set.</p><p>A set is a hash family, a block width `n`, and five numbers: the height of the hypertree, how many layers it is split into, how many bits of the message digest a FORS tree covers, how many of them there are, and how big a hash is allowed to be. The names carry the trade they make — `s` for small signatures and slow signing, `f` for fast signing and larger signatures.</p></div>
+}</div></div>
 </div>
 <div class="item" id="pq-slhdsa-prehash">
 <div class="name"><span class="kind">type</span>PreHash</div>
@@ -2936,7 +2952,7 @@
   Sha3_512
   Shake128
   Shake256
-} derive(Eq, @debug.Debug)</div><p>A hash function usable as the pre-hash of [`PrivateKey::sign`].</p></div>
+}</div></div>
 </div>
 <div class="item" id="pq-slhdsa-context-size">
 <div class="name"><span class="kind">let</span>context_size</div>
@@ -3016,7 +3032,7 @@
 <div class="body"><div class="sig">pub(all) struct Bits {
   bytes : Bytes
   unused : Int32
-} derive(Eq, @debug.Debug)</div><p>A decoded BIT STRING: the content bytes and how many low bits of the last byte are padding.</p></div>
+}</div></div>
 </div>
 <div class="item" id="asn1-tlv">
 <div class="name"><span class="kind">type</span>Tlv</div>
@@ -3031,7 +3047,7 @@
 <div class="body"><div class="sig">pub(all) suberror Refused {
   Malformed(String)
   Unsupported(String)
-} derive(Eq)</div><p>A refused encoding. `Malformed` is a hostile or corrupt certificate; `Unsupported` is well-formed DER this parser deliberately does not read, and the two are separated so a caller can log an interop gap without calling it an attack.</p><div class="sig">implements <code>Show</code></div></div>
+}</div><div class="sig">implements <code>Show</code></div></div>
 </div>
 <div class="item" id="asn1-bits-get">
 <div class="name"><span class="kind">fn</span><span class="dim">Bits::</span>get</div>
@@ -3150,7 +3166,7 @@
   BrainpoolP256r1
   BrainpoolP384r1
   BrainpoolP512r1
-} derive(Eq, @debug.Debug)</div><p>Which curve a key lives on.</p><p>The short-Weierstrass curves that protocols in use actually name: the three NIST primes, which TLS and JOSE speak; secp256k1, which Bitcoin and Ethereum speak; and the three brainpool curves RFC 5639 defines, which some European and government profiles require. They differ only in their parameters, so the arithmetic is written once and each curve is a row in a table.</p></div>
+}</div></div>
 </div>
 <div class="item" id="curve-curve-size">
 <div class="name"><span class="kind">fn</span><span class="dim">Curve::</span>size</div>
@@ -3178,14 +3194,14 @@
   exponent1 : @bigint.BigInt
   exponent2 : @bigint.BigInt
   coefficient : @bigint.BigInt
-} derive(Eq)</div><p>An RSA signing key as PKCS#1 holds it.</p><p>The seven numbers after the modulus and the two exponents are the CRT parameters: they let a signer do two half-size exponentiations instead of one full-size one. They are carried rather than recomputed because a format that stores them would lose information otherwise, and because computing them back from silence costs two big-integer factorisations per load.</p></div>
+}</div></div>
 </div>
 <div class="item" id="key-rsapublic">
 <div class="name"><span class="kind">type</span>RsaPublic</div>
 <div class="body"><div class="sig">pub(all) struct RsaPublic {
   modulus : @bigint.BigInt
   exponent : @bigint.BigInt
-} derive(Eq)</div><p>An RSA verification key as PKCS#1 holds it: two integers.</p></div>
+}</div></div>
 </div>
 <div class="item" id="key-line-width">
 <div class="name"><span class="kind">let</span>line_width</div>

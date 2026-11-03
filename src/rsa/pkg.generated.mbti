@@ -12,13 +12,14 @@ import {
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) enum Digest {
   Sha1
   Sha224
   Sha256
   Sha384
   Sha512
-} derive(Eq, @debug.Debug)
+}
 pub fn Digest::equal(Self, Self) -> Bool
 pub fn Digest::not_equal(Self, Self) -> Bool
 pub fn Digest::to_repr(Self) -> @debug.Repr
@@ -45,10 +46,11 @@ pub fn PublicKey::verify(Self, BytesView, BytesView) -> Bool
 pub fn PublicKey::with_scheme(Self, digest~ : Digest, scheme~ : Scheme) -> Self
 pub impl @spec.Verifier for PublicKey
 
+#derive(Eq, @debug.Debug)
 pub(all) enum Scheme {
   Pkcs1
   Pss(salt~ : Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn Scheme::equal(Self, Self) -> Bool
 pub fn Scheme::not_equal(Self, Self) -> Bool
 pub fn Scheme::to_repr(Self) -> @debug.Repr

@@ -51,6 +51,7 @@ pub(all) struct EcPrivate {
   public : Bytes?
 }
 
+#derive(Eq)
 pub(all) struct RsaPrivate {
   modulus : @bigint.BigInt
   public_exponent : @bigint.BigInt
@@ -60,14 +61,15 @@ pub(all) struct RsaPrivate {
   exponent1 : @bigint.BigInt
   exponent2 : @bigint.BigInt
   coefficient : @bigint.BigInt
-} derive(Eq)
+}
 pub fn RsaPrivate::equal(Self, Self) -> Bool
 pub fn RsaPrivate::not_equal(Self, Self) -> Bool
 
+#derive(Eq)
 pub(all) struct RsaPublic {
   modulus : @bigint.BigInt
   exponent : @bigint.BigInt
-} derive(Eq)
+}
 pub fn RsaPublic::equal(Self, Self) -> Bool
 pub fn RsaPublic::not_equal(Self, Self) -> Bool
 

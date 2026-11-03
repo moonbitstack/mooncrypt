@@ -12,10 +12,11 @@ pub fn xxhash(BytesView, kind? : Kind, seed? : UInt64) -> UInt64
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) enum Kind {
   Xxh32
   Xxh64
-} derive(Eq, @debug.Debug)
+}
 pub fn Kind::block(Self) -> Int32
 pub fn Kind::equal(Self, Self) -> Bool
 pub fn Kind::not_equal(Self, Self) -> Bool

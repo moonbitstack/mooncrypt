@@ -27,10 +27,11 @@ pub fn Crc32::value(Self) -> UInt32
 pub fn Crc32::write(Self, BytesView) -> Unit
 pub impl @spec.Hash for Crc32
 
+#derive(Eq, @debug.Debug)
 pub(all) enum Kind {
   Ieee
   Castagnoli
-} derive(Eq, @debug.Debug)
+}
 pub fn Kind::block(Self) -> Int32
 pub fn Kind::equal(Self, Self) -> Bool
 pub fn Kind::not_equal(Self, Self) -> Bool

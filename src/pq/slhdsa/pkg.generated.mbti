@@ -13,6 +13,7 @@ pub let context_size : Int32
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) enum Kind {
   Sha2_128s
   Sha2_128f
@@ -26,7 +27,7 @@ pub(all) enum Kind {
   Shake_192f
   Shake_256s
   Shake_256f
-} derive(Eq, @debug.Debug)
+}
 pub fn Kind::equal(Self, Self) -> Bool
 pub fn Kind::not_equal(Self, Self) -> Bool
 pub fn Kind::private_key(Self) -> Int32
@@ -35,6 +36,7 @@ pub fn Kind::seeds(Self) -> Int32
 pub fn Kind::signature(Self) -> Int32
 pub fn Kind::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum PreHash {
   Sha2_224
   Sha2_256
@@ -48,7 +50,7 @@ pub(all) enum PreHash {
   Sha3_512
   Shake128
   Shake256
-} derive(Eq, @debug.Debug)
+}
 pub fn PreHash::equal(Self, Self) -> Bool
 pub fn PreHash::not_equal(Self, Self) -> Bool
 pub fn PreHash::to_repr(Self) -> @debug.Repr

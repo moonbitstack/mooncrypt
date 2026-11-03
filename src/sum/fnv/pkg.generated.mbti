@@ -26,12 +26,13 @@ pub fn Fnv::value(Self) -> UInt64
 pub fn Fnv::write(Self, BytesView) -> Unit
 pub impl @spec.Hash for Fnv
 
+#derive(Eq, @debug.Debug)
 pub(all) enum Kind {
   Fnv1_32
   Fnv1a_32
   Fnv1_64
   Fnv1a_64
-} derive(Eq, @debug.Debug)
+}
 pub fn Kind::block(Self) -> Int32
 pub fn Kind::equal(Self, Self) -> Bool
 pub fn Kind::not_equal(Self, Self) -> Bool

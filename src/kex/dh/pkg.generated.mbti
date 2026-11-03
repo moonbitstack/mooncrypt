@@ -21,13 +21,14 @@ pub fn shared_with(BytesView, BytesView, BytesView) -> Bytes raise @spec.Broken
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) enum Group {
   Ffdhe2048
   Ffdhe3072
   Ffdhe4096
   Ffdhe6144
   Ffdhe8192
-} derive(Eq, @debug.Debug)
+}
 pub fn Group::bits(Self) -> Int32
 pub fn Group::equal(Self, Self) -> Bool
 pub fn Group::name(Self) -> String

@@ -17,11 +17,12 @@ pub(all) struct Encapsulated {
   ciphertext : Bytes
 }
 
+#derive(Eq, @debug.Debug)
 pub(all) enum Kind {
   K512
   K768
   K1024
-} derive(Eq, @debug.Debug)
+}
 pub fn Kind::ciphertext(Self) -> Int32
 pub fn Kind::decapsulation(Self) -> Int32
 pub fn Kind::encapsulation(Self) -> Int32

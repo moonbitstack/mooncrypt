@@ -17,11 +17,12 @@ pub let sensitive : Params
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) struct Params {
   n : Int32
   r : Int32
   p : Int32
-} derive(Eq, @debug.Debug)
+}
 pub fn Params::equal(Self, Self) -> Bool
 pub fn Params::new(n? : Int32, r? : Int32, p? : Int32) -> Self
 pub fn Params::not_equal(Self, Self) -> Bool

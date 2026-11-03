@@ -28,6 +28,7 @@ pub fn Crc16::value(Self) -> UInt32
 pub fn Crc16::write(Self, BytesView) -> Unit
 pub impl @spec.Hash for Crc16
 
+#derive(Eq, @debug.Debug)
 pub(all) enum Kind {
   Arc
   CcittFalse
@@ -35,7 +36,7 @@ pub(all) enum Kind {
   Kermit
   X25
   Modbus
-} derive(Eq, @debug.Debug)
+}
 pub fn Kind::block(Self) -> Int32
 pub fn Kind::equal(Self, Self) -> Bool
 pub fn Kind::not_equal(Self, Self) -> Bool

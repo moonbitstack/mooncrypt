@@ -13,11 +13,12 @@ pub fn eq(BytesView, BytesView) -> Bool
 pub fn wipe(FixedArray[Byte]) -> Unit
 
 // Errors
+#derive(Eq, @debug.Debug)
 pub(all) suberror Broken {
   Tag
   Size(want~ : Int32, got~ : Int32)
   Weak
-} derive(Eq, @debug.Debug)
+}
 pub fn Broken::equal(Self, Self) -> Bool
 pub fn Broken::not_equal(Self, Self) -> Bool
 pub fn Broken::to_repr(Self) -> @debug.Repr
