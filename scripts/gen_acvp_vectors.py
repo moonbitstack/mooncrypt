@@ -158,17 +158,7 @@ def mlkem(cache: pathlib.Path, _full: bool):
 
 # --------------------------------------------------------------------- ML-DSA
 
-# Every signature family is sampled: a signing vector is a key and a signature,
-# which is kilobytes each, and the point of the set is to cover each interface
-# combination, not to replay the same interface hundreds of times.
-SAMPLE = 3
-
-
-def pick(cases, n=SAMPLE):
-    return cases[:n]
-
-
-def mldsa(cache: pathlib.Path, full: bool):
+def mldsa(cache: pathlib.Path, _full: bool):
     keygen = {}
     for group, cases in load(cache, "ML-DSA-keyGen-FIPS204"):
         keygen[param(group["parameterSet"])] = cases
@@ -177,7 +167,7 @@ def mldsa(cache: pathlib.Path, full: bool):
     for family, sink in (("ML-DSA-sigGen-FIPS204", siggen), ("ML-DSA-sigVer-FIPS204", sigver)):
         for group, cases in load(cache, family):
             name = param(group["parameterSet"])
-            sink.setdefault(name, []).append((group, pick(cases, 999) if full else pick(cases)))
+            sink.setdefault(name, []).append((group, cases))
 
     for name in sorted(keygen):
         body = table(
