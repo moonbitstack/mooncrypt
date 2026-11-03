@@ -86,44 +86,35 @@ fn bit_of_limbs(a : Fp, i : Int32) -> Bool {
 }
 
 ///|
-/// Subtract `p` from a `(k+1)`-limb value, taking `tmp` when the result is
-/// non-negative and `r` otherwise, branch-free.
-fn reduce(r : Fp, extra : UInt64, f : Field, k : Int32) -> Fp {
-  let p = f.p
-  let tmp = FixedArray::make(k, 0UL)
-  let mut borrow = 0UL
-  for i in 0..<k {
-    let d = r.unsafe_get(i) - p.unsafe_get(i) - borrow
-    tmp.unsafe_set(i, d & limb_mask)
-    borrow = d >> 63
-  }
-  // Use `tmp` exactly when `extra == borrow`: both 0, or extra 1 and a borrow
-  // out of the low limbs, which is r_full - p with its top bit consumed. The
-  // choice is a mask, not a branch, because `r` holds a secret.
-  let use_tmp = (extra ^ borrow) - 1UL
-  let out = FixedArray::make(k, 0UL)
-  for i in 0..<k {
-    out.unsafe_set(
-      i,
-      (tmp.unsafe_get(i) & use_tmp) |
-      (r.unsafe_get(i) & (use_tmp ^ 0xFFFFFFFFFFFFFFFFUL)),
-    )
-  }
-  out
-}
-
-///|
-/// `a + b mod p`.
+/// `a + b mod p`. The conditional subtraction happens in place, so this is one
+/// allocation and three passes — it is the most-called function in the point
+/// arithmetic and `reduce` was allocating three arrays for it.
 fn fadd(a : Fp, b : Fp, f : Field) -> Fp {
   let k = f.k
-  let r = FixedArray::make(k, 0UL)
+  let p = f.p
+  let out = FixedArray::make(k, 0UL)
   let mut carry = 0UL
   for i in 0..<k {
     let s = a.unsafe_get(i) + b.unsafe_get(i) + carry
-    r.unsafe_set(i, s & limb_mask)
+    out.unsafe_set(i, s & limb_mask)
     carry = s >> 32
   }
-  reduce(r, carry, f, k)
+  let mut borrow = 0UL
+  for i in 0..<k {
+    let d = out.unsafe_get(i) - p.unsafe_get(i) - borrow
+    out.unsafe_set(i, d & limb_mask)
+    borrow = d >> 63
+  }
+  // The subtraction stands unless it borrowed with nothing above it; then `p`
+  // goes back on. A mask, not a branch: both limbs are secret.
+  let restore = 0UL - (borrow & (carry ^ 1UL))
+  let mut adding = 0UL
+  for i in 0..<k {
+    let s = out.unsafe_get(i) + (p.unsafe_get(i) & restore) + adding
+    out.unsafe_set(i, s & limb_mask)
+    adding = s >> 32
+  }
+  out
 }
 
 ///|
