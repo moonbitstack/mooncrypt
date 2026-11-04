@@ -651,3 +651,127 @@ fn mul2_limb(
   }
   jp_affine(acc, f)
 }
+
+///|
+/// The comb table for `curve`, or an empty array when it has none: the brainpool
+/// curves keep the general path, their `a` being arbitrary enough that a table
+/// would be the only saving.
+fn fixed_base_of(c : Curve) -> FixedArray[UInt64] {
+  match c {
+    P256 => p256_fixed
+    P384 => p384_fixed
+    P521 => p521_fixed
+    Secp256k1 => secp256k1_fixed
+    _ => FixedArray::make(0, 0UL)
+  }
+}
+
+///|
+/// Row `j` of the scalar's bit matrix: bit `i` is scalar bit `i·d + j`, counted
+/// from the least significant end of a `len`-byte big-endian scalar.
+fn comb_row(
+  scalar : BytesView,
+  j : Int32,
+  w : Int32,
+  d : Int32,
+  len : Int32,
+) -> Int32 {
+  let mut row = 0
+  for i in 0..<w {
+    let t = i * d + j
+    let byte = scalar.unsafe_get(len - 1 - t / 8).to_int()
+    row = row | (((byte >> (t % 8)) & 1) << i)
+  }
+  row
+}
+
+///|
+/// `P + Q` where `Q` is affine and comes from the comb table, so `Z2 = 1`:
+/// seven multiplications instead of ten. `madd-2007-bl`.
+fn jp_madd_raw(a : Jp, x : Fp, y : Fp, f : Field) -> Jp {
+  let z1z1 = fsqr(a.z, f)
+  let u2 = fmul(x, z1z1, f)
+  let s2 = fmul(fmul(y, a.z, f), z1z1, f)
+  let h = fsub(u2, a.x, f)
+  let hh = fsqr(h, f)
+  let i = fadd(fadd(hh, hh, f), fadd(hh, hh, f), f)
+  let j = fmul(h, i, f)
+  let dy = fsub(s2, a.y, f)
+  let r = fadd(dy, dy, f)
+  let v = fmul(a.x, i, f)
+  let x3 = fsub(fsub(fsqr(r, f), j, f), fadd(v, v, f), f)
+  let y1j = fmul(a.y, j, f)
+  let y3 = fsub(fmul(r, fsub(v, x3, f), f), fadd(y1j, y1j, f), f)
+  let zh = fadd(a.z, h, f)
+  let z3 = fsub(fsub(fsqr(zh, f), z1z1, f), hh, f)
+  { x: x3, y: y3, z: z3, }
+}
+
+///|
+/// The same, with the two infinities folded in. A table entry of `(0, 0)` is the
+/// point at infinity — that is `T[0]`, which a zero row reaches — and is given a
+/// `z` of zero so the selection lands on the accumulator rather than on a false
+/// affine point.
+fn jp_madd(a : Jp, x : Fp, y : Fp, f : Field) -> Jp {
+  let raw = jp_madd_raw(a, x, y, f)
+  let all = 0xFFFFFFFFFFFFFFFFUL
+  let a_gone = fzero_mask(a.z, f.k)
+  let e_gone = fzero_mask(x, f.k) & fzero_mask(y, f.k)
+  let z = fselect(e_gone, FixedArray::make(f.k, 0UL), f.one, f.k)
+  let b : Jp = { x, y, z, }
+  let out = jp_select(a_gone, b, raw, f.k)
+  jp_select(e_gone & (a_gone ^ all), a, out, f.k)
+}
+
+///|
+/// `[k]G` through the comb table: `d - 1` doublings and `d` mixed additions,
+/// against one doubling per scalar bit for the general path. The table is read
+/// whole — one entry per row, chosen by a mask — so the pattern of reads does
+/// not follow `k`.
+fn mul_g_limb(c : Curve, k : BigInt) -> Point {
+  let table = fixed_base_of(c)
+  if table.length() == 0 {
+    return mul_limb(c, k, generator(c))
+  }
+  let f = field_of(c)
+  let kk = f.k
+  let w = fixed_window
+  let d = (bits(params(c).n) + w - 1) / w
+  let len = (w * d + 7) / 8
+  let scalar = k.to_octets(length=len)
+  let ex = FixedArray::make(kk, 0UL)
+  let ey = FixedArray::make(kk, 0UL)
+  let mut acc = jp_infinity(f)
+  let mut j = d - 1
+  while j >= 0 {
+    if j < d - 1 {
+      acc = jp_double(acc, f)
+    }
+    let row = comb_row(scalar, j, w, d, len)
+    // The whole table, every row: an index would put the scalar into the cache
+    // line pattern, which is the one thing this table must not leak.
+    for i in 0..<kk {
+      ex.unsafe_set(i, 0UL)
+      ey.unsafe_set(i, 0UL)
+    }
+    for e in 0..<(1 << w) {
+      let mask = digit_mask(e, row)
+      let at = e * 2 * kk
+      for i in 0..<kk {
+        ex.unsafe_set(
+          i,
+          ex.unsafe_get(i) ^
+          (mask & (table.unsafe_get(at + i) ^ ex.unsafe_get(i))),
+        )
+        ey.unsafe_set(
+          i,
+          ey.unsafe_get(i) ^
+          (mask & (table.unsafe_get(at + kk + i) ^ ey.unsafe_get(i))),
+        )
+      }
+    }
+    acc = jp_madd(acc, ex, ey, f)
+    j = j - 1
+  }
+  jp_affine(acc, f)
+}

@@ -115,6 +115,39 @@ test "mul agrees with repeated addition on every curve" {
 }
 
 ///|
+test "the comb agrees with the general multiplication on the generator" {
+  for c in all_curves() {
+    let g = generator(c)
+    let n = params(c).n
+    let scalars : Array[BigInt] = [
+      0,
+      1,
+      2,
+      3,
+      15,
+      16,
+      17,
+      255,
+      65537,
+      (1 : BigInt) << 128,
+      ((1 : BigInt) << 128) + (7 : BigInt),
+      n / (3 : BigInt),
+      n - (1 : BigInt),
+      n - (2 : BigInt),
+    ]
+    for d in scalars {
+      let want = mul(c, d, g)
+      let got = mul_g(c, d)
+      assert_eq(got.zero, want.zero)
+      if !want.zero {
+        assert_eq(got.x, want.x)
+        assert_eq(got.y, want.y)
+      }
+    }
+  }
+}
+
+///|
 test "the two-scalar product is the sum of the two products" {
   for c in all_curves() {
     let g = generator(c)

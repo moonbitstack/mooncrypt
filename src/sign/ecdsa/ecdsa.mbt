@@ -156,7 +156,7 @@ pub fn PrivateKey::bytes(self : PrivateKey) -> Bytes {
 ///|
 /// The verification key that matches this signing key: `Q = [d]G`.
 pub fn PrivateKey::public(self : PrivateKey) -> PublicKey {
-  let q = @ec.mul(self.curve, self.d, @ec.generator(self.curve))
+  let q = @ec.mul_g(self.curve, self.d)
   { curve: self.curve, hash: self.hash, x: q.x, y: q.y, }
 }
 
@@ -191,7 +191,7 @@ pub impl @spec.Signer for PrivateKey with fn sign(
   // A zero `r` or `s` is vanishingly unlikely and would be a signature that
   // verifies for anything, so it is re-derived rather than emitted.
   for _ in 0..<64 {
-    let pt = @ec.mul(self.curve, k, @ec.generator(self.curve))
+    let pt = @ec.mul_g(self.curve, k)
     let r = @ec.mod_n(self.curve, pt.x)
     let s = @ec.mod_n(self.curve, @ec.inv(k, order) * (e + r * self.d))
     if r != (0 : BigInt) && s != (0 : BigInt) {

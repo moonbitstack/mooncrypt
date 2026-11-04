@@ -260,6 +260,15 @@ pub fn mul(c : Curve, k : BigInt, pt : Point) -> Point {
 }
 
 ///|
+/// `[k]G`, with the generator fixed: this is what a signature and a key pair
+/// need, and four of the curves have a comb table for it that turns the
+/// per-bit doubling into a table read. Falls back to [`mul`] where there is no
+/// table, so the caller need not know which curves have one.
+pub fn mul_g(c : Curve, k : BigInt) -> Point {
+  mul_g_limb(c, k)
+}
+
+///|
 /// `[k1]P1 + [k2]P2`, in one pass over the scalars. A signature verification is
 /// always a sum of two products, and sharing the doublings between them halves
 /// that half of the work.

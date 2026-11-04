@@ -32,6 +32,8 @@ pub fn mul(@curve.Curve, @bigint.BigInt, Point) -> Point
 
 pub fn mul2(@curve.Curve, @bigint.BigInt, Point, @bigint.BigInt, Point) -> Point
 
+pub fn mul_g(@curve.Curve, @bigint.BigInt) -> Point
+
 pub fn on_curve(@curve.Curve, @bigint.BigInt, @bigint.BigInt) -> Bool
 
 pub fn params(@curve.Curve) -> Params
