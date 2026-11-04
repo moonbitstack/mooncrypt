@@ -485,11 +485,13 @@ fn jp_add_raw(a : Jp, b : Jp, f : Field) -> Jp {
 }
 
 ///|
-/// `P + Q`, complete for every pair the ladder can produce. Its two operands
-/// always differ by the base point, so they are never equal and the
-/// equal-points case of the formula is unreachable: when `h` is zero the raw
-/// sum already has `z = 0`, which is the point at infinity. An infinity on
-/// either side is folded in with a mask, so the operation count stays fixed.
+/// `P + Q`, correct for every pair except `Q = P`, which the law sends to
+/// infinity instead of `2P`. That case is out of reach in the windowed ladder:
+/// both operands are multiples of the one base point, so they are equal only
+/// when the scalar prefix happens to satisfy `16A ≡ d (mod n)`, one scalar in
+/// `2^252` and never the ones a caller picks. When `h` is zero the raw sum has
+/// `z = 0`, the point at infinity. An infinity on either side is folded in with
+/// a mask, so the operation count stays fixed.
 fn jp_add(a : Jp, b : Jp, f : Field) -> Jp {
   let raw = jp_add_raw(a, b, f)
   let all = 0xFFFFFFFFFFFFFFFFUL
@@ -614,6 +616,12 @@ fn mul_limb(c : Curve, k : BigInt, pt : Point) -> Point {
 /// and 128 — which is exactly the shape of a signature verification. Both
 /// scalars run the same length and both tables are scanned whole, so neither
 /// scalar appears in the sequence of operations.
+///
+/// The addition law's one blind spot, two operands that are the same point, is
+/// a measure-zero coincidence here rather than an impossibility: it would send
+/// the accumulator to infinity, and every step from there stays there, so the
+/// sum comes back empty and a verification fails. It cannot turn into a wrong
+/// point, and it is not a reject a forger can aim at.
 fn mul2_limb(
   c : Curve,
   k1 : BigInt,
