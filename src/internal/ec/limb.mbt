@@ -685,7 +685,7 @@ fn mul_limb(c : Curve, k : BigInt, pt : Point) -> Point {
 /// steps, where a row is worth `2^j` with `j` the number of doublings still to
 /// come. Doubling a partial sum that is still zero costs nothing but the
 /// doublings it was going to make anyway.
-fn mul2_g_limb(c : Curve, k1 : BigInt, k2 : BigInt, pt : Point) -> Point {
+fn mul2_g_window_limb(c : Curve, k1 : BigInt, k2 : BigInt, pt : Point) -> Point {
   let table = fixed_base_of(c)
   let f = field_of(c)
   let kk = f.k
@@ -711,26 +711,7 @@ fn mul2_g_limb(c : Curve, k1 : BigInt, k2 : BigInt, pt : Point) -> Point {
     if i >= bit_count - d {
       let j = bit_count - 1 - i
       let row = comb_row(s1, j, w, d, len)
-      for n in 0..<kk {
-        ex.unsafe_set(n, 0UL)
-        ey.unsafe_set(n, 0UL)
-      }
-      for e in 0..<(1 << w) {
-        let mask = digit_mask(e, row)
-        let at = e * 2 * kk
-        for n in 0..<kk {
-          ex.unsafe_set(
-            n,
-            ex.unsafe_get(n) ^
-            (mask & (table.unsafe_get(at + n) ^ ex.unsafe_get(n))),
-          )
-          ey.unsafe_set(
-            n,
-            ey.unsafe_get(n) ^
-            (mask & (table.unsafe_get(at + kk + n) ^ ey.unsafe_get(n))),
-          )
-        }
-      }
+      comb_entry(table, row, ex, ey, f)
       acc = jp_madd(acc, ex, ey, f)
     }
   }
@@ -750,6 +731,40 @@ fn fixed_base_of(c : Curve) -> FixedArray[UInt64] {
     BrainpoolP256r1 => brainpool_p256_fixed
     BrainpoolP384r1 => brainpool_p384_fixed
     BrainpoolP512r1 => brainpool_p512_fixed
+  }
+}
+
+///|
+/// The comb entry a row names, read whole: every one of the `2^w` entries is
+/// loaded and the match kept by a mask, because an index would put the scalar
+/// into the cache line pattern — the one thing this table must not leak.
+fn comb_entry(
+  table : FixedArray[UInt64],
+  row : Int32,
+  out_x : Fp,
+  out_y : Fp,
+  f : Field,
+) -> Unit {
+  let kk = f.k
+  for i in 0..<kk {
+    out_x.unsafe_set(i, 0UL)
+    out_y.unsafe_set(i, 0UL)
+  }
+  for e in 0..<(1 << fixed_window) {
+    let mask = digit_mask(e, row)
+    let at = e * 2 * kk
+    for i in 0..<kk {
+      out_x.unsafe_set(
+        i,
+        out_x.unsafe_get(i) ^
+        (mask & (table.unsafe_get(at + i) ^ out_x.unsafe_get(i))),
+      )
+      out_y.unsafe_set(
+        i,
+        out_y.unsafe_get(i) ^
+        (mask & (table.unsafe_get(at + kk + i) ^ out_y.unsafe_get(i))),
+      )
+    }
   }
 }
 
@@ -833,28 +848,7 @@ fn mul_g_limb(c : Curve, k : BigInt) -> Point {
       acc = jp_double(acc, f)
     }
     let row = comb_row(scalar, j, w, d, len)
-    // The whole table, every row: an index would put the scalar into the cache
-    // line pattern, which is the one thing this table must not leak.
-    for i in 0..<kk {
-      ex.unsafe_set(i, 0UL)
-      ey.unsafe_set(i, 0UL)
-    }
-    for e in 0..<(1 << w) {
-      let mask = digit_mask(e, row)
-      let at = e * 2 * kk
-      for i in 0..<kk {
-        ex.unsafe_set(
-          i,
-          ex.unsafe_get(i) ^
-          (mask & (table.unsafe_get(at + i) ^ ex.unsafe_get(i))),
-        )
-        ey.unsafe_set(
-          i,
-          ey.unsafe_get(i) ^
-          (mask & (table.unsafe_get(at + kk + i) ^ ey.unsafe_get(i))),
-        )
-      }
-    }
+    comb_entry(table, row, ex, ey, f)
     acc = jp_madd(acc, ex, ey, f)
     j = j - 1
   }
@@ -947,6 +941,82 @@ fn mul_glv_limb(c : Curve, k : BigInt, pt : Point) -> Point {
     }
     acc = jp_add(acc, window_lookup(t1, digit_at(s1b, i), f), f)
     acc = jp_add(acc, window_lookup(t2, digit_at(s2b, i), f), f)
+  }
+  jp_affine(acc, f)
+}
+
+///|
+/// `[k1]G + [k2]P`: two windows where the curve has no endomorphism, and one
+/// window plus a split scalar where it does — `secp256k1` being the only curve
+/// here that qualifies.
+fn mul2_g_limb(c : Curve, k1 : BigInt, k2 : BigInt, pt : Point) -> Point {
+  match c {
+    Secp256k1 => mul2_g_glv_limb(c, k1, k2, pt)
+    _ => mul2_g_window_limb(c, k1, k2, pt)
+  }
+}
+
+///|
+/// The same sum for `secp256k1`, with the public-key half split through the
+/// endomorphism: both halves are then 128 bits wide, so the loop needs 128
+/// doublings instead of 256, and the comb rows still land in the last `d` steps
+/// where a row is worth `2^j` with `j` the doublings still to come.
+fn mul2_g_glv_limb(c : Curve, k1 : BigInt, k2 : BigInt, pt : Point) -> Point {
+  let n = params(c).n
+  let (s1, s2) = glv_split(k2, n)
+  let half1 = if s1 < (0 : BigInt) { (0 : BigInt) - s1 } else { s1 }
+  let half2 = if s2 < (0 : BigInt) { (0 : BigInt) - s2 } else { s2 }
+  let f = field_of(c)
+  let kk = f.k
+  let w = fixed_window
+  let d = (bits(n) + w - 1) / w
+  let table = fixed_base_of(c)
+  let negate = fn(y : BigInt) { mod_p(c, (0 : BigInt) - y) }
+  let first : Point = if s1 < (0 : BigInt) {
+    { x: pt.x, y: negate(pt.y), zero: false, }
+  } else {
+    pt
+  }
+  let second : Point = {
+    x: mod_p(c, glv_beta * pt.x),
+    y: if s2 < (0 : BigInt) {
+      negate(pt.y)
+    } else {
+      pt.y
+    },
+    zero: false,
+  }
+  let z_one = copy_limbs(f.one, f.k)
+  let t1 = table_of(
+    { x: ffrom(first.x, f), y: ffrom(first.y, f), z: z_one, },
+    f,
+  )
+  let t2 = table_of(
+    { x: ffrom(second.x, f), y: ffrom(second.y, f), z: copy_limbs(f.one, f.k), },
+    f,
+  )
+  let e1 = half1.to_octets(length=16)
+  let e2 = half2.to_octets(length=16)
+  let len = (w * d + 7) / 8
+  let comb = k1.to_octets(length=len)
+  let bit_count = 16 * 8
+  let ex = FixedArray::make(kk, 0UL)
+  let ey = FixedArray::make(kk, 0UL)
+  let mut acc = jp_infinity(f)
+  for i in 0..<bit_count {
+    if i > 0 {
+      acc = jp_double(acc, f)
+    }
+    if (i + 1) % 4 == 0 {
+      acc = jp_add(acc, window_lookup(t1, digit_at(e1, i / 4), f), f)
+      acc = jp_add(acc, window_lookup(t2, digit_at(e2, i / 4), f), f)
+    }
+    if i >= bit_count - d {
+      let j = bit_count - 1 - i
+      let row = comb_row(comb, j, w, d, len)
+      comb_entry(table, row, ex, ey, f)
+      acc = jp_madd(acc, ex, ey, f)
+    }
   }
   jp_affine(acc, f)
 }
