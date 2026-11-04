@@ -36,7 +36,7 @@ pub fn[S : @moonseed.Source] PrivateKey::generate(
 ) -> PrivateKey raise @moonseed.Unavailable {
   let order = @ec.params(curve).n.to_octets(length=key_size)
   let scalar = BigInt::from_octets(@moonseed.scalar(order, source))
-  { scalar, point: @ec.mul(curve, scalar, @ec.generator(curve)), }
+  { scalar, point: @ec.mul_g(curve, scalar), }
 }
 
 ///|
@@ -53,7 +53,7 @@ pub fn PrivateKey::new(secret : BytesView) -> PrivateKey raise @spec.Broken {
   let scalar = BigInt::from_octets(secret)
   let order = @ec.params(curve).n
   guard scalar > (0 : BigInt) && scalar < order else { raise @spec.Weak }
-  let point = @ec.mul(curve, scalar, @ec.generator(curve))
+  let point = @ec.mul_g(curve, scalar)
   { scalar, point, }
 }
 
@@ -142,7 +142,7 @@ fn PrivateKey::sign_checked(
     // than the key. There is no correct signature to return, so this stops.
     abort("schnorr: the derived nonce is zero")
   }
-  let r_point = @ec.mul(curve, k0, @ec.generator(curve))
+  let r_point = @ec.mul_g(curve, k0)
   let k = if r_point.y % (2 : BigInt) == (0 : BigInt) { k0 } else { order - k0 }
   let e = challenge(r_point.x.to_octets(length=key_size), point, msg)
   join([
@@ -178,10 +178,15 @@ pub impl @spec.Verifier for PublicKey with fn verify(
     return false
   }
   let e = challenge(sig[0:32].to_owned(), self.point, msg)
-  // s·G - e·P, with the subtraction done as an addition of the negation.
-  let left = @ec.mul(curve, s, @ec.generator(curve))
-  let right = @ec.mul(curve, e, self.point)
-  let sum = @ec.add(curve, left, negate(right))
+  // s·G - e·P, as one pass over the two scalars with the second negated: the
+  // doublings are shared, which is most of the work.
+  let sum = @ec.mul2(
+    curve,
+    s,
+    @ec.generator(curve),
+    @ec.mod_n(curve, -e),
+    self.point,
+  )
   if sum.zero {
     return false
   }

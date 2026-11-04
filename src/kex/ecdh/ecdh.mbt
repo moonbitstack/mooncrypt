@@ -25,7 +25,7 @@ pub fn public(
   curve~ : Curve = P256,
 ) -> Bytes raise @spec.Broken {
   let d = @ec.scalar(curve, scalar)
-  @ec.encode(curve, @ec.mul(curve, d, @ec.generator(curve)))
+  @ec.encode(curve, @ec.mul_g(curve, d))
 }
 
 ///|
