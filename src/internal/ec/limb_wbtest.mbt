@@ -79,6 +79,9 @@ test "field arithmetic agrees with BigInt arithmetic" {
       }
     }
     for v in values {
+      // The symmetric square has to agree with the general product it
+      // replaces, so it is checked against `BigInt` on the same values.
+      assert_eq(fto(fsqr(ffrom(v, f), f), f), mod_p(c, v * v))
       if v != (0 : BigInt) {
         let back = fto(finv(ffrom(v, f), f), f)
         assert_eq(back * v % p, (1 : BigInt))

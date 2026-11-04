@@ -28,10 +28,17 @@ priv struct Field {
   a : Fp
   exp : Fp
   exp_bits : Int32
-  // `fmul` writes the wide product here instead of allocating: no multiplication
+  // Which doubling formula applies: `a = -3` and `a = 0` both have a cheaper one
+  // than the general `a`, and between them they cover five of the seven curves
+  // here. Public, so the branch it drives is not one a secret can steer.
+  a_kind : Int32
+  // The wide product goes here instead of into a fresh array: no multiplication
   // nests inside another, so one buffer per field is enough and it takes the
   // largest allocation out of the hot loop.
   scratch : FixedArray[UInt64]
+  // `fsqr` needs the diagonal terms in a second buffer: it writes the square to
+  // `scratch` and reads the diagonals back at the offset they land on.
+  scratch2 : FixedArray[UInt64]
 }
 
 ///|
@@ -139,29 +146,13 @@ fn fsub(a : Fp, b : Fp, f : Field) -> Fp {
 }
 
 ///|
-/// `a * b * R^-1 mod p`, by schoolbook product then Montgomery reduction. The
-/// product goes into the field's scratch buffer, the index arithmetic is in
-/// range by construction, and the final conditional subtraction is a mask, so
-/// the loop allocates once and branches on nothing.
-fn fmul(a : Fp, b : Fp, f : Field) -> Fp {
+/// Montgomery reduction of the wide product in `t`, `t * R^-1 mod p`. The
+/// index arithmetic is in range by construction and the final conditional
+/// subtraction is a mask, so the loop branches on nothing. Shared by `fmul` and
+/// `fsqr`, which differ only in how they build `t`.
+fn mont_reduce(t : FixedArray[UInt64], f : Field) -> Fp {
   let k = f.k
   let p = f.p
-  let t = f.scratch
-  for i in 0..<(2 * k + 2) {
-    t.unsafe_set(i, 0UL)
-  }
-  for i in 0..<k {
-    let ai = a.unsafe_get(i)
-    let mut carry = 0UL
-    for j in 0..<k {
-      let uv = t.unsafe_get(i + j) + ai * b.unsafe_get(j) + carry
-      t.unsafe_set(i + j, uv & 0xFFFFFFFFUL)
-      carry = uv >> 32
-    }
-    let s = t.unsafe_get(i + k) + carry
-    t.unsafe_set(i + k, s & 0xFFFFFFFFUL)
-    t.unsafe_set(i + k + 1, t.unsafe_get(i + k + 1) + (s >> 32))
-  }
   for i in 0..<k {
     let m = (t.unsafe_get(i) * f.n0) & 0xFFFFFFFFUL
     let mut carry = 0UL
@@ -197,9 +188,82 @@ fn fmul(a : Fp, b : Fp, f : Field) -> Fp {
 }
 
 ///|
-/// `a^2`.
+/// `a * b * R^-1 mod p`, by schoolbook product then Montgomery reduction.
+fn fmul(a : Fp, b : Fp, f : Field) -> Fp {
+  let k = f.k
+  let t = f.scratch
+  for i in 0..<(2 * k + 2) {
+    t.unsafe_set(i, 0UL)
+  }
+  for i in 0..<k {
+    let ai = a.unsafe_get(i)
+    let mut carry = 0UL
+    for j in 0..<k {
+      let uv = t.unsafe_get(i + j) + ai * b.unsafe_get(j) + carry
+      t.unsafe_set(i + j, uv & 0xFFFFFFFFUL)
+      carry = uv >> 32
+    }
+    let s = t.unsafe_get(i + k) + carry
+    t.unsafe_set(i + k, s & 0xFFFFFFFFUL)
+    t.unsafe_set(i + k + 1, t.unsafe_get(i + k + 1) + (s >> 32))
+  }
+  mont_reduce(t, f)
+}
+
+///|
+/// `a^2`, by the symmetric product: `a * a` costs `k^2` limb products, but the
+/// off-diagonal half of them is counted twice and can be computed once — so the
+/// square is `k(k+1)/2` products and a doubling. Squaring is the most frequent
+/// field operation in the point arithmetic (five to eight per doubling, five
+/// per addition), so this is where a quarter of the multiplications go.
 fn fsqr(a : Fp, f : Field) -> Fp {
-  fmul(a, a, f)
+  let k = f.k
+  let t = f.scratch
+  let d = f.scratch2
+  for i in 0..<(2 * k + 2) {
+    t.unsafe_set(i, 0UL)
+  }
+  for i in 0..<k {
+    let sq = a.unsafe_get(i) * a.unsafe_get(i)
+    d.unsafe_set(2 * i, sq & 0xFFFFFFFFUL)
+    d.unsafe_set(2 * i + 1, sq >> 32)
+  }
+  // The upper triangle: for row `i` the columns below the diagonal are left
+  // alone, and the carry out of each row lands on a limb no earlier row wrote.
+  for i in 0..<k {
+    let ai = a.unsafe_get(i)
+    let mut carry = 0UL
+    for j in (i + 1)..<k {
+      let uv = t.unsafe_get(i + j) + ai * a.unsafe_get(j) + carry
+      t.unsafe_set(i + j, uv & 0xFFFFFFFFUL)
+      carry = uv >> 32
+    }
+    t.unsafe_set(i + k, carry)
+  }
+  // Everything above the diagonal is counted twice.
+  let mut carry = 0UL
+  for i in 0..<(2 * k) {
+    let v = (t.unsafe_get(i) << 1) | carry
+    t.unsafe_set(i, v & 0xFFFFFFFFUL)
+    carry = v >> 32
+  }
+  let mut j = 2 * k
+  t.unsafe_set(j, t.unsafe_get(j) + carry)
+  // The diagonal goes on in one pass in limb order, so the carry chain is the
+  // same length whatever the value.
+  let mut carry = 0UL
+  for i in 0..<(2 * k) {
+    let s = t.unsafe_get(i) + d.unsafe_get(i) + carry
+    t.unsafe_set(i, s & 0xFFFFFFFFUL)
+    carry = s >> 32
+  }
+  while j < 2 * k + 2 {
+    let s = t.unsafe_get(j) + carry
+    t.unsafe_set(j, s & 0xFFFFFFFFUL)
+    carry = s >> 32
+    j = j + 1
+  }
+  mont_reduce(t, f)
 }
 
 ///|
@@ -259,9 +323,18 @@ fn field_of(curve : Curve) -> Field {
     a: FixedArray::make(k, 0UL),
     exp: limbs_from_be(exp.to_octets(length=kk)[:], k),
     exp_bits: bits(exp),
+    a_kind: 2,
     scratch: FixedArray::make(2 * k + 2, 0UL),
+    scratch2: FixedArray::make(2 * k + 2, 0UL),
   }
   let a = ffrom(params(curve).a, base)
+  let a_kind = if params(curve).a == (0 : BigInt) {
+    0
+  } else if params(curve).a + (3 : BigInt) == p_big {
+    1
+  } else {
+    2
+  }
   {
     k,
     p,
@@ -271,7 +344,9 @@ fn field_of(curve : Curve) -> Field {
     a,
     exp: base.exp,
     exp_bits: base.exp_bits,
+    a_kind,
     scratch: base.scratch,
+    scratch2: base.scratch2,
   }
 }
 
@@ -327,30 +402,51 @@ fn jp_select(mask : UInt64, a : Jp, b : Jp, k : Int32) -> Jp {
 }
 
 ///|
-/// `2P` in Jacobian coordinates, `dbl-2007-bl` (any `a`), evaluated
-/// unconditionally: the exceptional inputs are folded in by [`jp_double`], so
-/// the arithmetic itself has no branch.
+/// `2P` in Jacobian coordinates, evaluated unconditionally: the exceptional
+/// inputs are folded in by [`jp_double`], so the arithmetic itself has no
+/// branch. The branch here is on the curve's `a`, which is public.
 fn jp_double_raw(p : Jp, f : Field) -> Jp {
-  let xx = fsqr(p.x, f)
-  let yy = fsqr(p.y, f)
-  let yyyy = fsqr(yy, f)
   let zz = fsqr(p.z, f)
+  let yy = fsqr(p.y, f)
+  let yz = fadd(p.y, p.z, f)
+  let z3 = fsub(fsub(fsqr(yz, f), yy, f), zz, f)
+  if f.a_kind == 1 {
+    // dbl-2001-b, for `a = -3`: `3(X - Z²)(X + Z²)` replaces the `3X² + aZ⁴`
+    // of the general formula with a single multiplication, and `X·Y²` is used
+    // twice, so the doubling costs three multiplications and five squarings
+    // where the general one costs two and eight.
+    let beta = fmul(p.x, yy, f)
+    let two_beta = fadd(beta, beta, f)
+    let four_beta = fadd(two_beta, two_beta, f)
+    let eight_beta = fadd(four_beta, four_beta, f)
+    let diff = fsub(p.x, zz, f)
+    let alpha = fmul(fadd(p.x, zz, f), fadd(fadd(diff, diff, f), diff, f), f)
+    let x3 = fsub(fsqr(alpha, f), eight_beta, f)
+    let gamma2 = fsqr(yy, f)
+    let two_gamma2 = fadd(gamma2, gamma2, f)
+    let four_gamma2 = fadd(two_gamma2, two_gamma2, f)
+    let eight_gamma2 = fadd(four_gamma2, four_gamma2, f)
+    let y3 = fsub(fmul(alpha, fsub(four_beta, x3, f), f), eight_gamma2, f)
+    return { x: x3, y: y3, z: z3, }
+  }
+  let xx = fsqr(p.x, f)
+  let yyyy = fsqr(yy, f)
   let xyy = fadd(p.x, yy, f)
   let inner = fsub(fsub(fsqr(xyy, f), xx, f), yyyy, f)
   let s = fadd(inner, inner, f)
-  let azz = fmul(f.a, fsqr(zz, f), f)
-  let three_xx = fadd(fadd(xx, xx, f), xx, f)
-  let m = fadd(three_xx, azz, f)
+  let azz = if f.a_kind == 0 {
+    FixedArray::make(f.k, 0UL)
+  } else {
+    fmul(f.a, fsqr(zz, f), f)
+  }
+  let m = fadd(fadd(fadd(xx, xx, f), xx, f), azz, f)
   let t = fsub(fsqr(m, f), fadd(s, s, f), f)
   let st = fsub(s, t, f)
   let mst = fmul(m, st, f)
   let two_yyyy = fadd(yyyy, yyyy, f)
   let four_yyyy = fadd(two_yyyy, two_yyyy, f)
   let eight_yyyy = fadd(four_yyyy, four_yyyy, f)
-  let y3 = fsub(mst, eight_yyyy, f)
-  let yz = fadd(p.y, p.z, f)
-  let z3 = fsub(fsub(fsqr(yz, f), yy, f), zz, f)
-  { x: t, y: y3, z: z3, }
+  { x: t, y: fsub(mst, eight_yyyy, f), z: z3, }
 }
 
 ///|

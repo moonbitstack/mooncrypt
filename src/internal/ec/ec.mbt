@@ -260,12 +260,30 @@ pub fn mul(c : Curve, k : BigInt, pt : Point) -> Point {
 }
 
 ///|
+/// The number of bits in `n`, or zero for zero. Counted off the top octet:
+/// shifting a `BigInt` down one bit at a time allocates a new one per bit, and
+/// on a 256-bit prime that was eighty microseconds a call.
 pub fn bits(n : BigInt) -> Int32 {
-  let mut count = 0
-  let mut rest = n
-  while rest > (0 : BigInt) {
-    count += 1
-    rest = rest >> 1
+  if n <= (0 : BigInt) {
+    return 0
+  }
+  let mut count : Int32 = 0
+  let mut started = false
+  for b in n.to_octets() {
+    let v = b.to_int()
+    if started || v != 0 {
+      if count == 0 {
+        // The first octet that is not zero: count only the bits it uses.
+        started = true
+        let mut rest = v
+        while rest != 0 {
+          count = count + 1
+          rest = rest >> 1
+        }
+      } else {
+        count = count + 8
+      }
+    }
   }
   count
 }
