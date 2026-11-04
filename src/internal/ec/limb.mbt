@@ -611,43 +611,66 @@ fn mul_limb(c : Curve, k : BigInt, pt : Point) -> Point {
 }
 
 ///|
-/// `[k1]P1 + [k2]P2` in one loop: the doublings are shared, so the sum costs
-/// 256 doublings and 128 additions where two separate multiplications cost 512
-/// and 128 — which is exactly the shape of a signature verification. Both
-/// scalars run the same length and both tables are scanned whole, so neither
-/// scalar appears in the sequence of operations.
+/// `[k1]G + [k2]P`, in one loop: the doublings are shared, and the half against
+/// the fixed base comes from the comb table instead of a second window. That is
+/// the shape of every signature verification here.
 ///
-/// The addition law's one blind spot, two operands that are the same point, is
-/// a measure-zero coincidence here rather than an impossibility: it would send
-/// the accumulator to infinity, and every step from there stays there, so the
-/// sum comes back empty and a verification fails. It cannot turn into a wrong
-/// point, and it is not a reject a forger can aim at.
-fn mul2_limb(
-  c : Curve,
-  k1 : BigInt,
-  p1 : Point,
-  k2 : BigInt,
-  p2 : Point,
-) -> Point {
+/// The two halves want different numbers of doublings — the comb needs `d - 1`,
+/// the window one per scalar bit — so the comb rows are spent in the last `d`
+/// steps, where a row is worth `2^j` with `j` the number of doublings still to
+/// come. Doubling a partial sum that is still zero costs nothing but the
+/// doublings it was going to make anyway.
+fn mul2_g_limb(c : Curve, k1 : BigInt, k2 : BigInt, pt : Point) -> Point {
+  let table = fixed_base_of(c)
+  if table.length() == 0 {
+    return add(c, mul_g_limb(c, k1), mul_limb(c, k2, pt))
+  }
   let f = field_of(c)
+  let kk = f.k
+  let w = fixed_window
   let size = c.size()
-  let s1 = k1.to_octets(length=size)
+  let bit_count = size * 8
+  let d = (bits(params(c).n) + w - 1) / w
+  let len = (w * d + 7) / 8
+  let s1 = k1.to_octets(length=len)
   let s2 = k2.to_octets(length=size)
   let z_one = copy_limbs(f.one, f.k)
-  let t1 = table_of({ x: ffrom(p1.x, f), y: ffrom(p1.y, f), z: z_one, }, f)
-  let t2 = table_of(
-    { x: ffrom(p2.x, f), y: ffrom(p2.y, f), z: copy_limbs(f.one, f.k), },
-    f,
-  )
+  let win = table_of({ x: ffrom(pt.x, f), y: ffrom(pt.y, f), z: z_one, }, f)
+  let ex = FixedArray::make(kk, 0UL)
+  let ey = FixedArray::make(kk, 0UL)
   let mut acc = jp_infinity(f)
-  for i in 0..<(size * 2) {
+  for i in 0..<bit_count {
     if i > 0 {
-      for _ in 0..<4 {
-        acc = jp_double(acc, f)
-      }
+      acc = jp_double(acc, f)
     }
-    acc = jp_add(acc, window_lookup(t1, digit_at(s1, i), f), f)
-    acc = jp_add(acc, window_lookup(t2, digit_at(s2, i), f), f)
+    if (i + 1) % 4 == 0 {
+      acc = jp_add(acc, window_lookup(win, digit_at(s2, i / 4), f), f)
+    }
+    if i >= bit_count - d {
+      let j = bit_count - 1 - i
+      let row = comb_row(s1, j, w, d, len)
+      for n in 0..<kk {
+        ex.unsafe_set(n, 0UL)
+        ey.unsafe_set(n, 0UL)
+      }
+      for e in 0..<(1 << w) {
+        let mask = digit_mask(e, row)
+        let at = e * 2 * kk
+        for n in 0..<kk {
+          ex.unsafe_set(
+            n,
+            ex.unsafe_get(n) ^
+            (mask & (table.unsafe_get(at + n) ^ ex.unsafe_get(n))),
+          )
+          ey.unsafe_set(
+            n,
+            ey.unsafe_get(n) ^
+            (mask & (table.unsafe_get(at + kk + n) ^ ey.unsafe_get(n))),
+          )
+        }
+      }
+      acc = jp_madd(acc, ex, ey, f)
+    }
   }
   jp_affine(acc, f)
 }

@@ -164,7 +164,7 @@ test "the two-scalar product is the sum of the two products" {
     for pair in pairs {
       let (a, b) = pair
       let want = add(c, mul(c, a, g), mul(c, b, h))
-      let got = mul2(c, a, g, b, h)
+      let got = mul2_g(c, a, b, h)
       assert_eq(got.zero, want.zero)
       if !want.zero {
         assert_eq(got.x, want.x)

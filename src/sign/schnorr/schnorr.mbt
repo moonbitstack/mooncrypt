@@ -180,13 +180,7 @@ pub impl @spec.Verifier for PublicKey with fn verify(
   let e = challenge(sig[0:32].to_owned(), self.point, msg)
   // s·G - e·P, as one pass over the two scalars with the second negated: the
   // doublings are shared, which is most of the work.
-  let sum = @ec.mul2(
-    curve,
-    s,
-    @ec.generator(curve),
-    @ec.mod_n(curve, -e),
-    self.point,
-  )
+  let sum = @ec.mul2_g(curve, s, @ec.mod_n(curve, -e), self.point)
   if sum.zero {
     return false
   }

@@ -233,10 +233,9 @@ pub impl @spec.Verifier for PublicKey with fn verify(
   let w = @ec.inv(s, order)
   // One pass over both scalars instead of two multiplications: the doublings
   // are shared, which is most of the cost of a verification.
-  let pt = @ec.mul2(
+  let pt = @ec.mul2_g(
     self.curve,
     @ec.mod_n(self.curve, e * w),
-    @ec.generator(self.curve),
     @ec.mod_n(self.curve, r * w),
     { x: self.x, y: self.y, zero: false, },
   )

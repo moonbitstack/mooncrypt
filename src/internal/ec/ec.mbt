@@ -273,23 +273,15 @@ pub fn mul_g(c : Curve, k : BigInt) -> Point {
 }
 
 ///|
-/// `[k1]P1 + [k2]P2`, in one pass over the scalars. A signature verification is
-/// always a sum of two products, and sharing the doublings between them halves
-/// that half of the work.
-pub fn mul2(
-  c : Curve,
-  k1 : BigInt,
-  p1 : Point,
-  k2 : BigInt,
-  p2 : Point,
-) -> Point {
-  if p1.zero {
-    return mul(c, k2, p2)
+/// `[k1]G + [k2]P`, in one pass. A signature verification is always a fixed
+/// multiple of the generator plus a multiple of the public key, and running the
+/// two through one loop shares the doublings — the bulk of the work — between
+/// them.
+pub fn mul2_g(c : Curve, k1 : BigInt, k2 : BigInt, pt : Point) -> Point {
+  if pt.zero {
+    return mul_g(c, k1)
   }
-  if p2.zero {
-    return mul(c, k1, p1)
-  }
-  mul2_limb(c, k1, p1, k2, p2)
+  mul2_g_limb(c, k1, k2, pt)
 }
 
 ///|
