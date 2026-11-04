@@ -622,9 +622,6 @@ fn mul_limb(c : Curve, k : BigInt, pt : Point) -> Point {
 /// doublings it was going to make anyway.
 fn mul2_g_limb(c : Curve, k1 : BigInt, k2 : BigInt, pt : Point) -> Point {
   let table = fixed_base_of(c)
-  if table.length() == 0 {
-    return add(c, mul_g_limb(c, k1), mul_limb(c, k2, pt))
-  }
   let f = field_of(c)
   let kk = f.k
   let w = fixed_window
@@ -676,16 +673,18 @@ fn mul2_g_limb(c : Curve, k1 : BigInt, k2 : BigInt, pt : Point) -> Point {
 }
 
 ///|
-/// The comb table for `curve`, or an empty array when it has none: the brainpool
-/// curves keep the general path, their `a` being arbitrary enough that a table
-/// would be the only saving.
+/// The comb table for `curve`. Exhaustive on purpose: a curve without a table
+/// does not compile, so adding one means running the generator rather than
+/// quietly falling back to the slow path.
 fn fixed_base_of(c : Curve) -> FixedArray[UInt64] {
   match c {
     P256 => p256_fixed
     P384 => p384_fixed
     P521 => p521_fixed
     Secp256k1 => secp256k1_fixed
-    _ => FixedArray::make(0, 0UL)
+    BrainpoolP256r1 => brainpool_p256_fixed
+    BrainpoolP384r1 => brainpool_p384_fixed
+    BrainpoolP512r1 => brainpool_p512_fixed
   }
 }
 
@@ -753,9 +752,6 @@ fn jp_madd(a : Jp, x : Fp, y : Fp, f : Field) -> Jp {
 /// not follow `k`.
 fn mul_g_limb(c : Curve, k : BigInt) -> Point {
   let table = fixed_base_of(c)
-  if table.length() == 0 {
-    return mul_limb(c, k, generator(c))
-  }
   let f = field_of(c)
   let kk = f.k
   let w = fixed_window
