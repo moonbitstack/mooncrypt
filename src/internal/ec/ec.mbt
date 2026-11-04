@@ -264,6 +264,10 @@ pub fn mul(c : Curve, k : BigInt, pt : Point) -> Point {
 /// need, and four of the curves have a comb table for it that turns the
 /// per-bit doubling into a table read. Falls back to [`mul`] where there is no
 /// table, so the caller need not know which curves have one.
+///
+/// `k` is a scalar below `n`, as everywhere in this module. The table covers
+/// `ceil(bits(n)/5)·5` bits, a little more than `n` has, so a scalar in range is
+/// never cut short.
 pub fn mul_g(c : Curve, k : BigInt) -> Point {
   mul_g_limb(c, k)
 }
