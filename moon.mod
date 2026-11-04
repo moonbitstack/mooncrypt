@@ -1,6 +1,6 @@
 name = "moonbitstack/mooncrypt"
 
-version = "0.4.10"
+version = "0.4.11"
 
 readme = "README.md"
 
