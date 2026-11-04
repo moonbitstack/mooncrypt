@@ -73,3 +73,20 @@ test "CTR-DRBG fills a Source buffer" {
   }
   assert_eq(out.length(), 48)
 }
+
+///|
+test "the reseed counter counts generate calls and starts again at a reseed" {
+  // SP 800-90A: one after instantiating, one more per request, one after a reseed.
+  // A caller watches this to reseed before the interval is spent.
+  let ctr = @drbg.CtrDrbg::new(
+    entropy=seed_entropy()[:],
+    nonce=seed_nonce()[:],
+    personalization=b""[:],
+  )
+  assert_eq(ctr.reseed_counter(), 1UL)
+  ignore(ctr.generate(16))
+  ignore(ctr.generate(16))
+  assert_eq(ctr.reseed_counter(), 3UL)
+  ctr.reseed(entropy=seed_entropy()[:], additional=b""[:])
+  assert_eq(ctr.reseed_counter(), 1UL)
+}
