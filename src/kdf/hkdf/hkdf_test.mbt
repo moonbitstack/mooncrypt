@@ -117,3 +117,14 @@ test "info separates uses of one secret" {
   let b = @hkdf.key(ikm[:], sha256, info=b"server"[:], len=32)
   assert_not_eq(a, b)
 }
+
+///|
+test "a key given back as bytes expands as the key that was extracted" {
+  let hash = sha256
+  let extracted = @hkdf.extract(b"input"[:], hash, salt=b"salt"[:])
+  let again = @hkdf.Prk::new(extracted.bytes()[:], hash)
+  assert_eq(
+    @hkdf.expand(again, info=b"info"[:], len=42),
+    @hkdf.expand(extracted, info=b"info"[:], len=42),
+  )
+}

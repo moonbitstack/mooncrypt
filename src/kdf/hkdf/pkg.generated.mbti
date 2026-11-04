@@ -17,6 +17,7 @@ pub fn key(BytesView, () -> &@spec.Hash, salt? : BytesView, info? : BytesView, l
 // Types and methods
 type Prk
 pub fn Prk::bytes(Self) -> Bytes
+pub fn Prk::new(BytesView, () -> &@spec.Hash) -> Self
 pub fn Prk::size(Self) -> Int32
 
 // Type aliases

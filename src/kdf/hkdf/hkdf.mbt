@@ -16,6 +16,14 @@ struct Prk {
 }
 
 ///|
+/// A key that did not come out of [`extract`] here. TLS 1.3 expands from the output of an earlier
+/// expansion, and a session ticket brings a stored key back, and both are pseudorandom keys in the
+/// sense of RFC 5869 §2.3, which asks only for one at least as long as the digest.
+pub fn Prk::new(key : BytesView, hash : () -> &@spec.Hash) -> Prk {
+  { key: key.to_owned(), hash, }
+}
+
+///|
 /// The extracted key itself, for a caller that has to store it — a TLS session
 /// ticket, for instance, keeps the resumption secret between connections.
 pub fn Prk::bytes(self : Prk) -> Bytes {
