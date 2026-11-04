@@ -39,6 +39,41 @@ priv struct Field {
   // `fsqr` needs the diagonal terms in a second buffer: it writes the square to
   // `scratch` and reads the diagonals back at the offset they land on.
   scratch2 : FixedArray[UInt64]
+  // Field elements handed out to the arithmetic instead of being allocated:
+  // a scalar multiplication makes some six thousand of them, and the allocation
+  // was a quarter of the time each one took. `used` is a one-element array
+  // because the field itself is passed by value everywhere.
+  pool : FixedArray[Fp]
+  used : FixedArray[Int32]
+}
+
+///|
+/// How deep the pool goes: the longest expression in the point arithmetic is
+/// about twenty live elements, and the rest is margin. Running past it is not an
+/// error — `take` falls back to allocating, which is only slower.
+let pool_depth : Int32 = 48
+
+///|
+/// A field element to write into. The caller owns it until the matching
+/// [`release`], and every producer overwrites all `k` limbs.
+fn take(f : Field) -> Fp {
+  let at = f.used.unsafe_get(0)
+  if at < f.pool.length() {
+    f.used.unsafe_set(0, at + 1)
+    f.pool.unsafe_get(at)
+  } else {
+    FixedArray::make(f.k, 0UL)
+  }
+}
+
+///|
+fn mark(f : Field) -> Int32 {
+  f.used.unsafe_get(0)
+}
+
+///|
+fn release(f : Field, at : Int32) -> Unit {
+  f.used.unsafe_set(0, at)
 }
 
 ///|
@@ -99,7 +134,7 @@ fn bit_of_limbs(a : Fp, i : Int32) -> Bool {
 fn fadd(a : Fp, b : Fp, f : Field) -> Fp {
   let k = f.k
   let p = f.p
-  let out = FixedArray::make(k, 0UL)
+  let out = take(f)
   let mut carry = 0UL
   for i in 0..<k {
     let s = a.unsafe_get(i) + b.unsafe_get(i) + carry
@@ -128,7 +163,7 @@ fn fadd(a : Fp, b : Fp, f : Field) -> Fp {
 /// `a - b mod p`.
 fn fsub(a : Fp, b : Fp, f : Field) -> Fp {
   let k = f.k
-  let r = FixedArray::make(k, 0UL)
+  let r = take(f)
   let mut borrow = 0UL
   for i in 0..<k {
     let d = a.unsafe_get(i) - b.unsafe_get(i) - borrow
@@ -165,7 +200,7 @@ fn mont_reduce(t : FixedArray[UInt64], f : Field) -> Fp {
     t.unsafe_set(i + k, s & 0xFFFFFFFFUL)
     t.unsafe_set(i + k + 1, t.unsafe_get(i + k + 1) + (s >> 32))
   }
-  let out = FixedArray::make(k, 0UL)
+  let out = take(f)
   for i in 0..<k {
     out.unsafe_set(i, t.unsafe_get(k + i))
   }
@@ -314,6 +349,10 @@ fn field_of(curve : Curve) -> Field {
   let r2 = limbs_from_be((r * r % p_big).to_octets(length=kk)[:], k)
   let one = limbs_from_be((r % p_big).to_octets(length=kk)[:], k)
   let exp = p_big - (2 : BigInt)
+  let pool = FixedArray::make(pool_depth, FixedArray::make(0, 0UL))
+  for i in 0..<pool_depth {
+    pool.unsafe_set(i, FixedArray::make(k, 0UL))
+  }
   let base : Field = {
     k,
     p,
@@ -326,8 +365,13 @@ fn field_of(curve : Curve) -> Field {
     a_kind: 2,
     scratch: FixedArray::make(2 * k + 2, 0UL),
     scratch2: FixedArray::make(2 * k + 2, 0UL),
+    pool,
+    used: FixedArray::make(1, 0),
   }
-  let a = ffrom(params(curve).a, base)
+  // `ffrom` hands back a pool slot, and this one has to outlive the pool: it is
+  // the curve's `a`, read on every doubling.
+  let a = copy_limbs(ffrom(params(curve).a, base), k)
+  release(base, 0)
   let a_kind = if params(curve).a == (0 : BigInt) {
     0
   } else if params(curve).a + (3 : BigInt) == p_big {
@@ -347,6 +391,8 @@ fn field_of(curve : Curve) -> Field {
     a_kind,
     scratch: base.scratch,
     scratch2: base.scratch2,
+    pool: base.pool,
+    used: base.used,
   }
 }
 
@@ -406,6 +452,7 @@ fn jp_select(mask : UInt64, a : Jp, b : Jp, k : Int32) -> Jp {
 /// inputs are folded in by [`jp_double`], so the arithmetic itself has no
 /// branch. The branch here is on the curve's `a`, which is public.
 fn jp_double_raw(p : Jp, f : Field) -> Jp {
+  let at = mark(f)
   let zz = fsqr(p.z, f)
   let yy = fsqr(p.y, f)
   let yz = fadd(p.y, p.z, f)
@@ -427,7 +474,7 @@ fn jp_double_raw(p : Jp, f : Field) -> Jp {
     let four_gamma2 = fadd(two_gamma2, two_gamma2, f)
     let eight_gamma2 = fadd(four_gamma2, four_gamma2, f)
     let y3 = fsub(fmul(alpha, fsub(four_beta, x3, f), f), eight_gamma2, f)
-    return { x: x3, y: y3, z: z3, }
+    return settled(x3, y3, z3, f, at)
   }
   let xx = fsqr(p.x, f)
   let yyyy = fsqr(yy, f)
@@ -446,7 +493,21 @@ fn jp_double_raw(p : Jp, f : Field) -> Jp {
   let two_yyyy = fadd(yyyy, yyyy, f)
   let four_yyyy = fadd(two_yyyy, two_yyyy, f)
   let eight_yyyy = fadd(four_yyyy, four_yyyy, f)
-  { x: t, y: fsub(mst, eight_yyyy, f), z: z3, }
+  settled(t, fsub(mst, eight_yyyy, f), z3, f, at)
+}
+
+///|
+/// The result of a point operation, taken out of the pool: a point outlives the
+/// expression that built it, so its three coordinates are copied to arrays of
+/// their own before the temporaries are handed back.
+fn settled(x : Fp, y : Fp, z : Fp, f : Field, at : Int32) -> Jp {
+  let out = {
+    x: copy_limbs(x, f.k),
+    y: copy_limbs(y, f.k),
+    z: copy_limbs(z, f.k),
+  }
+  release(f, at)
+  out
 }
 
 ///|
@@ -461,6 +522,7 @@ fn jp_double(p : Jp, f : Field) -> Jp {
 ///|
 /// `P + Q` in Jacobian coordinates, `add-2007-bl`, evaluated unconditionally.
 fn jp_add_raw(a : Jp, b : Jp, f : Field) -> Jp {
+  let at = mark(f)
   let z1z1 = fsqr(a.z, f)
   let z2z2 = fsqr(b.z, f)
   let u1 = fmul(a.x, z2z2, f)
@@ -481,7 +543,7 @@ fn jp_add_raw(a : Jp, b : Jp, f : Field) -> Jp {
   let y3 = fsub(rvx, fadd(s1j, s1j, f), f)
   let zz = fadd(a.z, b.z, f)
   let z3 = fmul(fsub(fsub(fsqr(zz, f), z1z1, f), z2z2, f), h, f)
-  { x: x3, y: y3, z: z3, }
+  settled(x3, y3, z3, f, at)
 }
 
 ///|
@@ -576,14 +638,17 @@ fn jp_affine(acc : Jp, f : Field) -> Point {
   if fis_zero(acc.z, f.k) {
     return { x: 0, y: 0, zero: true, }
   }
+  let at = mark(f)
   let zi = finv(acc.z, f)
   let zi2 = fsqr(zi, f)
   let zi3 = fmul(zi2, zi, f)
-  {
+  let out = {
     x: fto(fmul(acc.x, zi2, f), f),
     y: fto(fmul(acc.y, zi3, f), f),
     zero: false,
   }
+  release(f, at)
+  out
 }
 
 ///|
@@ -711,6 +776,7 @@ fn comb_row(
 /// `P + Q` where `Q` is affine and comes from the comb table, so `Z2 = 1`:
 /// seven multiplications instead of ten. `madd-2007-bl`.
 fn jp_madd_raw(a : Jp, x : Fp, y : Fp, f : Field) -> Jp {
+  let at = mark(f)
   let z1z1 = fsqr(a.z, f)
   let u2 = fmul(x, z1z1, f)
   let s2 = fmul(fmul(y, a.z, f), z1z1, f)
@@ -726,7 +792,7 @@ fn jp_madd_raw(a : Jp, x : Fp, y : Fp, f : Field) -> Jp {
   let y3 = fsub(fmul(r, fsub(v, x3, f), f), fadd(y1j, y1j, f), f)
   let zh = fadd(a.z, h, f)
   let z3 = fsub(fsub(fsqr(zh, f), z1z1, f), hh, f)
-  { x: x3, y: y3, z: z3, }
+  settled(x3, y3, z3, f, at)
 }
 
 ///|
