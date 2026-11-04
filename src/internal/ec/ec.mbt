@@ -249,14 +249,20 @@ pub fn add(c : Curve, a : Point, b : Point) -> Point {
 }
 
 ///|
-/// `[k]P`. The scalar multiplication runs in fixed-width 32-bit limbs with a
-/// Montgomery ladder and a branch-free swap, so every bit costs one addition
-/// and one doubling whatever its value; see [`mul_limb`] for the field.
+/// `[k]P` over a point that is not the generator: four bits at a time against a
+/// table of small multiples, in fixed-width 32-bit limbs, with the table scanned
+/// whole so neither the count nor the pattern of reads follows `k`.
+///
+/// `secp256k1` takes a different route — see [`mul_glv_limb`] — because its
+/// endomorphism halves the width of the scalar.
 pub fn mul(c : Curve, k : BigInt, pt : Point) -> Point {
   if pt.zero {
     return pt
   }
-  mul_limb(c, k, pt)
+  match c {
+    Secp256k1 => mul_glv_limb(c, k, pt)
+    _ => mul_limb(c, k, pt)
+  }
 }
 
 ///|

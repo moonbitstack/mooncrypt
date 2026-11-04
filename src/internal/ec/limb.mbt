@@ -794,3 +794,93 @@ fn mul_g_limb(c : Curve, k : BigInt) -> Point {
   }
   jp_affine(acc, f)
 }
+
+// ------------------------------------------------------------ secp256k1 GLV
+
+///|
+/// `secp256k1` has `p ≡ 1 (mod 3)`, so the curve carries an endomorphism
+/// `φ(x, y) = (βx, y)` with `β³ = 1 (mod p)`, and `φ` is multiplication by `λ`
+/// with `λ³ = 1 (mod n)`. A scalar can therefore be split in two halves of half
+/// the width — the lattice below is the one the GLV paper gives for this curve —
+/// and `[k]P` becomes `[k₁]P + [k₂]φ(P)` with both halves under `2^128`. That
+/// halves the doublings, which is where most of the work is.
+let glv_beta : BigInt = big(
+  "7AE96A2B657C07106E64479EAC3434E99CF0497512F58995C1396C28719501EE",
+)
+
+///|
+let glv_a1 : BigInt = big("3086D221A7D46BCDE86C90E49284EB15")
+
+///|
+let glv_b1 : BigInt = big("0E4437ED6010E88286F547FA90ABFE4C3")
+
+///|
+let glv_a2 : BigInt = big("114CA50F7A8E2F3F657C1108D9D44CFD8")
+
+///|
+let glv_b2 : BigInt = glv_a1
+
+///|
+/// `k = k₁ + k₂·λ` with `|k₁|, |k₂| < 2^128`, by rounding `k` onto the lattice
+/// spanned by `(a₁, b₁)` and `(a₂, b₂)`. Both halves can come out negative, and
+/// the caller turns that into a negation of the point rather than a reduction
+/// back to full width.
+fn glv_split(k : BigInt, n : BigInt) -> (BigInt, BigInt) {
+  let half = n / (2 : BigInt)
+  let c1 = (glv_b2 * k + half) / n
+  let c2 = (glv_b1 * k + half) / n
+  let k1 = k - c1 * glv_a1 - c2 * glv_a2
+  let k2 = c1 * glv_b1 - c2 * glv_b2
+  (k1, k2)
+}
+
+///|
+/// `[k]P` for `secp256k1`, over the two halves. The tables are built for `P` and
+/// `φ(P)` — negated where the half is negative — and the two run through one
+/// windowed loop, so the multiplication is 124 doublings rather than 256.
+fn mul_glv_limb(c : Curve, k : BigInt, pt : Point) -> Point {
+  let n = params(c).n
+  let (s1, s2) = glv_split(k, n)
+  let half1 = if s1 < (0 : BigInt) { (0 : BigInt) - s1 } else { s1 }
+  let half2 = if s2 < (0 : BigInt) { (0 : BigInt) - s2 } else { s2 }
+  let f = field_of(c)
+  let negate = fn(y : BigInt) { mod_p(c, (0 : BigInt) - y) }
+  let first : Point = if s1 < (0 : BigInt) {
+    { x: pt.x, y: negate(pt.y), zero: false, }
+  } else {
+    pt
+  }
+  let second : Point = {
+    x: mod_p(c, glv_beta * pt.x),
+    y: if s2 < (0 : BigInt) {
+      negate(pt.y)
+    } else {
+      pt.y
+    },
+    zero: false,
+  }
+  let z_one = copy_limbs(f.one, f.k)
+  let t1 = table_of(
+    { x: ffrom(first.x, f), y: ffrom(first.y, f), z: z_one, },
+    f,
+  )
+  let t2 = table_of(
+    { x: ffrom(second.x, f), y: ffrom(second.y, f), z: copy_limbs(f.one, f.k), },
+    f,
+  )
+  // Both halves are under `2^128`, so sixteen bytes carry them.
+  let width = 16
+  let s1b = half1.to_octets(length=width)
+  let s2b = half2.to_octets(length=width)
+  let mut acc = jp_infinity(f)
+  for i in 0..<(width * 2) {
+    if i > 0 {
+      for _ in 0..<4 {
+        acc = jp_double(acc, f)
+      }
+    }
+    acc = jp_add(acc, window_lookup(t1, digit_at(s1b, i), f), f)
+    acc = jp_add(acc, window_lookup(t2, digit_at(s2b, i), f), f)
+  }
+  jp_affine(acc, f)
+}
