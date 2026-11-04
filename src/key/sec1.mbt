@@ -23,7 +23,7 @@ pub(all) struct EcPrivate {
 pub fn sec1_der(
   curve : @curve.Curve,
   scalar : BytesView,
-  public~ : BytesView? = None,
+  public? : BytesView,
 ) -> Bytes {
   let fields = [
     @asn1.integer(b"\x01"),

@@ -3269,7 +3269,7 @@
 </div>
 <div class="item" id="key-sec1-der">
 <div class="name"><span class="kind">fn</span>sec1_der</div>
-<div class="body"><div class="sig">pub fn sec1_der(@curve.Curve, BytesView, public? : BytesView?) -&gt; Bytes</div><p>The SEC1 `ECPrivateKey` of RFC 5915 §3, with the curve always written.</p><p>`public` is written when it is given. It is derivable from the scalar — it is the scalar times the generator — so a file that carries it is carrying a convenience, not a second secret.</p></div>
+<div class="body"><div class="sig">pub fn sec1_der(@curve.Curve, BytesView, public? : BytesView) -&gt; Bytes</div><p>The SEC1 `ECPrivateKey` of RFC 5915 §3, with the curve always written.</p><p>`public` is written when it is given. It is derivable from the scalar — it is the scalar times the generator — so a file that carries it is carrying a convenience, not a second secret.</p></div>
 </div>
 <div class="item" id="key-spki-der">
 <div class="name"><span class="kind">fn</span>spki_der</div>

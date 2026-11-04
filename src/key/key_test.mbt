@@ -148,7 +148,7 @@ test "sec1 ec private key round-trips" {
   assert_eq(parsed.curve, Some(@curve.P256))
   assert_eq(parsed.scalar, BigInt::from_octets(ec_scalar))
   assert_eq(parsed.public, Some(ec_point))
-  let again = @key.sec1_der(@curve.P256, ec_scalar[:], public=Some(ec_point[:]))
+  let again = @key.sec1_der(@curve.P256, ec_scalar[:], public=ec_point[:])
   assert_eq(again, ec_sec1)
 }
 

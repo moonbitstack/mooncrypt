@@ -36,7 +36,7 @@ pub fn rsa_private_der(RsaPrivate) -> Bytes
 
 pub fn rsa_public_der(BytesView, BytesView) -> Bytes
 
-pub fn sec1_der(@curve.Curve, BytesView, public? : BytesView?) -> Bytes
+pub fn sec1_der(@curve.Curve, BytesView, public? : BytesView) -> Bytes
 
 pub fn spki_der(BytesView) -> Bytes
 
