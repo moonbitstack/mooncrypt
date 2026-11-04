@@ -231,14 +231,14 @@ pub impl @spec.Verifier for PublicKey with fn verify(
   }
   let e = truncate(@spec.digest((self.hash)(), msg)[:], order)
   let w = @ec.inv(s, order)
-  let pt = @ec.add(
+  // One pass over both scalars instead of two multiplications: the doublings
+  // are shared, which is most of the cost of a verification.
+  let pt = @ec.mul2(
     self.curve,
-    @ec.mul(self.curve, @ec.mod_n(self.curve, e * w), @ec.generator(self.curve)),
-    @ec.mul(self.curve, @ec.mod_n(self.curve, r * w), {
-      x: self.x,
-      y: self.y,
-      zero: false,
-    }),
+    @ec.mod_n(self.curve, e * w),
+    @ec.generator(self.curve),
+    @ec.mod_n(self.curve, r * w),
+    { x: self.x, y: self.y, zero: false, },
   )
   if pt.zero {
     return false

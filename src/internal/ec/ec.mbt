@@ -260,6 +260,26 @@ pub fn mul(c : Curve, k : BigInt, pt : Point) -> Point {
 }
 
 ///|
+/// `[k1]P1 + [k2]P2`, in one pass over the scalars. A signature verification is
+/// always a sum of two products, and sharing the doublings between them halves
+/// that half of the work.
+pub fn mul2(
+  c : Curve,
+  k1 : BigInt,
+  p1 : Point,
+  k2 : BigInt,
+  p2 : Point,
+) -> Point {
+  if p1.zero {
+    return mul(c, k2, p2)
+  }
+  if p2.zero {
+    return mul(c, k1, p1)
+  }
+  mul2_limb(c, k1, p1, k2, p2)
+}
+
+///|
 /// The number of bits in `n`, or zero for zero. Counted off the top octet:
 /// shifting a `BigInt` down one bit at a time allocates a new one per bit, and
 /// on a 256-bit prime that was eighty microseconds a call.

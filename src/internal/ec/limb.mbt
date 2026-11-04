@@ -538,17 +538,8 @@ fn window_lookup(table : FixedArray[Jp], digit : Int32, f : Field) -> Jp {
 }
 
 ///|
-/// `[k]P` over the limb field, four bits at a time: each nibble costs four
-/// doublings and one addition against the precomputed small multiples, so a
-/// scalar multiplication is 64 additions and 256 doublings instead of 256 of
-/// each. The loop covers the scalar's full width and the table is scanned
-/// whole, so neither the count nor the sequence of operations follows `k`.
-fn mul_limb(c : Curve, k : BigInt, pt : Point) -> Point {
-  let f = field_of(c)
-  let size = c.size()
-  let scalar = k.to_octets(length=size)
-  let z_one = copy_limbs(f.one, f.k)
-  let base : Jp = { x: ffrom(pt.x, f), y: ffrom(pt.y, f), z: z_one, }
+/// The small multiples `P, 2P, … 15P` in Jacobian coordinates.
+fn table_of(base : Jp, f : Field) -> FixedArray[Jp] {
   let table = FixedArray::make(16, jp_infinity(f))
   for i in 0..<16 {
     table.unsafe_set(i, jp_infinity(f))
@@ -557,23 +548,29 @@ fn mul_limb(c : Curve, k : BigInt, pt : Point) -> Point {
   // 2P comes from the doubling formula: the addition law leaves the
   // equal-points case to infinity, which is what the ladder wants and not what
   // a table wants. From there (i-1)·P and P differ by P, which they never do.
-  if 16 > 2 {
-    table.unsafe_set(2, jp_double(base, f))
-  }
+  table.unsafe_set(2, jp_double(base, f))
   for i in 3..<16 {
     table.unsafe_set(i, jp_add(table.unsafe_get(i - 1), base, f))
   }
-  let mut acc = jp_infinity(f)
-  for i in 0..<(size * 2) {
-    if i > 0 {
-      for _ in 0..<4 {
-        acc = jp_double(acc, f)
-      }
-    }
-    let byte = scalar.unsafe_get(i / 2).to_int()
-    let digit = if i % 2 == 0 { (byte >> 4) & 0xF } else { byte & 0xF }
-    acc = jp_add(acc, window_lookup(table, digit, f), f)
+  table
+}
+
+///|
+/// Nibble `i` of a scalar held big-endian, counting from the top.
+fn digit_at(scalar : BytesView, i : Int32) -> Int32 {
+  let byte = scalar.unsafe_get(i / 2).to_int()
+  if i % 2 == 0 {
+    (byte >> 4) & 0xF
+  } else {
+    byte & 0xF
   }
+}
+
+///|
+/// A Jacobian point as an affine one: 0 and the point at infinity are the same
+/// thing here, and the inverse is the one place a scalar multiplication can
+/// still come out empty-handed.
+fn jp_affine(acc : Jp, f : Field) -> Point {
   if fis_zero(acc.z, f.k) {
     return { x: 0, y: 0, zero: true, }
   }
@@ -585,4 +582,64 @@ fn mul_limb(c : Curve, k : BigInt, pt : Point) -> Point {
     y: fto(fmul(acc.y, zi3, f), f),
     zero: false,
   }
+}
+
+///|
+/// `[k]P` over the limb field, four bits at a time: each nibble costs four
+/// doublings and one addition against the precomputed small multiples, so a
+/// scalar multiplication is 64 additions and 256 doublings instead of 256 of
+/// each. The loop covers the scalar's full width and the table is scanned
+/// whole, so neither the count nor the sequence of operations follows `k`.
+fn mul_limb(c : Curve, k : BigInt, pt : Point) -> Point {
+  let f = field_of(c)
+  let size = c.size()
+  let scalar = k.to_octets(length=size)
+  let z_one = copy_limbs(f.one, f.k)
+  let table = table_of({ x: ffrom(pt.x, f), y: ffrom(pt.y, f), z: z_one, }, f)
+  let mut acc = jp_infinity(f)
+  for i in 0..<(size * 2) {
+    if i > 0 {
+      for _ in 0..<4 {
+        acc = jp_double(acc, f)
+      }
+    }
+    acc = jp_add(acc, window_lookup(table, digit_at(scalar, i), f), f)
+  }
+  jp_affine(acc, f)
+}
+
+///|
+/// `[k1]P1 + [k2]P2` in one loop: the doublings are shared, so the sum costs
+/// 256 doublings and 128 additions where two separate multiplications cost 512
+/// and 128 — which is exactly the shape of a signature verification. Both
+/// scalars run the same length and both tables are scanned whole, so neither
+/// scalar appears in the sequence of operations.
+fn mul2_limb(
+  c : Curve,
+  k1 : BigInt,
+  p1 : Point,
+  k2 : BigInt,
+  p2 : Point,
+) -> Point {
+  let f = field_of(c)
+  let size = c.size()
+  let s1 = k1.to_octets(length=size)
+  let s2 = k2.to_octets(length=size)
+  let z_one = copy_limbs(f.one, f.k)
+  let t1 = table_of({ x: ffrom(p1.x, f), y: ffrom(p1.y, f), z: z_one, }, f)
+  let t2 = table_of(
+    { x: ffrom(p2.x, f), y: ffrom(p2.y, f), z: copy_limbs(f.one, f.k), },
+    f,
+  )
+  let mut acc = jp_infinity(f)
+  for i in 0..<(size * 2) {
+    if i > 0 {
+      for _ in 0..<4 {
+        acc = jp_double(acc, f)
+      }
+    }
+    acc = jp_add(acc, window_lookup(t1, digit_at(s1, i), f), f)
+    acc = jp_add(acc, window_lookup(t2, digit_at(s2, i), f), f)
+  }
+  jp_affine(acc, f)
 }

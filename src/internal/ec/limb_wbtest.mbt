@@ -115,6 +115,33 @@ test "mul agrees with repeated addition on every curve" {
 }
 
 ///|
+test "the two-scalar product is the sum of the two products" {
+  for c in all_curves() {
+    let g = generator(c)
+    let n = params(c).n
+    let h = mul(c, (7 : BigInt), g)
+    let pairs : Array[(BigInt, BigInt)] = [
+      (0, 1),
+      (1, 0),
+      (1, 1),
+      (5, 9),
+      (n - (1 : BigInt), 3),
+      (65537, n - (2 : BigInt)),
+    ]
+    for pair in pairs {
+      let (a, b) = pair
+      let want = add(c, mul(c, a, g), mul(c, b, h))
+      let got = mul2(c, a, g, b, h)
+      assert_eq(got.zero, want.zero)
+      if !want.zero {
+        assert_eq(got.x, want.x)
+        assert_eq(got.y, want.y)
+      }
+    }
+  }
+}
+
+///|
 test "zero and the point at infinity come out right" {
   for c in all_curves() {
     let g = generator(c)
