@@ -81,7 +81,7 @@
         <span class="stamp">Guide</span>
         <h1>From a digest to a key file</h1>
         <p class="lede">
-          Ten sections, each one runnable on its own. The line under every listing
+          Eleven sections, each one runnable on its own. The line under every listing
           is what that listing printed when it was run against this checkout.
         </p>
       </div>
@@ -102,7 +102,8 @@
             <li><a href="#pq"><span class="n">08</span>After the quantum computer</a></li>
             <li><a href="#keys"><span class="n">09</span>Reading a key file</a></li>
             <li><a href="#random"><span class="n">10</span>Where randomness comes from</a></li>
-            <li><a href="#next"><span class="n">11</span>Where to go next</a></li>
+            <li><a href="#constant-time"><span class="n">11</span>What the clock is allowed to say</a></li>
+            <li><a href="#next"><span class="n">12</span>Where to go next</a></li>
           </ol>
         </aside>
 
@@ -447,6 +448,28 @@ EC PRIVATE KEY
             numbers, and refuse a structure whose lengths do not add up.
           </p>
 
+          <h2 id="constant-time">What the clock is allowed to say</h2>
+          <p>
+            A key-dependent branch is a key-dependent timing, and a timing is a
+            measurement a nearby attacker can take. Nothing here branches on a
+            secret: AES runs its S-box as a circuit over bit planes rather than a
+            table, and the curves keep their scalars in fixed-width limbs, choose
+            table entries with a mask, and take the carry that decides whether a
+            subtraction is undone as a mask as well. secp256k1's scalar is split
+            over the endomorphism with a fixed-width multiplication against a
+            precomputed reciprocal, so the split no longer contains a division
+            whose quotient correction followed the scalar.
+          </p>
+          <p>
+            The claim is measured, not asserted. The <code>timing</code> example
+            runs each of five operations twice over — once on a fixed input, once
+            on random ones, alternating so both classes see the same machine — and
+            reports Welch's t between the two sets of timings. Below 4.5 the two
+            are indistinguishable at the sample count used; the table of readings
+            and the command that reproduces them are in the
+            <a href="https://github.com/moonbitstack/mooncrypt#constant-time">README</a>.
+          </p>
+
           <h2 id="random">Where randomness comes from</h2>
           <p>
             From the caller. No algorithm here reaches for an entropy source: a
@@ -461,6 +484,15 @@ EC PRIVATE KEY
             <a href="https://github.com/moonbitstack/moonseed">moonseed</a>
             <code>Source</code>. Curve scalars are drawn as FIPS 186-5 A.2.2 draws
             them, from the same bytes as Go's <code>ecdsa.GenerateKey</code>.
+          </p>
+
+          <p>
+            A deterministic generator has a second limit worth knowing about:
+            SP 800-90A caps the requests it may serve between reseeds, and each of
+            <code>CtrDrbg</code>, <code>HashDrbg</code> and <code>HmacDrbg</code>
+            refuses to go past its <code>interval</code> — 2^48 requests unless the
+            caller names a smaller one — rather than continue on entropy it was
+            instantiated with long ago. A reseed puts the counter back to one.
           </p>
 
           <div class="note">

@@ -134,9 +134,12 @@ runs the Boyar-Peralta S-box as a fixed circuit over eight 64-bit planes, four
 blocks at a time, with the key schedule on the same path; the curves multiply in
 fixed-width 32-bit limbs, and their ladder reads the scalar at its full width —
 an infinity on either side of an addition, or the carry that decides whether a
-subtraction should be undone, is a mask rather than a comparison. What that does
-not cover is physical attack: cache and power analysis of the hardware itself are
-out of scope here, which is why the blocks are transposed rather than looked up.
+subtraction should be undone, is a mask rather than a comparison. secp256k1's
+scalar is split over the endomorphism without a division and without a branch on
+which half came out negative, so the split costs the same whatever the scalar is.
+What that does not cover is physical attack: cache and power analysis of the
+hardware itself are out of scope here, which is why the blocks are transposed
+rather than looked up.
 
 ## Configuration
 
@@ -206,6 +209,56 @@ out-of-range scalar. Each AEAD is checked at the tag lengths it defines and with
 and without associated data, and each block cipher at every key length it takes,
 because those are the branches a vector copied straight from a specification
 never reaches.
+
+## Constant time
+
+A branch-free implementation is a claim, and one worth measuring rather than
+asserting. `src/examples/timing` runs five operations twice over — once on a
+fixed input, once on random ones, alternating by a pseudorandom bit so both
+classes meet the same machine at the same temperature — and reports Welch's t
+between the two sets of timings. Under the null hypothesis (the clock does not
+follow the input) t is about standard normal, so the conventional threshold for
+"this leaks" is 4.5.
+
+| Operation | Samples per class | t |
+|:--|--:|--:|
+| AES-128 encrypt | 99639 | 1.26 |
+| P-256 `[k]G` | 3952 | −0.90 |
+| secp256k1 `[k]P` | 4029 | 1.14 |
+| Curve25519 shared | 4047 | −1.02 |
+| RSA-2048 private operation | 293 | 0.77 |
+
+`scripts/run_dudect.sh` reproduces the table at those sample counts. A t under
+the threshold is evidence, not proof: it says the two classes are
+indistinguishable at this sample count, and a leak of a few nanoseconds per call
+would take more samples to surface.
+
+## Timing
+
+The same machine, `native` and release, the best of several rounds — the
+comparison is against Go's `crypto/ecdsa`, measured on that machine with
+`scripts/compare_ecdsa.go`:
+
+| Operation | mooncrypt | Go `crypto/ecdsa` |
+|:--|--:|--:|
+| ECDSA P-256 sign | 636 us | 73 us |
+| ECDSA P-256 verify | 2315 us | 124 us |
+
+Everything else, through the same harness (`--bench`):
+
+| Operation | Rate |
+|:--|--:|
+| SHA-256 | 74 MB/s |
+| ChaCha20-Poly1305 | 63 MB/s |
+| AES-128-GCM | 27 MB/s |
+| Ed25519 sign | 4.5 ms |
+| Ed25519 verify | 8.5 ms |
+| X25519 shared | 1.5 ms |
+| RSA-2048 private operation | 36 ms |
+
+These are one machine's numbers, from the build the MoonBit toolchain produces
+for the native target; an optimising C compiler is where most of the gap to a
+hand-tuned implementation would come from.
 
 ## Post-quantum
 

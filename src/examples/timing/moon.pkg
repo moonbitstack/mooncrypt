@@ -1,0 +1,22 @@
+// The constant-time measurement, runnable: `moon run src/examples/timing`.
+pkgtype(kind: "executable")
+
+import {
+  "moonbitstack/mooncrypt/internal/ec",
+  "moonbitstack/mooncrypt/cipher/aes",
+  "moonbitstack/mooncrypt/kex/x25519",
+  "moonbitstack/mooncrypt/rsa",
+  "moonbitstack/mooncrypt/hash/sha2",
+  "moonbitstack/mooncrypt/aead/gcm",
+  "moonbitstack/mooncrypt/aead/chachapoly",
+  "moonbitstack/mooncrypt/sign/ecdsa",
+  "moonbitstack/mooncrypt/sign/ed25519",
+  "moonbitstack/moonseed",
+  "moonbitstack/moonbase/base16",
+  "moonbitlang/core/bench",
+  "moonbitlang/core/env",
+}
+
+options(
+  supported_targets: "native",
+)
