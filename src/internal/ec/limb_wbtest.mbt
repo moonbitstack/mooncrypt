@@ -197,3 +197,91 @@ test "zero and the point at infinity come out right" {
     assert_eq(back.y, g.y)
   }
 }
+
+///|
+/// The halves of a scalar over the `secp256k1` endomorphism as the rounding
+/// gives them, which is what the fixed-width split has to reproduce: `c₁` and
+/// `c₂` round `k` onto the lattice, and the rest is arithmetic.
+fn exact_glv_split(k : BigInt) -> (BigInt, BigInt) {
+  let n = params(@curve.Secp256k1).n
+  let a1 = big("3086D221A7D46BCDE86C90E49284EB15")
+  let b1 = big("0E4437ED6010E88286F547FA90ABFE4C3")
+  let a2 = big("114CA50F7A8E2F3F657C1108D9D44CFD8")
+  let half = n / (2 : BigInt)
+  let c1 = (a1 * k + half) / n
+  let c2 = (b1 * k + half) / n
+  (k - c1 * a1 - c2 * a2, c1 * b1 - c2 * a1)
+}
+
+///|
+/// A half as the split reports it: sixteen big-endian bytes and a sign mask.
+fn signed_half(h : Bytes, negative : UInt64) -> BigInt {
+  let magnitude = BigInt::from_octets(h)
+  if negative == 0xFFFFFFFFFFFFFFFFUL {
+    (0 : BigInt) - magnitude
+  } else {
+    magnitude
+  }
+}
+
+///|
+test "the endomorphism split matches the exact rounding" {
+  let n = params(@curve.Secp256k1).n
+  let cases : Array[BigInt] = [
+    1,
+    2,
+    3,
+    7,
+    65537,
+    (1 : BigInt) << 64,
+    (1 : BigInt) << 127,
+    ((1 : BigInt) << 128) - (1 : BigInt),
+    (1 : BigInt) << 128,
+    n / (2 : BigInt),
+    n / (3 : BigInt),
+    n - (1 : BigInt),
+    n - (2 : BigInt),
+  ]
+  for k in cases {
+    let (want1, want2) = exact_glv_split(k)
+    let (h1, neg1, h2, neg2) = glv_split(k)
+    assert_eq(signed_half(h1, neg1), want1)
+    assert_eq(signed_half(h2, neg2), want2)
+    // Both halves are under `2^128`, which is what lets the windowed loop run
+    // half as long.
+    assert_true(want1 < (1 : BigInt) << 128 && want1 > -((1 : BigInt) << 128))
+    assert_true(want2 < (1 : BigInt) << 128 && want2 > -((1 : BigInt) << 128))
+  }
+}
+
+///|
+test "the split holds over a swept scalar range" {
+  let lam = big(
+    "5363AD4CC05C30E0A5261C028812645A122E22EA20816678DF02967C1B23BD72",
+  )
+  let mut k = (1 : BigInt)
+  for _ in 0..<128 {
+    let (h1, neg1, h2, neg2) = glv_split(k)
+    let k1 = signed_half(h1, neg1)
+    let k2 = signed_half(h2, neg2)
+    // The two halves have to add back up to the scalar the caller gave, or the
+    // multiplication lands on a point that is not `[k]P`.
+    assert_eq(mod_n(@curve.Secp256k1, k1 + k2 * lam - k), (0 : BigInt))
+    let (want1, want2) = exact_glv_split(k)
+    assert_eq(k1, want1)
+    assert_eq(k2, want2)
+    // A split of a secret scalar must not be able to overflow the window: the
+    // modulus is close to `2^256`, so the halves sit just under `2^128`.
+    let m1 = if k1 < (0 : BigInt) { (0 : BigInt) - k1 } else { k1 }
+    let m2 = if k2 < (0 : BigInt) { (0 : BigInt) - k2 } else { k2 }
+    assert_eq(m1 >> 128, (0 : BigInt))
+    assert_eq(m2 >> 128, (0 : BigInt))
+    k = mod_n(
+      @curve.Secp256k1,
+      k * (6364136223846793005 : BigInt) + (1442695040888963407 : BigInt),
+    )
+    if k == (0 : BigInt) {
+      k = 1
+    }
+  }
+}

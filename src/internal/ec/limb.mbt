@@ -909,29 +909,217 @@ let glv_beta : BigInt = big(
 )
 
 ///|
-let glv_a1 : BigInt = big("3086D221A7D46BCDE86C90E49284EB15")
+/// `(a₁, b₁)` and `(a₂, b₂)`, the lattice basis, as little-endian 32-bit limbs:
+/// `k = k₁ + k₂·λ` with `k₁ = k - c₁a₁ - c₂a₂` and `k₂ = c₁b₁ - c₂b₂`, where
+/// `c₁` and `c₂` are `k` rounded onto the lattice.
+let glv_a1 : FixedArray[UInt64] = [
+  0x9284EB15UL, 0xE86C90E4UL, 0xA7D46BCDUL, 0x3086D221UL,
+]
 
 ///|
-let glv_b1 : BigInt = big("0E4437ED6010E88286F547FA90ABFE4C3")
+let glv_b1 : FixedArray[UInt64] = [
+  0x0ABFE4C3UL, 0x6F547FA9UL, 0x010E8828UL, 0xE4437ED6UL,
+]
 
 ///|
-let glv_a2 : BigInt = big("114CA50F7A8E2F3F657C1108D9D44CFD8")
+let glv_a2 : FixedArray[UInt64] = [
+  0x9D44CFD8UL, 0x57C1108DUL, 0xA8E2F3F6UL, 0x14CA50F7UL, 0x00000001UL,
+]
 
 ///|
-let glv_b2 : BigInt = glv_a1
+/// `⌊2^384·b₂/n⌋` and `⌊2^384·b₁/n⌋`. `⌊k·g/2^384⌋` is `⌊b·k/n⌋` to within one,
+/// which is all the rounding below needs — and it replaces the division that
+/// made this split's timing follow the scalar.
+let glv_g1 : FixedArray[UInt64] = [
+  0x45DBB030UL, 0xE893209AUL, 0x71E8CA7FUL, 0x3DAA8A14UL, 0x9284EB15UL, 0xE86C90E4UL,
+  0xA7D46BCDUL, 0x3086D221UL,
+]
 
 ///|
-/// `k = k₁ + k₂·λ` with `|k₁|, |k₂| < 2^128`, by rounding `k` onto the lattice
-/// spanned by `(a₁, b₁)` and `(a₂, b₂)`. Both halves can come out negative, and
-/// the caller turns that into a negation of the point rather than a reduction
-/// back to full width.
-fn glv_split(k : BigInt, n : BigInt) -> (BigInt, BigInt) {
-  let half = n / (2 : BigInt)
-  let c1 = (glv_b2 * k + half) / n
-  let c2 = (glv_b1 * k + half) / n
-  let k1 = k - c1 * glv_a1 - c2 * glv_a2
-  let k2 = c1 * glv_b1 - c2 * glv_b2
-  (k1, k2)
+let glv_g2 : FixedArray[UInt64] = [
+  0x8AC47F71UL, 0x1571B4AEUL, 0x9DF506C6UL, 0x221208ACUL, 0x0ABFE4C4UL, 0x6F547FA9UL,
+  0x010E8828UL, 0xE4437ED6UL,
+]
+
+///|
+/// `x · y`, schoolbook, into `kx + ky` limbs with two spare for the carries the
+/// rows hand up. Fixed width throughout: the loop counts are the lengths of the
+/// operands, which are constants here, so nothing about the product follows the
+/// values.
+fn limbs_mul(
+  x : FixedArray[UInt64],
+  kx : Int32,
+  y : FixedArray[UInt64],
+  ky : Int32,
+) -> FixedArray[UInt64] {
+  let width = kx + ky + 2
+  let out = FixedArray::make(width, 0UL)
+  for i in 0..<kx {
+    let xi = x.unsafe_get(i)
+    let mut carry = 0UL
+    for j in 0..<ky {
+      let uv = out.unsafe_get(i + j) + xi * y.unsafe_get(j) + carry
+      out.unsafe_set(i + j, uv & limb_mask)
+      carry = uv >> 32
+    }
+    // The row's carry lands on a limb an earlier row may already have written,
+    // so it runs on to the top: a fixed number of steps, as everywhere here.
+    for at in (i + ky)..<width {
+      let s = out.unsafe_get(at) + carry
+      out.unsafe_set(at, s & limb_mask)
+      carry = s >> 32
+    }
+  }
+  out
+}
+
+///|
+/// `round(k·g/2^384)` for a 256-bit `k` and a 256-bit reciprocal `g`: the
+/// product's limbs 12 and up, with half a unit added at bit 383 so the shift
+/// rounds to nearest instead of truncating.
+fn glv_round_shift(
+  k : FixedArray[UInt64],
+  g : FixedArray[UInt64],
+) -> FixedArray[UInt64] {
+  let wide = limbs_mul(k, 8, g, 8)
+  // 2^383 is bit 31 of limb 11; the carry it may start runs off the top.
+  let mut carry = 0x80000000UL
+  for i in 11..<16 {
+    let s = wide.unsafe_get(i) + carry
+    wide.unsafe_set(i, s & limb_mask)
+    carry = s >> 32
+  }
+  let out = FixedArray::make(4, 0UL)
+  for i in 0..<4 {
+    out.unsafe_set(i, wide.unsafe_get(12 + i))
+  }
+  out
+}
+
+///|
+/// `x + y` into `k` limbs, ignoring any carry past the top: the sums here are
+/// bounded well below the width they are held in.
+fn limbs_add_into(
+  x : FixedArray[UInt64],
+  kx : Int32,
+  y : FixedArray[UInt64],
+  ky : Int32,
+  k : Int32,
+) -> FixedArray[UInt64] {
+  let out = FixedArray::make(k, 0UL)
+  let mut carry = 0UL
+  for i in 0..<k {
+    let a = if i < kx { x.unsafe_get(i) } else { 0UL }
+    let b = if i < ky { y.unsafe_get(i) } else { 0UL }
+    let s = a + b + carry
+    out.unsafe_set(i, s & limb_mask)
+    carry = s >> 32
+  }
+  out
+}
+
+///|
+/// `x - y` in fixed width, as two's complement over `k` limbs: the caller reads
+/// the sign off the top limb and negates with a mask, so no branch depends on
+/// which of the two was larger.
+fn limbs_sub(
+  x : FixedArray[UInt64],
+  kx : Int32,
+  y : FixedArray[UInt64],
+  ky : Int32,
+  k : Int32,
+) -> FixedArray[UInt64] {
+  let out = FixedArray::make(k, 0UL)
+  let mut borrow = 0UL
+  for i in 0..<k {
+    let a = if i < kx { x.unsafe_get(i) } else { 0UL }
+    let b = if i < ky { y.unsafe_get(i) } else { 0UL }
+    let d = a - b - borrow
+    out.unsafe_set(i, d & limb_mask)
+    borrow = d >> 63
+  }
+  out
+}
+
+///|
+/// The magnitude of a two's complement word, with the negation applied as a
+/// mask, and the sign as a mask of its own for the caller to fold into the
+/// point.
+fn limbs_abs(x : FixedArray[UInt64], k : Int32) -> (FixedArray[UInt64], UInt64) {
+  // Limbs are 32 bits wide inside their slot, so the sign is bit 31 of the top
+  // one, not bit 63 of the word.
+  let negative = 0UL - ((x.unsafe_get(k - 1) >> 31) & 1UL)
+  let out = FixedArray::make(k, 0UL)
+  let mut carry = negative & 1UL
+  for i in 0..<k {
+    // The complement is taken in the limb's own width: a limb holds 32 bits, so
+    // complementing the 64-bit slot would set bits the carry chain then reads.
+    let s = ((x.unsafe_get(i) ^ negative) & limb_mask) + carry
+    out.unsafe_set(i, s & limb_mask)
+    carry = s >> 32
+  }
+  (out, negative)
+}
+
+///|
+/// The two halves of a secret `k` over the endomorphism, each under `2^128`,
+/// as sixteen big-endian bytes, with a mask for each that is all ones where the
+/// half came out negative.
+///
+/// This is the same split as before, without a division in it: `c₁` and `c₂`
+/// are `k·g >> 384` against a fixed reciprocal, the two products that follow are
+/// fixed-width multiplications, and the difference is taken in two's complement
+/// so the sign is never a comparison. Every loop runs a constant number of
+/// times, whatever `k` is.
+fn glv_split(k : BigInt) -> (Bytes, UInt64, Bytes, UInt64) {
+  let k8 = limbs_from_be(k.to_octets(length=32)[:], 8)
+  let c1 = glv_round_shift(k8, glv_g1)
+  let c2 = glv_round_shift(k8, glv_g2)
+  // k₁ = k - c₁a₁ - c₂a₂. Nine limbs hold the sum with room for the borrow to
+  // run, which is how a negative half is carried here.
+  let wide = 9
+  let t1 = limbs_mul(c1, 4, glv_a1, 4)
+  let t2 = limbs_mul(c2, 4, glv_a2, 5)
+  let sum = limbs_add_into(t1, 8, t2, 9, wide)
+  let d1 = limbs_sub(k8, 8, sum, wide, wide)
+  // k₂ = c₁b₁ - c₂b₂, with `b₂ = a₁`.
+  let p1 = limbs_mul(c1, 4, glv_b1, 4)
+  let p2 = limbs_mul(c2, 4, glv_a1, 4)
+  let d2 = limbs_sub(p1, 8, p2, 8, wide)
+  let (m1, neg1) = limbs_abs(d1, wide)
+  let (m2, neg2) = limbs_abs(d2, wide)
+  (limbs_to_be(m1, 4), neg1, limbs_to_be(m2, 4), neg2)
+}
+
+///|
+/// The tables for `P` and `φ(P)`, each negated where its half came out
+/// negative. The sign is folded into the point with a mask rather than a
+/// branch: which way a half points is half of what the split computed.
+fn glv_tables(
+  pt : Point,
+  neg1 : UInt64,
+  neg2 : UInt64,
+  f : Field,
+) -> (FixedArray[Jp], FixedArray[Jp]) {
+  let kk = f.k
+  let x = ffrom(pt.x, f)
+  let y = ffrom(pt.y, f)
+  let zero = FixedArray::make(kk, 0UL)
+  let minus_y = fsub(zero, y, f)
+  let first : Jp = {
+    x: copy_limbs(x, kk),
+    y: copy_limbs(y, kk),
+    z: copy_limbs(f.one, kk),
+  }
+  fselect_into(neg1, first.y, minus_y, kk)
+  // φ(P) = (βx, y), and `β` is a constant of the curve.
+  let second : Jp = {
+    x: copy_limbs(fmul(x, ffrom(glv_beta, f), f), kk),
+    y: copy_limbs(y, kk),
+    z: copy_limbs(f.one, kk),
+  }
+  fselect_into(neg2, second.y, minus_y, kk)
+  (table_of(first, f), table_of(second, f))
 }
 
 ///|
@@ -939,39 +1127,11 @@ fn glv_split(k : BigInt, n : BigInt) -> (BigInt, BigInt) {
 /// `φ(P)` — negated where the half is negative — and the two run through one
 /// windowed loop, so the multiplication is 124 doublings rather than 256.
 fn mul_glv_limb(c : Curve, k : BigInt, pt : Point) -> Point {
-  let n = params(c).n
-  let (s1, s2) = glv_split(k, n)
-  let half1 = if s1 < (0 : BigInt) { (0 : BigInt) - s1 } else { s1 }
-  let half2 = if s2 < (0 : BigInt) { (0 : BigInt) - s2 } else { s2 }
+  let (s1b, neg1, s2b, neg2) = glv_split(k)
   let f = field_of(c)
-  let negate = fn(y : BigInt) { mod_p(c, (0 : BigInt) - y) }
-  let first : Point = if s1 < (0 : BigInt) {
-    { x: pt.x, y: negate(pt.y), zero: false, }
-  } else {
-    pt
-  }
-  let second : Point = {
-    x: mod_p(c, glv_beta * pt.x),
-    y: if s2 < (0 : BigInt) {
-      negate(pt.y)
-    } else {
-      pt.y
-    },
-    zero: false,
-  }
-  let z_one = copy_limbs(f.one, f.k)
-  let t1 = table_of(
-    { x: ffrom(first.x, f), y: ffrom(first.y, f), z: z_one, },
-    f,
-  )
-  let t2 = table_of(
-    { x: ffrom(second.x, f), y: ffrom(second.y, f), z: copy_limbs(f.one, f.k), },
-    f,
-  )
+  let (t1, t2) = glv_tables(pt, neg1, neg2, f)
   // Both halves are under `2^128`, so sixteen bytes carry them.
   let width = 16
-  let s1b = half1.to_octets(length=width)
-  let s2b = half2.to_octets(length=width)
   let mut acc = jp_infinity(f)
   for i in 0..<(width * 2) {
     if i > 0 {
@@ -1003,40 +1163,13 @@ fn mul2_g_limb(c : Curve, k1 : BigInt, k2 : BigInt, pt : Point) -> Point {
 /// where a row is worth `2^j` with `j` the doublings still to come.
 fn mul2_g_glv_limb(c : Curve, k1 : BigInt, k2 : BigInt, pt : Point) -> Point {
   let n = params(c).n
-  let (s1, s2) = glv_split(k2, n)
-  let half1 = if s1 < (0 : BigInt) { (0 : BigInt) - s1 } else { s1 }
-  let half2 = if s2 < (0 : BigInt) { (0 : BigInt) - s2 } else { s2 }
+  let (e1, neg1, e2, neg2) = glv_split(k2)
   let f = field_of(c)
   let kk = f.k
   let w = fixed_window
   let d = (bits(n) + w - 1) / w
   let table = fixed_base_of(c)
-  let negate = fn(y : BigInt) { mod_p(c, (0 : BigInt) - y) }
-  let first : Point = if s1 < (0 : BigInt) {
-    { x: pt.x, y: negate(pt.y), zero: false, }
-  } else {
-    pt
-  }
-  let second : Point = {
-    x: mod_p(c, glv_beta * pt.x),
-    y: if s2 < (0 : BigInt) {
-      negate(pt.y)
-    } else {
-      pt.y
-    },
-    zero: false,
-  }
-  let z_one = copy_limbs(f.one, f.k)
-  let t1 = table_of(
-    { x: ffrom(first.x, f), y: ffrom(first.y, f), z: z_one, },
-    f,
-  )
-  let t2 = table_of(
-    { x: ffrom(second.x, f), y: ffrom(second.y, f), z: copy_limbs(f.one, f.k), },
-    f,
-  )
-  let e1 = half1.to_octets(length=16)
-  let e2 = half2.to_octets(length=16)
+  let (t1, t2) = glv_tables(pt, neg1, neg2, f)
   let len = (w * d + 7) / 8
   let comb = k1.to_octets(length=len)
   let bit_count = 16 * 8
