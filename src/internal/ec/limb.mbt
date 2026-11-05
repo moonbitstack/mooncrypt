@@ -36,9 +36,6 @@ priv struct Field {
   // nests inside another, so one buffer per field is enough and it takes the
   // largest allocation out of the hot loop.
   scratch : FixedArray[UInt64]
-  // `fsqr` needs the diagonal terms in a second buffer: it writes the square to
-  // `scratch` and reads the diagonals back at the offset they land on.
-  scratch2 : FixedArray[UInt64]
   // Field elements handed out to the arithmetic instead of being allocated:
   // a scalar multiplication makes some six thousand of them, and the allocation
   // was a quarter of the time each one took. `used` is a one-element array
@@ -183,8 +180,9 @@ fn fsub(a : Fp, b : Fp, f : Field) -> Fp {
 ///|
 /// Montgomery reduction of the wide product in `t`, `t * R^-1 mod p`. The
 /// index arithmetic is in range by construction and the final conditional
-/// subtraction is a mask, so the loop branches on nothing. Shared by `fmul` and
-/// `fsqr`, which differ only in how they build `t`.
+/// subtraction is a mask, so the loop branches on nothing. `fmul` interleaves
+/// its own reduction; this one serves `fsqr`, whose symmetric product is
+/// cheaper to build whole.
 fn mont_reduce(t : FixedArray[UInt64], f : Field) -> Fp {
   let k = f.k
   let p = f.p
@@ -223,26 +221,63 @@ fn mont_reduce(t : FixedArray[UInt64], f : Field) -> Fp {
 }
 
 ///|
-/// `a * b * R^-1 mod p`, by schoolbook product then Montgomery reduction.
+/// `a * b * R^-1 mod p`, interleaving the product with the reduction: after
+/// each row of `a * b` one limb falls out of the Montgomery reduction, so the
+/// accumulator only ever holds `k + 2` limbs and stays in cache, where a
+/// separate product and reduction walk `2k + 2` twice. This is the single most
+/// called routine in a scalar multiplication, so the shorter walk is worth the
+/// less readable index arithmetic.
 fn fmul(a : Fp, b : Fp, f : Field) -> Fp {
   let k = f.k
+  let p = f.p
   let t = f.scratch
-  for i in 0..<(2 * k + 2) {
+  for i in 0..<(k + 2) {
     t.unsafe_set(i, 0UL)
   }
   for i in 0..<k {
-    let ai = a.unsafe_get(i)
+    let bi = b.unsafe_get(i)
     let mut carry = 0UL
     for j in 0..<k {
-      let uv = t.unsafe_get(i + j) + ai * b.unsafe_get(j) + carry
-      t.unsafe_set(i + j, uv & 0xFFFFFFFFUL)
+      let uv = t.unsafe_get(j) + a.unsafe_get(j) * bi + carry
+      t.unsafe_set(j, uv & 0xFFFFFFFFUL)
       carry = uv >> 32
     }
-    let s = t.unsafe_get(i + k) + carry
-    t.unsafe_set(i + k, s & 0xFFFFFFFFUL)
-    t.unsafe_set(i + k + 1, t.unsafe_get(i + k + 1) + (s >> 32))
+    let s = t.unsafe_get(k) + carry
+    t.unsafe_set(k, s & 0xFFFFFFFFUL)
+    t.unsafe_set(k + 1, t.unsafe_get(k + 1) + (s >> 32))
+    // The low limb is now a multiple of the radix; clear it.
+    let m = (t.unsafe_get(0) * f.n0) & 0xFFFFFFFFUL
+    let mut down = (t.unsafe_get(0) + m * p.unsafe_get(0)) >> 32
+    for j in 1..<k {
+      let uv = t.unsafe_get(j) + m * p.unsafe_get(j) + down
+      t.unsafe_set(j - 1, uv & 0xFFFFFFFFUL)
+      down = uv >> 32
+    }
+    let s2 = t.unsafe_get(k) + down
+    t.unsafe_set(k - 1, s2 & 0xFFFFFFFFUL)
+    t.unsafe_set(k, t.unsafe_get(k + 1) + (s2 >> 32))
+    t.unsafe_set(k + 1, 0UL)
   }
-  mont_reduce(t, f)
+  let out = take(f)
+  for i in 0..<k {
+    out.unsafe_set(i, t.unsafe_get(i))
+  }
+  let mut borrow = 0UL
+  for i in 0..<k {
+    let d = out.unsafe_get(i) - p.unsafe_get(i) - borrow
+    out.unsafe_set(i, d & 0xFFFFFFFFUL)
+    borrow = d >> 63
+  }
+  // `borrow` is the carry out of `a - p`; when it differs from the limb above
+  // the subtraction should not have happened, so `p` goes back on.
+  let mask = 0UL - (borrow ^ t.unsafe_get(k))
+  let mut adding = 0UL
+  for i in 0..<k {
+    let s = out.unsafe_get(i) + (p.unsafe_get(i) & mask) + adding
+    out.unsafe_set(i, s & 0xFFFFFFFFUL)
+    adding = s >> 32
+  }
+  out
 }
 
 ///|
@@ -254,14 +289,8 @@ fn fmul(a : Fp, b : Fp, f : Field) -> Fp {
 fn fsqr(a : Fp, f : Field) -> Fp {
   let k = f.k
   let t = f.scratch
-  let d = f.scratch2
   for i in 0..<(2 * k + 2) {
     t.unsafe_set(i, 0UL)
-  }
-  for i in 0..<k {
-    let sq = a.unsafe_get(i) * a.unsafe_get(i)
-    d.unsafe_set(2 * i, sq & 0xFFFFFFFFUL)
-    d.unsafe_set(2 * i + 1, sq >> 32)
   }
   // The upper triangle: for row `i` the columns below the diagonal are left
   // alone, and the carry out of each row lands on a limb no earlier row wrote.
@@ -275,23 +304,23 @@ fn fsqr(a : Fp, f : Field) -> Fp {
     }
     t.unsafe_set(i + k, carry)
   }
-  // Everything above the diagonal is counted twice.
+  // Everything above the diagonal is counted twice and the diagonal once, so
+  // one pass doubles a limb and adds the diagonal limb above it. Writing the
+  // diagonal square in place rather than into a second buffer saves a pass over
+  // the whole product, which is what made the square cost more than the
+  // product it saves multiplications from.
   let mut carry = 0UL
-  for i in 0..<(2 * k) {
-    let v = (t.unsafe_get(i) << 1) | carry
-    t.unsafe_set(i, v & 0xFFFFFFFFUL)
-    carry = v >> 32
+  for h in 0..<k {
+    let sq = a.unsafe_get(h) * a.unsafe_get(h)
+    let lo = (t.unsafe_get(2 * h) << 1) + carry + (sq & 0xFFFFFFFFUL)
+    t.unsafe_set(2 * h, lo & 0xFFFFFFFFUL)
+    let hi = (t.unsafe_get(2 * h + 1) << 1) + (lo >> 32) + (sq >> 32)
+    t.unsafe_set(2 * h + 1, hi & 0xFFFFFFFFUL)
+    carry = hi >> 32
   }
+  // A square below `2^(32k·2)` never carries out of the doubling, but the
+  // diagonal can, so the top two limbs still take the last carry in limb order.
   let mut j = 2 * k
-  t.unsafe_set(j, t.unsafe_get(j) + carry)
-  // The diagonal goes on in one pass in limb order, so the carry chain is the
-  // same length whatever the value.
-  let mut carry = 0UL
-  for i in 0..<(2 * k) {
-    let s = t.unsafe_get(i) + d.unsafe_get(i) + carry
-    t.unsafe_set(i, s & 0xFFFFFFFFUL)
-    carry = s >> 32
-  }
   while j < 2 * k + 2 {
     let s = t.unsafe_get(j) + carry
     t.unsafe_set(j, s & 0xFFFFFFFFUL)
@@ -364,7 +393,6 @@ fn field_of(curve : Curve) -> Field {
     exp_bits: bits(exp),
     a_kind: 2,
     scratch: FixedArray::make(2 * k + 2, 0UL),
-    scratch2: FixedArray::make(2 * k + 2, 0UL),
     pool,
     used: FixedArray::make(1, 0),
   }
@@ -390,7 +418,6 @@ fn field_of(curve : Curve) -> Field {
     exp_bits: base.exp_bits,
     a_kind,
     scratch: base.scratch,
-    scratch2: base.scratch2,
     pool: base.pool,
     used: base.used,
   }
@@ -426,24 +453,18 @@ fn fzero_mask(a : Fp, k : Int32) -> UInt64 {
 
 ///|
 /// `a` where `mask` is all ones, `b` where it is zero.
-fn fselect(mask : UInt64, a : Fp, b : Fp, k : Int32) -> Fp {
-  let out = FixedArray::make(k, 0UL)
-  for i in 0..<k {
-    out.unsafe_set(
-      i,
-      b.unsafe_get(i) ^ (mask & (a.unsafe_get(i) ^ b.unsafe_get(i))),
-    )
-  }
-  out
-}
 
 ///|
-/// The same choice over points.
-fn jp_select(mask : UInt64, a : Jp, b : Jp, k : Int32) -> Jp {
-  {
-    x: fselect(mask, a.x, b.x, k),
-    y: fselect(mask, a.y, b.y, k),
-    z: fselect(mask, a.z, b.z, k),
+/// `a` where `mask` is all ones, `b` where it is zero, written over `a`. Every fold of an exceptional case in the
+/// point arithmetic ends on a value it owns, so the three allocations a
+/// [`fselect`] would need — twelve per addition, once per bit of the ladder —
+/// buy nothing there.
+fn fselect_into(mask : UInt64, a : Fp, b : Fp, k : Int32) -> Unit {
+  for i in 0..<k {
+    a.unsafe_set(
+      i,
+      a.unsafe_get(i) ^ (mask & (b.unsafe_get(i) ^ a.unsafe_get(i))),
+    )
   }
 }
 
@@ -555,12 +576,18 @@ fn jp_add_raw(a : Jp, b : Jp, f : Field) -> Jp {
 /// `z = 0`, the point at infinity. An infinity on either side is folded in with
 /// a mask, so the operation count stays fixed.
 fn jp_add(a : Jp, b : Jp, f : Field) -> Jp {
-  let raw = jp_add_raw(a, b, f)
+  let out = jp_add_raw(a, b, f)
   let all = 0xFFFFFFFFFFFFFFFFUL
   let a_gone = fzero_mask(a.z, f.k)
   let b_gone = fzero_mask(b.z, f.k)
-  let out = jp_select(a_gone, b, raw, f.k)
-  jp_select(b_gone & (a_gone ^ all), a, out, f.k)
+  fselect_into(a_gone, out.x, b.x, f.k)
+  fselect_into(a_gone, out.y, b.y, f.k)
+  fselect_into(a_gone, out.z, b.z, f.k)
+  let only_b = b_gone & (a_gone ^ all)
+  fselect_into(only_b, out.x, a.x, f.k)
+  fselect_into(only_b, out.y, a.y, f.k)
+  fselect_into(only_b, out.z, a.z, f.k)
+  out
 }
 
 ///|
@@ -816,14 +843,27 @@ fn jp_madd_raw(a : Jp, x : Fp, y : Fp, f : Field) -> Jp {
 /// `z` of zero so the selection lands on the accumulator rather than on a false
 /// affine point.
 fn jp_madd(a : Jp, x : Fp, y : Fp, f : Field) -> Jp {
-  let raw = jp_madd_raw(a, x, y, f)
+  let out = jp_madd_raw(a, x, y, f)
   let all = 0xFFFFFFFFFFFFFFFFUL
-  let a_gone = fzero_mask(a.z, f.k)
-  let e_gone = fzero_mask(x, f.k) & fzero_mask(y, f.k)
-  let z = fselect(e_gone, FixedArray::make(f.k, 0UL), f.one, f.k)
-  let b : Jp = { x, y, z, }
-  let out = jp_select(a_gone, b, raw, f.k)
-  jp_select(e_gone & (a_gone ^ all), a, out, f.k)
+  let k = f.k
+  let a_gone = fzero_mask(a.z, k)
+  let e_gone = fzero_mask(x, k) & fzero_mask(y, k)
+  fselect_into(a_gone, out.x, x, k)
+  fselect_into(a_gone, out.y, y, k)
+  // The entry's `z` is one where the row is present and zero where it is the
+  // point at infinity, so the selection never lands on a false affine point.
+  for i in 0..<k {
+    let z_entry = f.one.unsafe_get(i) & (e_gone ^ all)
+    out.z.unsafe_set(
+      i,
+      out.z.unsafe_get(i) ^ (a_gone & (z_entry ^ out.z.unsafe_get(i))),
+    )
+  }
+  let only_b = e_gone & (a_gone ^ all)
+  fselect_into(only_b, out.x, a.x, k)
+  fselect_into(only_b, out.y, a.y, k)
+  fselect_into(only_b, out.z, a.z, k)
+  out
 }
 
 ///|
