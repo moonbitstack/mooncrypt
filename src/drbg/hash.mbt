@@ -98,6 +98,7 @@ pub struct HashDrbg {
   mut v : FixedArray[Byte]
   mut c : FixedArray[Byte]
   mut reseed_counter : UInt64
+  interval : UInt64
 }
 
 ///|
@@ -108,6 +109,7 @@ pub fn HashDrbg::new(
   entropy~ : BytesView,
   nonce~ : BytesView,
   personalization~ : BytesView,
+  interval~ : UInt64 = reseed_limit,
 ) -> HashDrbg {
   let bits = seedlen(hash) * 8
   let seed = hash_df(hash, join([entropy, nonce, personalization]), bits)
@@ -117,7 +119,7 @@ pub fn HashDrbg::new(
     join([b"\x00"[:], v.unsafe_reinterpret_as_bytes()[:]]),
     bits,
   )
-  { hash, v, c, reseed_counter: 1, }
+  { hash, v, c, reseed_counter: 1, interval, }
 }
 
 ///|
@@ -150,7 +152,7 @@ pub fn HashDrbg::reseed(
 
 ///|
 /// Draw `n` bytes with no additional input.
-pub fn HashDrbg::generate(self : HashDrbg, n : Int32) -> Bytes {
+pub fn HashDrbg::generate(self : HashDrbg, n : Int32) -> Bytes raise Refused {
   self.generate_with(n, additional=b""[:])
 }
 
@@ -160,7 +162,10 @@ pub fn HashDrbg::generate_with(
   self : HashDrbg,
   n : Int32,
   additional~ : BytesView,
-) -> Bytes {
+) -> Bytes raise Refused {
+  if self.reseed_counter > self.interval {
+    raise Reseed(limit=self.interval)
+  }
   let w = if additional.length() > 0 {
     to_fixed(
       @spec.digest(
@@ -196,9 +201,15 @@ pub fn HashDrbg::generate_with(
 }
 
 ///|
-/// How many bytes have been drawn since the last instantiation or reseed.
+/// How many requests have been served since the last instantiation or reseed.
 pub fn HashDrbg::reseed_counter(self : HashDrbg) -> UInt64 {
   self.reseed_counter
+}
+
+///|
+/// The number of requests this generator will serve between reseeds.
+pub fn HashDrbg::interval(self : HashDrbg) -> UInt64 {
+  self.interval
 }
 
 ///|
@@ -208,8 +219,10 @@ pub extend HashDrbg with @moonseed.Source::{fill}
 pub impl @moonseed.Source for HashDrbg with fn fill(
   self : HashDrbg,
   buf : FixedArray[Byte],
-) -> Unit {
-  let out = self.generate_with(buf.length(), additional=b""[:])
+) -> Unit raise @moonseed.Unavailable {
+  let out = self.generate_with(buf.length(), additional=b""[:]) catch {
+    Reseed(_) => raise @moonseed.Unavailable::Exhausted
+  }
   for i in 0..<buf.length() {
     buf[i] = out[i]
   }

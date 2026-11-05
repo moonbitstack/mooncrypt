@@ -8,8 +8,12 @@ import {
 }
 
 // Values
+pub let reseed_limit : UInt64
 
 // Errors
+pub(all) suberror Refused {
+  Reseed(limit~ : UInt64)
+}
 
 // Types and methods
 pub struct CtrDrbg {
@@ -18,12 +22,14 @@ pub struct CtrDrbg {
   mut key : FixedArray[Byte]
   mut v : FixedArray[Byte]
   mut reseed_counter : UInt64
+  interval : UInt64
 }
 pub fn CtrDrbg::fill(Self, FixedArray[Byte]) -> Unit raise @moonseed.Unavailable
-pub fn CtrDrbg::generate(Self, Int32) -> Bytes
-pub fn CtrDrbg::generate_with(Self, Int32, additional~ : BytesView) -> Bytes
+pub fn CtrDrbg::generate(Self, Int32) -> Bytes raise Refused
+pub fn CtrDrbg::generate_with(Self, Int32, additional~ : BytesView) -> Bytes raise Refused
+pub fn CtrDrbg::interval(Self) -> UInt64
 pub fn CtrDrbg::kind(Self) -> Kind
-pub fn CtrDrbg::new(entropy~ : BytesView, nonce~ : BytesView, personalization~ : BytesView, kind? : Kind, derivation? : Bool) -> Self
+pub fn CtrDrbg::new(entropy~ : BytesView, nonce~ : BytesView, personalization~ : BytesView, kind? : Kind, derivation? : Bool, interval? : UInt64) -> Self
 pub fn CtrDrbg::reseed(Self, entropy~ : BytesView, additional~ : BytesView) -> Unit
 pub fn CtrDrbg::reseed_counter(Self) -> UInt64
 pub impl @moonseed.Source for CtrDrbg
@@ -33,20 +39,23 @@ pub struct HashDrbg {
   mut v : FixedArray[Byte]
   mut c : FixedArray[Byte]
   mut reseed_counter : UInt64
+  interval : UInt64
 }
 pub fn HashDrbg::fill(Self, FixedArray[Byte]) -> Unit raise @moonseed.Unavailable
-pub fn HashDrbg::generate(Self, Int32) -> Bytes
-pub fn HashDrbg::generate_with(Self, Int32, additional~ : BytesView) -> Bytes
-pub fn HashDrbg::new(() -> &@spec.Hash, entropy~ : BytesView, nonce~ : BytesView, personalization~ : BytesView) -> Self
+pub fn HashDrbg::generate(Self, Int32) -> Bytes raise Refused
+pub fn HashDrbg::generate_with(Self, Int32, additional~ : BytesView) -> Bytes raise Refused
+pub fn HashDrbg::interval(Self) -> UInt64
+pub fn HashDrbg::new(() -> &@spec.Hash, entropy~ : BytesView, nonce~ : BytesView, personalization~ : BytesView, interval? : UInt64) -> Self
 pub fn HashDrbg::reseed(Self, entropy~ : BytesView, additional~ : BytesView) -> Unit
 pub fn HashDrbg::reseed_counter(Self) -> UInt64
 pub impl @moonseed.Source for HashDrbg
 
 type HmacDrbg
 pub fn HmacDrbg::fill(Self, FixedArray[Byte]) -> Unit raise @moonseed.Unavailable
-pub fn HmacDrbg::generate(Self, Int32) -> Bytes
-pub fn HmacDrbg::generate_with(Self, Int32, additional~ : BytesView) -> Bytes
-pub fn HmacDrbg::new(() -> &@spec.Hash, entropy~ : BytesView, nonce~ : BytesView, personalization~ : BytesView) -> Self
+pub fn HmacDrbg::generate(Self, Int32) -> Bytes raise Refused
+pub fn HmacDrbg::generate_with(Self, Int32, additional~ : BytesView) -> Bytes raise Refused
+pub fn HmacDrbg::interval(Self) -> UInt64
+pub fn HmacDrbg::new(() -> &@spec.Hash, entropy~ : BytesView, nonce~ : BytesView, personalization~ : BytesView, interval? : UInt64) -> Self
 pub fn HmacDrbg::reseed(Self, entropy~ : BytesView, additional~ : BytesView) -> Unit
 pub fn HmacDrbg::reseed_counter(Self) -> UInt64
 pub fn HmacDrbg::wipe(Self) -> Unit

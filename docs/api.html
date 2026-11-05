@@ -74,7 +74,7 @@
         <h1>Every package, in order</h1>
         <p class="lede">
           Generated from each package's interface file and the comments above its
-          declarations. 703 public declarations across 64
+          declarations. 708 public declarations across 64
           packages.
         </p>
       </div>
@@ -1420,17 +1420,31 @@
   Aes256
 }</div></div>
 </div>
+<div class="item" id="drbg-refused">
+<div class="name"><span class="kind">error</span>Refused</div>
+<div class="body"><div class="sig">pub(all) suberror Refused {
+  Reseed(limit~ : UInt64)
+}</div><p>The generator was asked for output past its reseed interval. SP 800-90A requires a reseed at that point rather than more output: past the interval the state is no longer backed by the entropy it was instantiated with, and continuing would silently return bytes from a generator that has been stretched further than its security argument allows.</p><p>`limit` is the interval the generator was given.</p></div>
+</div>
+<div class="item" id="drbg-reseed-limit">
+<div class="name"><span class="kind">let</span>reseed_limit</div>
+<div class="body"><div class="sig">pub let reseed_limit : UInt64</div><p>`2^48` requests, the cap SP 800-90A §10.1.1 and §10.2.1 put on every generator here. Instantiation takes it as a default; a caller that reseeds on its own schedule can pass something smaller.</p></div>
+</div>
 <div class="item" id="drbg-ctrdrbg-fill">
 <div class="name"><span class="kind">fn</span><span class="dim">CtrDrbg::</span>fill</div>
 <div class="body"><div class="sig">pub fn CtrDrbg::fill(Self, FixedArray[Byte]) -&gt; Unit raise @moonseed.Unavailable</div></div>
 </div>
 <div class="item" id="drbg-ctrdrbg-generate">
 <div class="name"><span class="kind">fn</span><span class="dim">CtrDrbg::</span>generate</div>
-<div class="body"><div class="sig">pub fn CtrDrbg::generate(Self, Int32) -&gt; Bytes</div><p>Draw `n` bytes with no additional input.</p></div>
+<div class="body"><div class="sig">pub fn CtrDrbg::generate(Self, Int32) -&gt; Bytes raise Refused</div><p>Draw `n` bytes with no additional input.</p></div>
 </div>
 <div class="item" id="drbg-ctrdrbg-generate-with">
 <div class="name"><span class="kind">fn</span><span class="dim">CtrDrbg::</span>generate_with</div>
-<div class="body"><div class="sig">pub fn CtrDrbg::generate_with(Self, Int32, additional~ : BytesView) -&gt; Bytes</div><p>Draw `n` bytes with an additional input (§10.2.1.5).</p><p>The additional input is processed before the keystream, and the processed value — zeroes when there is none — is folded back into the state afterwards, so producing output always advances Key and V.</p></div>
+<div class="body"><div class="sig">pub fn CtrDrbg::generate_with(Self, Int32, additional~ : BytesView) -&gt; Bytes raise Refused</div><p>Draw `n` bytes with an additional input (§10.2.1.5).</p><p>The additional input is processed before the keystream, and the processed value — zeroes when there is none — is folded back into the state afterwards, so producing output always advances Key and V.</p></div>
+</div>
+<div class="item" id="drbg-ctrdrbg-interval">
+<div class="name"><span class="kind">fn</span><span class="dim">CtrDrbg::</span>interval</div>
+<div class="body"><div class="sig">pub fn CtrDrbg::interval(Self) -&gt; UInt64</div><p>The number of requests this generator will serve between reseeds.</p></div>
 </div>
 <div class="item" id="drbg-ctrdrbg-kind">
 <div class="name"><span class="kind">fn</span><span class="dim">CtrDrbg::</span>kind</div>
@@ -1438,7 +1452,7 @@
 </div>
 <div class="item" id="drbg-ctrdrbg-new">
 <div class="name"><span class="kind">fn</span><span class="dim">CtrDrbg::</span>new</div>
-<div class="body"><div class="sig">pub fn CtrDrbg::new(entropy~ : BytesView, nonce~ : BytesView, personalization~ : BytesView, kind? : Kind, derivation? : Bool) -&gt; Self</div><p>Seed the generator from an entropy input, a nonce and a personalization string (§10.2.1.3).</p><p>Without the derivation function the entropy input must already be the seed length — key length plus one block — which is what full-entropy instantiation requires; only the personalization string is folded in, and the nonce is not used. With it, the three are concatenated and stretched to the seed length.</p></div>
+<div class="body"><div class="sig">pub fn CtrDrbg::new(entropy~ : BytesView, nonce~ : BytesView, personalization~ : BytesView, kind? : Kind, derivation? : Bool, interval? : UInt64) -&gt; Self</div><p>Seed the generator from an entropy input, a nonce and a personalization string (§10.2.1.3).</p><p>Without the derivation function the entropy input must already be the seed length — key length plus one block — which is what full-entropy instantiation requires; only the personalization string is folded in, and the nonce is not used. With it, the three are concatenated and stretched to the seed length.</p></div>
 </div>
 <div class="item" id="drbg-ctrdrbg-reseed">
 <div class="name"><span class="kind">fn</span><span class="dim">CtrDrbg::</span>reseed</div>
@@ -1454,15 +1468,19 @@
 </div>
 <div class="item" id="drbg-hashdrbg-generate">
 <div class="name"><span class="kind">fn</span><span class="dim">HashDrbg::</span>generate</div>
-<div class="body"><div class="sig">pub fn HashDrbg::generate(Self, Int32) -&gt; Bytes</div><p>Draw `n` bytes with no additional input.</p></div>
+<div class="body"><div class="sig">pub fn HashDrbg::generate(Self, Int32) -&gt; Bytes raise Refused</div><p>Draw `n` bytes with no additional input.</p></div>
 </div>
 <div class="item" id="drbg-hashdrbg-generate-with">
 <div class="name"><span class="kind">fn</span><span class="dim">HashDrbg::</span>generate_with</div>
-<div class="body"><div class="sig">pub fn HashDrbg::generate_with(Self, Int32, additional~ : BytesView) -&gt; Bytes</div><p>Draw `n` bytes with an additional input bound to this call (§10.1.1.5).</p></div>
+<div class="body"><div class="sig">pub fn HashDrbg::generate_with(Self, Int32, additional~ : BytesView) -&gt; Bytes raise Refused</div><p>Draw `n` bytes with an additional input bound to this call (§10.1.1.5).</p></div>
+</div>
+<div class="item" id="drbg-hashdrbg-interval">
+<div class="name"><span class="kind">fn</span><span class="dim">HashDrbg::</span>interval</div>
+<div class="body"><div class="sig">pub fn HashDrbg::interval(Self) -&gt; UInt64</div><p>The number of requests this generator will serve between reseeds.</p></div>
 </div>
 <div class="item" id="drbg-hashdrbg-new">
 <div class="name"><span class="kind">fn</span><span class="dim">HashDrbg::</span>new</div>
-<div class="body"><div class="sig">pub fn HashDrbg::new(() -&gt; &amp;@spec.Hash, entropy~ : BytesView, nonce~ : BytesView, personalization~ : BytesView) -&gt; Self</div><p>Seed the generator from an entropy input, a nonce and a personalization string (§10.1.1.2). `V` starts from the seed and `C` from `0x00 ∥ V`.</p></div>
+<div class="body"><div class="sig">pub fn HashDrbg::new(() -&gt; &amp;@spec.Hash, entropy~ : BytesView, nonce~ : BytesView, personalization~ : BytesView, interval? : UInt64) -&gt; Self</div><p>Seed the generator from an entropy input, a nonce and a personalization string (§10.1.1.2). `V` starts from the seed and `C` from `0x00 ∥ V`.</p></div>
 </div>
 <div class="item" id="drbg-hashdrbg-reseed">
 <div class="name"><span class="kind">fn</span><span class="dim">HashDrbg::</span>reseed</div>
@@ -1470,7 +1488,7 @@
 </div>
 <div class="item" id="drbg-hashdrbg-reseed-counter">
 <div class="name"><span class="kind">fn</span><span class="dim">HashDrbg::</span>reseed_counter</div>
-<div class="body"><div class="sig">pub fn HashDrbg::reseed_counter(Self) -&gt; UInt64</div><p>How many bytes have been drawn since the last instantiation or reseed.</p></div>
+<div class="body"><div class="sig">pub fn HashDrbg::reseed_counter(Self) -&gt; UInt64</div><p>How many requests have been served since the last instantiation or reseed.</p></div>
 </div>
 <div class="item" id="drbg-hmacdrbg-fill">
 <div class="name"><span class="kind">fn</span><span class="dim">HmacDrbg::</span>fill</div>
@@ -1478,15 +1496,19 @@
 </div>
 <div class="item" id="drbg-hmacdrbg-generate">
 <div class="name"><span class="kind">fn</span><span class="dim">HmacDrbg::</span>generate</div>
-<div class="body"><div class="sig">pub fn HmacDrbg::generate(Self, Int32) -&gt; Bytes</div><p>Draw `n` bytes with no additional input.</p></div>
+<div class="body"><div class="sig">pub fn HmacDrbg::generate(Self, Int32) -&gt; Bytes raise Refused</div><p>Draw `n` bytes with no additional input.</p></div>
 </div>
 <div class="item" id="drbg-hmacdrbg-generate-with">
 <div class="name"><span class="kind">fn</span><span class="dim">HmacDrbg::</span>generate_with</div>
-<div class="body"><div class="sig">pub fn HmacDrbg::generate_with(Self, Int32, additional~ : BytesView) -&gt; Bytes</div><p>Draw `n` bytes with an additional input folded in (SP 800-90A §10.1.2.5). The additional input binds this call to its context without changing the seed, so two calls with different context strings diverge.</p></div>
+<div class="body"><div class="sig">pub fn HmacDrbg::generate_with(Self, Int32, additional~ : BytesView) -&gt; Bytes raise Refused</div><p>Draw `n` bytes with an additional input folded in (SP 800-90A §10.1.2.5). The additional input binds this call to its context without changing the seed, so two calls with different context strings diverge.</p></div>
+</div>
+<div class="item" id="drbg-hmacdrbg-interval">
+<div class="name"><span class="kind">fn</span><span class="dim">HmacDrbg::</span>interval</div>
+<div class="body"><div class="sig">pub fn HmacDrbg::interval(Self) -&gt; UInt64</div><p>The number of requests this generator will serve between reseeds.</p></div>
 </div>
 <div class="item" id="drbg-hmacdrbg-new">
 <div class="name"><span class="kind">fn</span><span class="dim">HmacDrbg::</span>new</div>
-<div class="body"><div class="sig">pub fn HmacDrbg::new(() -&gt; &amp;@spec.Hash, entropy~ : BytesView, nonce~ : BytesView, personalization~ : BytesView) -&gt; Self</div><p>Seed the generator from an entropy input, a nonce and a personalization string (SP 800-90A §10.1.2.3). The three identify the instance; the entropy input carries the strength, and a caller with none of its own should draw it from the platform's [`@moonseed.Source`].</p></div>
+<div class="body"><div class="sig">pub fn HmacDrbg::new(() -&gt; &amp;@spec.Hash, entropy~ : BytesView, nonce~ : BytesView, personalization~ : BytesView, interval? : UInt64) -&gt; Self</div><p>Seed the generator from an entropy input, a nonce and a personalization string (SP 800-90A §10.1.2.3). The three identify the instance; the entropy input carries the strength, and a caller with none of its own should draw it from the platform's [`@moonseed.Source`].</p></div>
 </div>
 <div class="item" id="drbg-hmacdrbg-reseed">
 <div class="name"><span class="kind">fn</span><span class="dim">HmacDrbg::</span>reseed</div>
@@ -1494,7 +1516,7 @@
 </div>
 <div class="item" id="drbg-hmacdrbg-reseed-counter">
 <div class="name"><span class="kind">fn</span><span class="dim">HmacDrbg::</span>reseed_counter</div>
-<div class="body"><div class="sig">pub fn HmacDrbg::reseed_counter(Self) -&gt; UInt64</div><p>How many bytes have been drawn since the last instantiation or reseed; a caller that watches this can reseed before the interval is spent.</p></div>
+<div class="body"><div class="sig">pub fn HmacDrbg::reseed_counter(Self) -&gt; UInt64</div><p>How many requests have been served since the last instantiation or reseed; a caller that watches this can reseed before the interval is spent.</p></div>
 </div>
 <div class="item" id="drbg-hmacdrbg-wipe">
 <div class="name"><span class="kind">fn</span><span class="dim">HmacDrbg::</span>wipe</div>

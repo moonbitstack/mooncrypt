@@ -14,6 +14,7 @@ struct HmacDrbg {
   key : FixedArray[Byte]
   v : FixedArray[Byte]
   mut reseed_counter : UInt64
+  interval : UInt64
 }
 
 ///|
@@ -26,6 +27,7 @@ pub fn HmacDrbg::new(
   entropy~ : BytesView,
   nonce~ : BytesView,
   personalization~ : BytesView,
+  interval~ : UInt64 = reseed_limit,
 ) -> HmacDrbg {
   let outlen = hash().size()
   let drbg : HmacDrbg = {
@@ -33,6 +35,7 @@ pub fn HmacDrbg::new(
     key: FixedArray::make(outlen, b'\x00'),
     v: FixedArray::make(outlen, b'\x01'),
     reseed_counter: 1,
+    interval,
   }
   drbg.update(join([entropy, nonce, personalization]))
   drbg
@@ -53,15 +56,21 @@ pub fn HmacDrbg::reseed(
 }
 
 ///|
-/// How many bytes have been drawn since the last instantiation or reseed; a
+/// How many requests have been served since the last instantiation or reseed; a
 /// caller that watches this can reseed before the interval is spent.
 pub fn HmacDrbg::reseed_counter(self : HmacDrbg) -> UInt64 {
   self.reseed_counter
 }
 
 ///|
+/// The number of requests this generator will serve between reseeds.
+pub fn HmacDrbg::interval(self : HmacDrbg) -> UInt64 {
+  self.interval
+}
+
+///|
 /// Draw `n` bytes with no additional input.
-pub fn HmacDrbg::generate(self : HmacDrbg, n : Int32) -> Bytes {
+pub fn HmacDrbg::generate(self : HmacDrbg, n : Int32) -> Bytes raise Refused {
   self.next(n, b""[:])
 }
 
@@ -73,7 +82,7 @@ pub fn HmacDrbg::generate_with(
   self : HmacDrbg,
   n : Int32,
   additional~ : BytesView,
-) -> Bytes {
+) -> Bytes raise Refused {
   self.next(n, additional)
 }
 
@@ -87,7 +96,14 @@ pub fn HmacDrbg::wipe(self : HmacDrbg) -> Unit {
 ///|
 /// The Generate step (§10.1.2.5): update with any additional input, drain `V`
 /// into the result, then update again so the state moves on.
-fn HmacDrbg::next(self : HmacDrbg, n : Int32, additional : BytesView) -> Bytes {
+fn HmacDrbg::next(
+  self : HmacDrbg,
+  n : Int32,
+  additional : BytesView,
+) -> Bytes raise Refused {
+  if self.reseed_counter > self.interval {
+    raise Reseed(limit=self.interval)
+  }
   if additional.length() > 0 {
     self.update(additional)
   }
@@ -158,13 +174,16 @@ fn HmacDrbg::update(self : HmacDrbg, provided : BytesView) -> Unit {
 pub extend HmacDrbg with @moonseed.Source::{fill}
 
 ///|
-/// Fill `buf` from the generator, which is the [`Source`] contract. There is no
-/// entropy to run out of — the generator refills itself — so this never raises.
+/// Fill `buf` from the generator, which is the [`Source`] contract. Past the
+/// reseed interval the generator has to be reseeded before it may serve more
+/// bytes, and a source with nothing to give says so by raising.
 pub impl @moonseed.Source for HmacDrbg with fn fill(
   self : HmacDrbg,
   buf : FixedArray[Byte],
-) -> Unit {
-  let out = self.next(buf.length(), b""[:])
+) -> Unit raise @moonseed.Unavailable {
+  let out = self.next(buf.length(), b""[:]) catch {
+    Reseed(_) => raise @moonseed.Unavailable::Exhausted
+  }
   for i in 0..<buf.length() {
     buf[i] = out[i]
   }

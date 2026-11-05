@@ -199,6 +199,7 @@ pub struct CtrDrbg {
   mut key : FixedArray[Byte]
   mut v : FixedArray[Byte]
   mut reseed_counter : UInt64
+  interval : UInt64
 }
 
 ///|
@@ -215,6 +216,7 @@ pub fn CtrDrbg::new(
   personalization~ : BytesView,
   kind~ : Kind = Aes256,
   derivation~ : Bool = true,
+  interval~ : UInt64 = reseed_limit,
 ) -> CtrDrbg {
   let keylen = kind.size()
   let seed = keylen + 16
@@ -241,7 +243,7 @@ pub fn CtrDrbg::new(
     seed_material.unsafe_reinterpret_as_bytes()[:],
     keylen,
   )
-  { kind, derivation, key: k, v: vv, reseed_counter: 1, }
+  { kind, derivation, key: k, v: vv, reseed_counter: 1, interval, }
 }
 
 ///|
@@ -279,7 +281,7 @@ pub fn CtrDrbg::reseed(
 
 ///|
 /// Draw `n` bytes with no additional input.
-pub fn CtrDrbg::generate(self : CtrDrbg, n : Int32) -> Bytes {
+pub fn CtrDrbg::generate(self : CtrDrbg, n : Int32) -> Bytes raise Refused {
   self.generate_with(n, additional=b""[:])
 }
 
@@ -293,7 +295,10 @@ pub fn CtrDrbg::generate_with(
   self : CtrDrbg,
   n : Int32,
   additional~ : BytesView,
-) -> Bytes {
+) -> Bytes raise Refused {
+  if self.reseed_counter > self.interval {
+    raise Reseed(limit=self.interval)
+  }
   let keylen = self.kind.size()
   let seed = keylen + 16
   let processed = if additional.length() > 0 {
@@ -352,6 +357,12 @@ pub fn CtrDrbg::reseed_counter(self : CtrDrbg) -> UInt64 {
 }
 
 ///|
+/// The number of requests this generator will serve between reseeds.
+pub fn CtrDrbg::interval(self : CtrDrbg) -> UInt64 {
+  self.interval
+}
+
+///|
 /// The block cipher the generator runs on.
 pub fn CtrDrbg::kind(self : CtrDrbg) -> Kind {
   self.kind
@@ -364,8 +375,12 @@ pub extend CtrDrbg with @moonseed.Source::{fill}
 pub impl @moonseed.Source for CtrDrbg with fn fill(
   self : CtrDrbg,
   buf : FixedArray[Byte],
-) -> Unit {
-  let out = self.generate_with(buf.length(), additional=b""[:])
+) -> Unit raise @moonseed.Unavailable {
+  // A source that has spent its interval has nothing to give: `Source::fill` is
+  // the interface that says so by raising.
+  let out = self.generate_with(buf.length(), additional=b""[:]) catch {
+    Reseed(_) => raise @moonseed.Unavailable::Exhausted
+  }
   for i in 0..<buf.length() {
     buf[i] = out[i]
   }

@@ -76,7 +76,7 @@ Import the ones you use. A package nothing imports is not linked, which is what
 | `kdf/argon2` | Argon2d, Argon2i and Argon2id, with secret and associated data | RFC 9106 |
 | `kdf/bcrypt` | bcrypt, the `$2b$` text format and a constant-time verify | Provos & Mazières 1999 |
 | `kdf/concat` | The Concat KDF, as a NIST key agreement derives from a shared secret | SP 800-56A §5.8.1 |
-| `drbg` | HMAC-DRBG over any hash, and CTR-DRBG over AES-128, AES-192 or AES-256 with or without the derivation function; each is a `moonseed` `Source`, so a key type can draw from it | SP 800-90A |
+| `drbg` | HMAC-DRBG over any hash, and CTR-DRBG over AES-128, AES-192 or AES-256 with or without the derivation function; each is a `moonseed` `Source`, so a key type can draw from it, and each refuses to serve past its reseed interval | SP 800-90A |
 | `curve` | The curves an EC key can live on — P-256, P-384, P-521, secp256k1 and brainpoolP256r1/P384r1/P512r1 — and their coordinate width; `sign/ecdsa` and `kex/ecdh` re-export it, import it to name a curve | FIPS 186-4, SEC 2, RFC 5639 |
 | `sign/ed25519` | Ed25519 | RFC 8032 |
 | `sign/ed448` | Ed448, with context and the prehash form | RFC 8032 |
@@ -145,7 +145,9 @@ BLAKE2, KMAC, xxHash or CTR-DRBG variant, `curve` the ECDSA curve, `digest` and 
 the RSA padding and its hash, `salt` and `info` the HKDF inputs, `params` the
 scrypt and Argon2 cost, `cost` bcrypt's, `tag` the CCM, SIV and GMAC tag length,
 `group` the RFC 7919 group, `digits` the one-time password length, and
-`Pss(salt=32)` carries its own salt length rather than assuming one.
+`Pss(salt=32)` carries its own salt length rather than assuming one, and
+`interval` the requests a DRBG serves between reseeds, defaulting to the 2^48
+SP 800-90A §10 caps it at.
 
 What is not an argument is what a specification fixes: HMAC's inner and outer
 pads, MD5's constants, SHA-2's round constants and initial values, the curve
