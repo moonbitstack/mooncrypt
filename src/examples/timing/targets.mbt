@@ -56,9 +56,26 @@ pub fn curve25519_target() -> (BytesView) -> Bytes {
 
 ///|
 /// The raw RSA private-key operation on a fixed-size input: the modular
-/// exponentiation a decryption or a signature spends its time on.
+/// exponentiation a decryption or a signature spends its time on. The key carries
+/// no factors, so this is the single fixed-width engine, blinded.
 pub fn rsa_target() -> (BytesView) -> Bytes {
   let key = rsa_key()
+  fn(input) {
+    key.rsadp(cut(input, key.size())) catch {
+      _ => abort("an input under the modulus was refused")
+    }
+  }
+}
+
+///|
+/// The same operation on a key that carries its CRT factors: the private
+/// exponentiation runs as the two fixed-width halves instead of the one. A fresh
+/// 2048-bit key is generated once, so the factors are the ones the generator
+/// found and the halves are real.
+pub fn rsa_crt_target() -> (BytesView) -> Bytes {
+  let key = @rsa.PrivateKey::generate(@system.source, bits=2048) catch {
+    _ => abort("rsa: a generator must never exhaust")
+  }
   fn(input) {
     key.rsadp(cut(input, key.size())) catch {
       _ => abort("an input under the modulus was refused")

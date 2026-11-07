@@ -95,10 +95,10 @@ fn main {
   let full = args.contains("--full")
   // Per class. The slow operations get fewer samples because each one costs
   // milliseconds; the quick pass is the same shape at a fiftieth of the size.
-  let (aes_n, p256_n, x25519_n, k1_n, rsa_n) = if full {
-    (100000, 4000, 4000, 4000, 300)
+  let (aes_n, p256_n, x25519_n, k1_n, rsa_n, rsa_crt_n) = if full {
+    (100000, 4000, 4000, 4000, 300, 300)
   } else {
-    (2000, 80, 80, 80, 6)
+    (2000, 80, 80, 80, 6, 6)
   }
   println("mooncrypt constant-time measurement")
   println(
@@ -112,6 +112,7 @@ fn main {
     measure("secp256k1 [k]P", k1_n, 32, secp256k1_target(), 3UL),
     measure("Curve25519 shared", x25519_n, 32, curve25519_target(), 4UL),
     measure("RSA-2048 private op", rsa_n, 256, rsa_target(), 5UL),
+    measure("RSA-2048 CRT private op", rsa_crt_n, 256, rsa_crt_target(), 6UL),
   ]
   report(readings)
 }

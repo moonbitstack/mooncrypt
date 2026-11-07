@@ -12,6 +12,7 @@ import {
   "moonbitstack/mooncrypt/sign/ecdsa",
   "moonbitstack/mooncrypt/sign/ed25519",
   "moonbitstack/moonseed",
+  "moonbitstack/moonseed/system",
   "moonbitstack/moonbase/base16",
   "moonbitlang/core/bench",
   "moonbitlang/core/env",

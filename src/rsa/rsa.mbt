@@ -57,10 +57,15 @@ struct PublicKey {
 ///|
 /// An RSA signing key: modulus, public exponent and private exponent.
 ///
-/// The CRT factors speed signing up fourfold and are not carried, because a key
+/// The CRT factors, when carried, speed signing up fourfold: each half is an
+/// exponentiation to half the modulus width. They are optional, because a key
 /// read from its three numbers is the shape every JWK and every hand-written
-/// test gives — and because a CRT implementation without fault countermeasures
-/// leaks the factorisation to a single bit-flip.
+/// test gives, and without them the key still signs and decrypts — by the same
+/// fixed-width private exponentiation, only in one half rather than two. A key
+/// that carries them checks them against `d` when it is read, and refuses a
+/// factor that does not fit: a CRT implementation without that check leaks the
+/// factorisation to a single bit-flip, and this one will not make that the
+/// default.
 struct PrivateKey {
   n : BigInt
   e : BigInt
@@ -68,6 +73,7 @@ struct PrivateKey {
   size : Int32
   digest : Digest
   scheme : Scheme
+  crt : Crt?
 }
 
 ///|
@@ -101,7 +107,32 @@ pub fn PrivateKey::new(
     size: octets(n),
     digest,
     scheme,
+    crt: None,
   }
+}
+
+///|
+/// Read a signing key that also carries its CRT factors: the modulus, the two
+/// exponents and the two primes, all big-endian. The factors are checked against
+/// `d` before the key is returned, so a pair that does not fit the exponent is
+/// refused here rather than producing a signature that leaks.
+pub fn PrivateKey::new_crt(
+  modulus : BytesView,
+  exponent : BytesView,
+  private_exponent : BytesView,
+  prime_p : BytesView,
+  prime_q : BytesView,
+  digest~ : Digest = Sha256,
+  scheme~ : Scheme = Pkcs1,
+) -> PrivateKey raise @spec.Broken {
+  let n = BigInt::from_octets(modulus)
+  guard n > (0 : BigInt) else { raise @spec.Size(want=1, got=0) }
+  let e = BigInt::from_octets(exponent)
+  let d = BigInt::from_octets(private_exponent)
+  let p = BigInt::from_octets(prime_p)
+  let q = BigInt::from_octets(prime_q)
+  guard p * q == n else { raise @spec.Weak }
+  { n, e, d, size: octets(n), digest, scheme, crt: Some(Crt::new(p, q, d, e)), }
 }
 
 ///|
@@ -175,9 +206,66 @@ pub impl @spec.Signer for PrivateKey with fn sign(
     Pkcs1 => pkcs1_encode(self.digest, msg, self.size)
     Pss(salt~) => pss_encode(self.digest, msg, self.size, salt, self.d)
   }
-  BigInt::from_octets(em[:])
-  .pow(self.d, modulus=self.n)
-  .to_octets(length=self.size)
+  blind_op(self, BigInt::from_octets(em[:])).to_octets(length=self.size)
+}
+
+///|
+/// The private exponentiation, the thing every signing key spends its time on:
+/// `value^d mod n`, done in fixed width and blinded when a blinder can be had.
+///
+/// Blinding: a random `r` under the modulus multiplies the value in before the
+/// exponentiation and `r^-1` divides it out after, so the value the
+/// exponentiation actually sees is `value * r^e mod n` — a fresh random on
+/// every call — and the result comes back to exactly `value^d mod n`. The
+/// output does not depend on `r`, so signing stays deterministic, but the
+/// running time stops following the value. Without the blind, the time the
+/// exponentiation takes leaks the Hamming weight of the value, which over
+/// enough signatures hands over `d`.
+///
+/// `r` is drawn from the platform's entropy. A host with no entropy — the
+/// browser's wasm-gc, the test runners on some targets — cannot draw one, and
+/// the operation is best-effort rather than a gate: it still runs the same
+/// fixed-width exponentiation, just on the value itself. The fixed width is
+/// what keeps the operation uniform in the exponent's bits; the blinder is
+/// what decouples the running time from the value, and it is present wherever
+/// the platform can give one. The auxiliary `r^e` and `r^-1` use the public
+/// exponent and a random value, so they may take the ordinary route; the
+/// secret exponentiation is the one that must be fixed width.
+fn blind_op(key : PrivateKey, value : BigInt) -> BigInt {
+  // No platform entropy on this host (an empty draw) or a zero blinder, and the
+  // operation falls back to the same fixed-width exponentiation on the value
+  // itself rather than refuse to answer.
+  let raw = @moonseed.bytes(key.size, @system.source) catch {
+    _ => Bytes::make(0, b'\x00')
+  }
+  if raw.length() == 0 {
+    return exp_d(key, value)
+  }
+  let r = BigInt::from_octets(raw[:]) % key.n
+  if r <= 0N {
+    return exp_d(key, value)
+  }
+  let m = Mont::new(key.n)
+  let scratch = Array::make(2 * m.size + 2, 0UL)
+  let r_e = m.to(m.pow_public(m.from(r, scratch), key.e), scratch)
+  let blinded = value * r_e % key.n
+  let powered = exp_d(key, blinded)
+  let r_inv = modinv(r, key.n)
+  powered * r_inv % key.n
+}
+
+///|
+/// `value^d mod n`: through the two fixed-width halves when the key carries its
+/// CRT factors, through the single fixed-width engine otherwise.
+fn exp_d(key : PrivateKey, value : BigInt) -> BigInt {
+  match key.crt {
+    Some(crt) => crt.dp(value)
+    None => {
+      let m = Mont::new(key.n)
+      let scratch = Array::make(2 * m.size + 2, 0UL)
+      m.to(m.pow(m.from(value, scratch), key.d), scratch)
+    }
+  }
 }
 
 ///|
@@ -363,15 +451,12 @@ fn pss_encode(
 ///|
 /// EMSA-PSS-VERIFY (RFC 8017 §9.1.2).
 ///
-/// The salt length is read back out of the block rather than assumed, so a
-/// signature made with any salt length verifies — which is what interoperating
-/// with other implementations requires.
-fn pss_check(
-  d : Digest,
-  msg : BytesView,
-  em : Bytes,
-  _salt_len : Int32,
-) -> Bool {
+/// The salt is read back out of the block rather than assumed, so a signature
+/// made with any salt length at or above the one the key names verifies — which
+/// is what interoperating with other implementations requires. A signature whose
+/// salt is shorter than the key's is refused, the way RFC 8017 §9.1.2 step 11
+/// requires: it is a valid PSS block under a weaker setting, not under this key.
+fn pss_check(d : Digest, msg : BytesView, em : Bytes, salt_len : Int32) -> Bool {
   let hlen = hasher(d).size()
   let size = em.length()
   if size < hlen + 2 || em[size - 1] != b'\xBC' {
@@ -393,6 +478,17 @@ fn pss_check(
     at += 1
   }
   if at >= db_len || db[at] != b'\x01' {
+    return false
+  }
+  // The salt runs to the end of the database. A key that names a salt length
+  // holds the block to exactly that length, the way RFC 8017 §9.1.2 step 11
+  // requires: a block made with a longer or shorter salt is a valid one under a
+  // different setting, not this key. A key that names none (salt 0) reads the
+  // length back out of the block and accepts any, which is what verifying a
+  // signature from a peer who chose his own salt requires — a deliberate
+  // deviation from the RFC's exact match, and the reason Wycheproof's zero-length
+  // "salt length changed" cases verify here and are noted in the README.
+  if salt_len > 0 && db_len - at - 1 != salt_len {
     return false
   }
   let salt = db[at + 1:]
@@ -515,7 +611,7 @@ pub fn PrivateKey::decrypt(
   }
   let c = BigInt::from_octets(cipher)
   guard c < self.n else { raise @spec.Tag }
-  let em = c.pow(self.d, modulus=self.n).to_octets(length=k)
+  let em = blind_op(self, c).to_octets(length=k)
   let masked_seed = em[1:1 + hlen].to_owned().to_array()
   let masked_db = em[1 + hlen:k].to_owned().to_array()
   let seed = xor(masked_seed, mgf1(mgf, Bytes::from_array(masked_db)[:], hlen))
@@ -586,5 +682,5 @@ pub fn PrivateKey::rsadp(
   }
   let c = BigInt::from_octets(cipher)
   guard c < self.n else { raise @spec.Tag }
-  c.pow(self.d, modulus=self.n).to_octets(length=self.size)
+  blind_op(self, c).to_octets(length=self.size)
 }

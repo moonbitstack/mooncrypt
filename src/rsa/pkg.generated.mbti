@@ -28,6 +28,7 @@ type PrivateKey
 pub fn PrivateKey::decrypt(Self, BytesView, digest? : Digest, mgf? : Digest, label? : BytesView) -> Bytes raise @spec.Broken
 pub fn[S : @moonseed.Source] PrivateKey::generate(S, bits? : Int32, digest? : Digest, scheme? : Scheme) -> Self raise @moonseed.Unavailable
 pub fn PrivateKey::new(BytesView, BytesView, BytesView, digest? : Digest, scheme? : Scheme) -> Self raise @spec.Broken
+pub fn PrivateKey::new_crt(BytesView, BytesView, BytesView, BytesView, BytesView, digest? : Digest, scheme? : Scheme) -> Self raise @spec.Broken
 pub fn PrivateKey::public(Self) -> PublicKey
 pub fn PrivateKey::rsadp(Self, BytesView) -> Bytes raise @spec.Broken
 pub fn PrivateKey::sign(Self, BytesView) -> Bytes

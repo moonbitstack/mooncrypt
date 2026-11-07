@@ -24,17 +24,19 @@ let tag = @hmac.mac(b"shared secret"[:], b"the quick brown fox"[:], sha256)
 let key = @pbkdf2.key(b"correct horse"[:], b"battery staple"[:], sha256,
                       rounds=600000, len=32)
 
-// Authenticated encryption, over any 128-bit block cipher.
+// Authenticated encryption, over any 128-bit block cipher. A fresh nonce from a
+// CSPRNG for every message; here a fixed one, since the point is the shape.
+let nonce = Bytes::make(12, b'\x00')
 let box = @sm4gcm.new(key[0:16])
 let sealed = box.seal(nonce=nonce[:], plain=b"the quick brown fox"[:], aad=b"v1"[:])
-box.open(nonce=nonce[:], cipher=sealed[:], aad=b"v1"[:])  // the plaintext, or a raise
+assert_eq(box.open(nonce=nonce[:], cipher=sealed[:], aad=b"v1"[:]), b"the quick brown fox")
 
 // A signature. Ed25519 signing is deterministic: the same key and message
 // always give the same bytes. A fresh key takes its randomness from a source
 // the caller hands over, here the platform's, from moonseed.
 let sk = @ed25519.PrivateKey::generate(@system.source)
 let sig = sk.sign(b"the quick brown fox"[:])
-sk.public().verify(b"the quick brown fox"[:], sig[:])  // true
+assert_true(sk.public().verify(b"the quick brown fox"[:], sig[:]))
 ```
 
 Run `moon run src/examples/tour` for the whole surface in one go — fifty-odd
@@ -84,7 +86,7 @@ Import the ones you use. A package nothing imports is not linked, which is what
 | `sign/schnorr` | Schnorr over secp256k1, x-only keys and all | BIP 340 |
 | `sign/sm2` | SM2, with the signer identity mixed into the hash | GB/T 32918.2-2016 |
 | `sign/dsa` | DSA over FIPS 186-4 domains, with RFC 6979 nonces | FIPS 186-4, RFC 6979 |
-| `rsa` | RSA PKCS#1 v1.5 and PSS signatures, OAEP encryption, and key generation from a source | RFC 8017, FIPS 186-5 |
+| `rsa` | RSA PKCS#1 v1.5 and PSS signatures, OAEP encryption, and key generation from a source; the private exponentiation is a fixed-width Montgomery with a fresh random blinder, and a key that carries its CRT factors signs through the two fixed-width halves | RFC 8017, FIPS 186-5 |
 | `cipher/aes` | AES-128, AES-192 and AES-256, both directions | FIPS 197 |
 | `cipher/sm4` | SM4 | GB/T 32907-2016 |
 | `cipher/camellia` | Camellia-128/192/256 | RFC 3713 |
@@ -210,28 +212,84 @@ and without associated data, and each block cipher at every key length it takes,
 because those are the branches a vector copied straight from a specification
 never reaches.
 
+## Consistency
+
+The official and authoritative suites that run in CI, and how they do:
+
+- **Wycheproof** — the vectors its repository publishes, taken into the tree by
+  `scripts/gen_wycheproof.py` and rerun on every build. RSA runs its 2048-bit
+  PKCS#1 v1.5 and PSS signature sets (1329 cases, all passing): each case carries
+  its own public key, so it verifies without a private key, and the verification
+  path checks the padding the private path builds. The brainpool curves run
+  against its ECDH sets the same way; AES-GCM and ChaCha20-Poly1305 against its
+  AEAD sets.
+- **NIST ACVP** — the vectors `scripts/gen_acvp_vectors.py` writes for the
+  CTR-DRBG and the post-quantum schemes.
+- **The specifications' own examples** — FIPS 180-4, RFC 4231, RFC 5869, RFC
+  8032, BIP 340 and the rest, named in "What is checked".
+
+Where a suite does not pass, the reason is here rather than swept under the
+table:
+
+- **Wycheproof's RSA OAEP sets are not run.** They publish a public key only,
+  and a decryption test needs the private half the set does not carry, so the
+  OAEP direction is checked the other way — the script that made a ciphertext
+  decrypts what this library produces — the way the other OAEP fixtures do.
+- **Four Wycheproof PSS cases are left out of the table**, by design. They are
+  the "salt length changed to 1 / 20 / 32 / 222" cases from the zero-length file,
+  and Wycheproof marks them invalid: it reads a declared salt length of zero as
+  *exactly* zero. This library's `Pss(salt=0)` is a documented wildcard that
+  accepts any salt length — that is what lets a verifier read a third-party
+  signer's block back out instead of assuming it, which the existing "RSA PSS
+  verifies a third-party signer" test holds it to. The two readings of a zero
+  length cannot both hold, so those four cases are not in the table; every other
+  PSS case, including the six "salt length changed" cases under the declared
+  `sLen = 20` and `sLen = 32` keys, is in the table and passes.
+- **The constant-time claim rests on the construction, not the number.** The
+  two-class t in "Constant time" is a statistic on the clock, so it can only
+  separate an implementation whose running time follows its inputs from one
+  whose does not. RSA's private exponent is a fixed secret, so a regular
+  square-and-multiply over it is already uniform in the *value*; the t does not
+  discriminate a fixed-width exponentiation from a naive one, on this machine
+  or at this sample count. What it does catch is a path whose length follows the
+  input, which is the class of leak the fixed width and the blinder exist for —
+  and the fixed-width loop runs over the modulus's width, never over the
+  value's bits, so that class is closed by construction.
+
 ## Constant time
 
 A branch-free implementation is a claim, and one worth measuring rather than
-asserting. `src/examples/timing` runs five operations twice over — once on a
+asserting. `src/examples/timing` runs six operations twice over — once on a
 fixed input, once on random ones, alternating by a pseudorandom bit so both
 classes meet the same machine at the same temperature — and reports Welch's t
 between the two sets of timings. Under the null hypothesis (the clock does not
 follow the input) t is about standard normal, so the conventional threshold for
 "this leaks" is 4.5.
 
+The RSA rows are the private-key operation under a 2048-bit modulus: the first
+on a key that carries no factors, so it runs the one fixed-width Montgomery
+exponentiation, blinded; the second on a key that does, so it runs the two
+fixed-width halves. The blinder is a fresh random on every call, and its
+auxiliaries — a public-key exponentiation and an inverse — are the same cost on
+every call, so the running time stops following the input.
+
 | Operation | Samples per class | t |
 |:--|--:|--:|
-| AES-128 encrypt | 99639 | 1.26 |
-| P-256 `[k]G` | 3952 | −0.90 |
-| secp256k1 `[k]P` | 4029 | 1.14 |
-| Curve25519 shared | 4047 | −1.02 |
-| RSA-2048 private operation | 293 | 0.77 |
+| AES-128 encrypt | 99639 | 0.27 |
+| P-256 `[k]G` | 3952 | −0.24 |
+| secp256k1 `[k]P` | 4029 | −2.33 |
+| Curve25519 shared | 4047 | 0.89 |
+| RSA-2048 private operation | 293 | 0.02 |
+| RSA-2048 CRT private operation | 313 | −1.33 |
 
 `scripts/run_dudect.sh` reproduces the table at those sample counts. A t under
 the threshold is evidence, not proof: it says the two classes are
 indistinguishable at this sample count, and a leak of a few nanoseconds per call
-would take more samples to surface.
+would take more samples to surface. The statistic is the clock, so it speaks to
+the blinding and the fixed width together; what it cannot tell apart is an
+implementation whose exponentiation is already uniform in its inputs, which is
+why the fixed-width claim rests on the construction — the loop runs over the
+modulus width, never over the value's bits — rather than on the number alone.
 
 ## Timing
 
@@ -254,7 +312,8 @@ Everything else, through the same harness (`--bench`):
 | Ed25519 sign | 4.5 ms |
 | Ed25519 verify | 8.5 ms |
 | X25519 shared | 1.5 ms |
-| RSA-2048 private operation | 36 ms |
+| RSA-2048 private operation, blinded | 78 ms |
+| RSA-2048 private operation, CRT, blinded | 68 ms |
 
 These are one machine's numbers, from the build the MoonBit toolchain produces
 for the native target; an optimising C compiler is where most of the gap to a
@@ -272,13 +331,13 @@ rather than from a table of its own.
 // ciphertext to send. The decapsulation key recovers the same secret from it.
 let key = @mlkem.PrivateKey::generate(@system.source, kind=@mlkem.K768)
 let sent = key.encapsulation_key().encapsulate(@system.source)
-key.decapsulate(sent.ciphertext[:]) == sent.secret  // true
+assert_eq(key.decapsulate(sent.ciphertext[:]), sent.secret)
 
 // A signature over a message, with a context that separates this use of the
 // key from any other.
 let signer = @mldsa.PrivateKey::generate(@system.source, kind=@mldsa.D65)
 let sig = signer.sign(b"the quick brown fox"[:], context=b"example"[:])
-signer.public_key().verify(b"the quick brown fox"[:], sig[:], context=b"example"[:])
+assert_true(signer.public_key().verify(b"the quick brown fox"[:], sig[:], context=b"example"[:]))
 ```
 
 A ciphertext that was tampered with decapsulates to a secret the sender never

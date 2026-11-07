@@ -150,7 +150,17 @@ pub fn[S : @moonseed.Source] PrivateKey::generate(
       continue
     }
     let d = modinv(e, phi)
-    return { n, e, d, size: octets(n), digest, scheme, }
+    // The factors are held, so the key signs through the two halves rather than
+    // the one: the primes the generator just found are exactly what a CRT needs.
+    return {
+      n,
+      e,
+      d,
+      size: octets(n),
+      digest,
+      scheme,
+      crt: Some(Crt::new(p, q, d, e)),
+    }
   }
   abort("rsa: unreachable")
 }

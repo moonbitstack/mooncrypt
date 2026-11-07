@@ -74,7 +74,7 @@
         <h1>Every package, in order</h1>
         <p class="lede">
           Generated from each package's interface file and the comments above its
-          declarations. 708 public declarations across 64
+          declarations. 709 public declarations across 64
           packages.
         </p>
       </div>
@@ -2189,6 +2189,10 @@
 <div class="item" id="rsa-privatekey-new">
 <div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>new</div>
 <div class="body"><div class="sig">pub fn PrivateKey::new(BytesView, BytesView, BytesView, digest? : Digest, scheme? : Scheme) -&gt; Self raise @spec.Broken</div><p>Read a signing key from its modulus and its two exponents, big-endian.</p></div>
+</div>
+<div class="item" id="rsa-privatekey-new-crt">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>new_crt</div>
+<div class="body"><div class="sig">pub fn PrivateKey::new_crt(BytesView, BytesView, BytesView, BytesView, BytesView, digest? : Digest, scheme? : Scheme) -&gt; Self raise @spec.Broken</div><p>Read a signing key that also carries its CRT factors: the modulus, the two exponents and the two primes, all big-endian. The factors are checked against `d` before the key is returned, so a pair that does not fit the exponent is refused here rather than producing a signature that leaks.</p></div>
 </div>
 <div class="item" id="rsa-privatekey-public">
 <div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>public</div>
