@@ -263,26 +263,35 @@ priv struct Crt {
 }
 
 ///|
-/// Build the CRT half from the two primes and the private exponent.
-///
-/// `d_p` and `d_q` are `d` reduced against the factors' own group orders, so
-/// each half exponentiates to a width half the modulus; `q_inv` is `q^-1 mod p`.
-/// The exponents are checked against `d` so a factor that does not fit the key
-/// is refused at construction rather than at a signature.
-fn Crt::new(p : BigInt, q : BigInt, d : BigInt, e : BigInt) -> Crt {
-  let p1 = p - 1N
-  let q1 = q - 1N
-  let d_p = d % p1
-  let d_q = d % q1
-  // `e * d_p ≡ 1 (mod p-1)` and likewise for `q` is what a genuine factor pair
-  // satisfies; a factor that does not fit `d` fails here.
-  guard e * d_p % p1 == 1N else {
-    abort("rsa: the factor p does not fit the private exponent")
+/// Build the CRT half from two primes the caller handed in: `d_p` and `d_q` are
+/// `d` reduced against the factors' own group orders, so each half exponentiates
+/// to a width half the modulus. `e * d_p ≡ 1 (mod p-1)`, and likewise for `q`,
+/// holds for a genuine factor pair; a pair that fails it is `Weak`, refused here
+/// rather than at a signature.
+fn Crt::new(
+  p : BigInt,
+  q : BigInt,
+  d : BigInt,
+  e : BigInt,
+) -> Crt raise @spec.Broken {
+  let crt = Crt::fitted(p, q, d)
+  guard e * crt.d_p % (p - 1N) == 1N && e * crt.d_q % (q - 1N) == 1N else {
+    raise @spec.Weak
   }
-  guard e * d_q % q1 == 1N else {
-    abort("rsa: the factor q does not fit the private exponent")
+  crt
+}
+
+///|
+/// The CRT half of factors already known to fit `d`, as a key just generated
+/// from them does. `q_inv` is `q^-1 mod p`.
+fn Crt::fitted(p : BigInt, q : BigInt, d : BigInt) -> Crt {
+  {
+    p_big: p,
+    q_big: q,
+    d_p: d % (p - 1N),
+    d_q: d % (q - 1N),
+    q_inv: modinv(q, p),
   }
-  { p_big: p, q_big: q, d_p, d_q, q_inv: modinv(q, p), }
 }
 
 ///|

@@ -117,3 +117,26 @@ test "a CRT factor that does not fit the modulus is refused" {
   let ok = key_crt()
   assert_true(ok.public().verify(b"m"[:], ok.sign(b"m"[:])[:]))
 }
+
+///|
+/// Factors that multiply to the modulus but do not fit the private exponent are
+/// refused as `Weak`, not taken down with the process: a key file is input.
+test "a CRT pair that does not fit the private exponent is refused" {
+  let wrong_d = crt_d[:crt_d.length() - 4].to_owned() + "b323"
+  let refused = try {
+    ignore(
+      @rsa.PrivateKey::new_crt(
+        crt_raw(crt_n)[:],
+        crt_raw(crt_e)[:],
+        crt_raw(wrong_d)[:],
+        crt_raw(crt_p)[:],
+        crt_raw(crt_q)[:],
+      ),
+    )
+    false
+  } catch {
+    Weak => true
+    _ => false
+  }
+  assert_true(refused)
+}
