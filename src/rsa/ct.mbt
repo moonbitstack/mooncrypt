@@ -20,28 +20,32 @@ fn width(bits : Int32) -> Int32 {
 }
 
 ///|
-/// How many 32-bit limbs a value occupies, from its own length.
-fn width_of(v : BigInt) -> Int32 {
+/// How many bits `v` takes. Used on public values only: the modulus and the
+/// public exponent.
+fn bit_length(v : BigInt) -> Int32 {
   let mut bits = 0
   let mut rest = v
   while rest > 0N {
     bits += 1
     rest = rest >> 1
   }
-  width(bits)
+  bits
 }
 
 ///|
 /// A Montgomery engine over one modulus: the modulus in 32-bit limbs (least
-/// significant first), the reduction constant `n0`, and the value one already
-/// in the engine's form. Built once per key and reused by every private
-/// operation under it.
+/// significant first), the reduction constant `n0`, `R^2 mod n` and `R mod n`
+/// to convert in and out, and the scratch one product needs. Built per
+/// exponentiation, so it holds nothing secret between operations.
 priv struct Mont {
   size : Int32
-  mod : Array[UInt64]
+  mod : FixedArray[UInt64]
   n0 : UInt64
-  r2 : Array[UInt64]
-  one : Array[UInt64]
+  r2 : FixedArray[UInt64]
+  one : FixedArray[UInt64]
+  // The running sum of one product, and its trial subtraction of the modulus.
+  t : FixedArray[UInt64]
+  u : FixedArray[UInt64]
 }
 
 ///|
@@ -61,9 +65,9 @@ fn lo32(v : BigInt) -> BigInt {
 
 ///|
 /// The 32-bit limbs of `v`, least significant first, in `size` lanes.
-fn limbs(v : BigInt, size : Int32) -> Array[UInt64] {
+fn limbs(v : BigInt, size : Int32) -> FixedArray[UInt64] {
   let bytes = v.to_octets(length=size * 4)
-  let out = Array::make(size, 0UL)
+  let out = FixedArray::make(size, 0UL)
   for i in 0..<size {
     let at = size * 4 - 4 * (i + 1)
     out[i] = (bytes[at].to_int().to_uint64() << 24) |
@@ -76,7 +80,7 @@ fn limbs(v : BigInt, size : Int32) -> Array[UInt64] {
 
 ///|
 /// A value in 32-bit lanes back to the integer it stands for.
-fn from_limbs(a : Array[UInt64]) -> BigInt {
+fn from_limbs(a : FixedArray[UInt64]) -> BigInt {
   let bytes = FixedArray::make(a.length() * 4, b'\x00')
   for i in 0..<a.length() {
     let at = a.length() * 4 - 4 * (i + 1)
@@ -89,9 +93,9 @@ fn from_limbs(a : Array[UInt64]) -> BigInt {
 }
 
 ///|
-/// Build the engine over `n`, which must be odd and at least 512 bits.
+/// Build the engine over `n`, which must be odd.
 fn Mont::new(n : BigInt) -> Mont {
-  let size = width_of(n)
+  let size = width(bit_length(n))
   let mod = limbs(n, size)
   // `n0 = -n^-1 mod 2^32`, by Newton iteration: each round doubles the correct
   // bits, five rounds from one cover the lane. Only the modulus's low limb
@@ -104,132 +108,149 @@ fn Mont::new(n : BigInt) -> Mont {
   let n0 = lo32(lane - inv).to_uint64()
   // `R = 2^32*size`; `R^2 mod n` and `R mod n` convert a plain value in and out.
   let r = 1N << (32 * size)
-  let r2 = limbs(r * r % n, size)
-  let one = limbs(r % n, size)
-  { size, mod, n0, r2, one, }
+  {
+    size,
+    mod,
+    n0,
+    r2: limbs(r * r % n, size),
+    one: limbs(r % n, size),
+    t: FixedArray::make(size + 2, 0UL),
+    u: FixedArray::make(size, 0UL),
+  }
 }
 
 ///|
-/// `a * b * R^-1 mod n`. `t` is scratch, `2*size + 2` lanes wide, reused by the
-/// caller so an exponentiation allocates it once.
+/// `out = a * b * R^-1 mod n`, by CIOS: each limb of `b` is multiplied in and
+/// one limb reduced away in the same pass, so the running sum stays `size + 2`
+/// lanes. `out` may be `a` or `b`: both are read before `out` is written.
 fn Mont::mul(
   self : Mont,
-  a : Array[UInt64],
-  b : Array[UInt64],
-  t : Array[UInt64],
-) -> Array[UInt64] {
+  out : FixedArray[UInt64],
+  a : FixedArray[UInt64],
+  b : FixedArray[UInt64],
+) -> Unit {
   let size = self.size
-  for i in 0..<(2 * size + 2) {
+  let t = self.t
+  let u = self.u
+  let n = self.mod
+  for i in 0..<(size + 2) {
     t[i] = 0UL
   }
-  // The wide product `t = a * b`, in the low `2*size + 1` lanes.
   for i in 0..<size {
-    let ai = a[i]
+    let bi = b[i]
     let mut carry = 0UL
     for j in 0..<size {
-      let uv = t[i + j] + ai * b[j] + carry
-      t[i + j] = uv & 0xFFFFFFFFUL
-      carry = uv >> 32
+      let s = t[j] + a[j] * bi + carry
+      t[j] = s & 0xFFFFFFFFUL
+      carry = s >> 32
     }
-    let s = t[i + size] + carry
-    t[i + size] = s & 0xFFFFFFFFUL
-    t[i + size + 1] = t[i + size + 1] + (s >> 32)
-  }
-  // CIOS reduction: for each limb, `m = t[i] * n0`, add `m * n` shifted, and
-  // the lane cancels to zero while the overflow drains upward.
-  for i in 0..<size {
-    let m = (t[i] * self.n0) & 0xFFFFFFFFUL
-    let mut carry = 0UL
-    for j in 0..<size {
-      let uv = t[i + j] + m * self.mod[j] + carry
-      t[i + j] = uv & 0xFFFFFFFFUL
-      carry = uv >> 32
+    let s = t[size] + carry
+    t[size] = s & 0xFFFFFFFFUL
+    t[size + 1] = s >> 32
+    // `m` makes the low lane cancel; the sum then shifts down one lane.
+    let m = (t[0] * self.n0) & 0xFFFFFFFFUL
+    let mut c = (t[0] + m * n[0]) >> 32
+    for j in 1..<size {
+      let s = t[j] + m * n[j] + c
+      t[j - 1] = s & 0xFFFFFFFFUL
+      c = s >> 32
     }
-    let s = t[i + size] + carry
-    t[i + size] = s & 0xFFFFFFFFUL
-    t[i + size + 1] = t[i + size + 1] + (s >> 32)
+    let s = t[size] + c
+    t[size - 1] = s & 0xFFFFFFFFUL
+    t[size] = t[size + 1] + (s >> 32)
   }
-  // The answer is the upper half; if it is still `n` or more, subtract it back.
-  let out = Array::make(size, 0UL)
+  // The sum is below `2n`. It is `n` or more exactly when the overflow lane is
+  // set or subtracting `n` does not borrow; the choice is a mask, not a branch.
   let mut borrow = 0UL
   for i in 0..<size {
-    let d = t[size + i] - self.mod[i] - borrow
-    out[i] = d & 0xFFFFFFFFUL
+    let d = t[i] - n[i] - borrow
+    u[i] = d & 0xFFFFFFFFUL
     borrow = d >> 63
   }
-  // The overflow lane or a borrow says the answer did not wrap: the choice is
-  // a mask, not a branch.
-  let keep = 0UL - (borrow ^ t[2 * size])
-  let mut carry = 0UL
+  let take = 0UL - ((t[size] | (borrow ^ 1UL)) & 1UL)
   for i in 0..<size {
-    let s = out[i] + (self.mod[i] & keep) + carry
-    out[i] = s & 0xFFFFFFFFUL
-    carry = s >> 32
+    out[i] = t[i] ^ (take & (t[i] ^ u[i]))
   }
-  out
 }
 
 ///|
-/// `a` times itself.
-fn Mont::square(
-  self : Mont,
-  a : Array[UInt64],
-  t : Array[UInt64],
-) -> Array[UInt64] {
-  self.mul(a, a, t)
-}
-
-///|
-/// `a` where `mask` is all ones, `b` where it is zero: the branch-free select.
-fn select(mask : UInt64, a : Array[UInt64], b : Array[UInt64]) -> Array[UInt64] {
-  let out = Array::make(a.length(), 0UL)
+/// A copy of `a`.
+fn copied(a : FixedArray[UInt64]) -> FixedArray[UInt64] {
+  let out = FixedArray::make(a.length(), 0UL)
   for i in 0..<a.length() {
-    out[i] = b[i] ^ (mask & (a[i] ^ b[i]))
+    out[i] = a[i]
   }
   out
 }
 
 ///|
-/// `base^exp mod n`, in the engine's form.
+/// `base^exp mod n`, in the engine's form, for a secret exponent.
 ///
-/// The exponent is secret, so the loop does not branch on its bits: every one
-/// squares, and the multiply is done for every bit and then selected in — the
-/// masked square-and-multiply a constant-time exponentiation needs. The loop
-/// runs over the full width of the modulus; leading zeros in the exponent are
-/// harmless, and the width is public.
-fn Mont::pow(self : Mont, base : Array[UInt64], exp : BigInt) -> Array[UInt64] {
-  let t = Array::make(2 * self.size + 2, 0UL)
-  let e = limbs(exp, self.size)
-  let mut r = self.one
-  let mut i = 32 * self.size - 1
-  while i >= 0 {
-    r = self.square(r, t)
-    let bit = (e[i / 32] >> (i % 32)) & 1UL
-    let mask = 0UL - bit
-    let rr = self.mul(r, base, t)
-    r = select(mask, rr, r)
-    i = i - 1
+/// A fixed four-bit window: every window squares four times and multiplies once
+/// by a table entry, and the entry is read by scanning all sixteen under masks,
+/// so neither the work nor the memory touched follows the exponent's bits. The
+/// windows cover the full width of the modulus; leading zeros in the exponent
+/// are harmless, and the width is public.
+fn Mont::pow(
+  self : Mont,
+  base : FixedArray[UInt64],
+  exp : BigInt,
+) -> FixedArray[UInt64] {
+  let size = self.size
+  let table = FixedArray::make(16 * size, 0UL)
+  let entry = copied(base)
+  for i in 0..<size {
+    table[i] = self.one[i]
+    table[size + i] = base[i]
+  }
+  for k in 2..<16 {
+    self.mul(entry, entry, base)
+    for i in 0..<size {
+      table[k * size + i] = entry[i]
+    }
+  }
+  let e = limbs(exp, size)
+  let r = copied(self.one)
+  let mut w = 8 * size - 1
+  while w >= 0 {
+    for _ in 0..<4 {
+      self.mul(r, r, r)
+    }
+    let nibble = (e[w / 8] >> (4 * (w % 8))) & 0xFUL
+    for i in 0..<size {
+      entry[i] = 0UL
+    }
+    for k in 0..<16 {
+      // All ones when `k` is the nibble: `x - 1` borrows into the top bit only
+      // for `x == 0`.
+      let mask = 0UL - (((k.to_uint64() ^ nibble) - 1UL) >> 63)
+      for i in 0..<size {
+        entry[i] = entry[i] | (table[k * size + i] & mask)
+      }
+    }
+    self.mul(r, r, entry)
+    w = w - 1
   }
   r
 }
 
 ///|
-/// `base^e mod n` for a public exponent: the branch-on-bit square-and-multiply
-/// the public-key paths (and the blinder's `r^e`) can use, because the bits of a
-/// public exponent leak nothing.
+/// `base^e mod n` for a public exponent: square-and-multiply from the
+/// exponent's top bit, branching on its bits, which leak nothing. The blinder's
+/// `r^e` takes this route, at seventeen bits for `e = 65537`.
 fn Mont::pow_public(
   self : Mont,
-  base : Array[UInt64],
+  base : FixedArray[UInt64],
   exp : BigInt,
-) -> Array[UInt64] {
-  let t = Array::make(2 * self.size + 2, 0UL)
-  let e = limbs(exp, self.size)
-  let mut r = self.one
-  let mut i = 32 * self.size - 1
+) -> FixedArray[UInt64] {
+  let bits = bit_length(exp)
+  let e = limbs(exp, width(bits))
+  let r = copied(self.one)
+  let mut i = bits - 1
   while i >= 0 {
-    r = self.square(r, t)
+    self.mul(r, r, r)
     if ((e[i / 32] >> (i % 32)) & 1UL) == 1UL {
-      r = self.mul(r, base, t)
+      self.mul(r, r, base)
     }
     i = i - 1
   }
@@ -237,15 +258,21 @@ fn Mont::pow_public(
 }
 
 ///|
-/// A plain integer into the engine's form.
-fn Mont::from(self : Mont, v : BigInt, t : Array[UInt64]) -> Array[UInt64] {
-  self.mul(limbs(v, self.size), self.r2, t)
+/// A plain integer below the modulus into the engine's form.
+fn Mont::from(self : Mont, v : BigInt) -> FixedArray[UInt64] {
+  let out = limbs(v, self.size)
+  self.mul(out, out, self.r2)
+  out
 }
 
 ///|
 /// A value in the engine's form back to the plain integer it stands for.
-fn Mont::to(self : Mont, a : Array[UInt64], t : Array[UInt64]) -> BigInt {
-  from_limbs(self.mul(a, limbs(1N, self.size), t))
+fn Mont::to(self : Mont, a : FixedArray[UInt64]) -> BigInt {
+  let unit = FixedArray::make(self.size, 0UL)
+  unit[0] = 1UL
+  let out = FixedArray::make(self.size, 0UL)
+  self.mul(out, a, unit)
+  from_limbs(out)
 }
 
 ///|
@@ -306,11 +333,16 @@ fn Crt::dp(self : Crt, c : BigInt) -> BigInt {
 }
 
 ///|
-/// `base^exp mod modulus` in fixed width: build the engine over the modulus and
-/// run the masked exponentiation. The engine is a few limbs and one Newton
-/// loop, cheap against the exponentiation it serves.
+/// `base^exp mod modulus` in fixed width, for a secret exponent and a base below
+/// the modulus.
 fn pow_mod(base : BigInt, exp : BigInt, modulus : BigInt) -> BigInt {
   let m = Mont::new(modulus)
-  let t = Array::make(2 * m.size + 2, 0UL)
-  m.to(m.pow(m.from(base, t), exp), t)
+  m.to(m.pow(m.from(base), exp))
+}
+
+///|
+/// `base^exp mod modulus` for a public exponent and a base below the modulus.
+fn pow_public_mod(base : BigInt, exp : BigInt, modulus : BigInt) -> BigInt {
+  let m = Mont::new(modulus)
+  m.to(m.pow_public(m.from(base), exp))
 }

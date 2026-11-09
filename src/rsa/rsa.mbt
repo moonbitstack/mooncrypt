@@ -245,9 +245,7 @@ fn blind_op(key : PrivateKey, value : BigInt) -> BigInt {
   if r <= 0N {
     return exp_d(key, value)
   }
-  let m = Mont::new(key.n)
-  let scratch = Array::make(2 * m.size + 2, 0UL)
-  let r_e = m.to(m.pow_public(m.from(r, scratch), key.e), scratch)
+  let r_e = pow_public_mod(r, key.e, key.n)
   let blinded = value * r_e % key.n
   let powered = exp_d(key, blinded)
   let r_inv = modinv(r, key.n)
@@ -260,11 +258,7 @@ fn blind_op(key : PrivateKey, value : BigInt) -> BigInt {
 fn exp_d(key : PrivateKey, value : BigInt) -> BigInt {
   match key.crt {
     Some(crt) => crt.dp(value)
-    None => {
-      let m = Mont::new(key.n)
-      let scratch = Array::make(2 * m.size + 2, 0UL)
-      m.to(m.pow(m.from(value, scratch), key.d), scratch)
-    }
+    None => pow_mod(value, key.d, key.n)
   }
 }
 
