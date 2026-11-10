@@ -51,3 +51,39 @@ test "the final subtraction is taken exactly when the sum reaches the modulus" {
     assert_eq(m.to(out), a * b % n)
   }
 }
+
+///|
+/// The square has to agree with the product and with `BigInt` at every width the
+/// engine runs at, and at the values where the carry chains inside it are
+/// longest: all ones, a single high limb, and one below the modulus.
+test "the square agrees with the product and with BigInt's, at every width" {
+  for n in moduli() {
+    let m = Mont::new(n)
+    let ones = (1N << (32 * m.size)) - 1N
+    let edges : Array[BigInt] = [
+      n >> 1,
+      ones % n,
+      (ones - 1N) % n,
+      0xFFFF_FFFFN % n,
+      (1N << 32) % n,
+    ]
+    for b in bases(n) {
+      check_square(m, n, b)
+    }
+    for b in edges {
+      check_square(m, n, b)
+    }
+  }
+}
+
+///|
+fn check_square(m : Mont, n : BigInt, b : BigInt) -> Unit raise {
+  let want = b * b % n
+  let squared = FixedArray::make(m.size, 0UL)
+  let product = FixedArray::make(m.size, 0UL)
+  let in_form = m.from(b)
+  m.sqr(squared, in_form)
+  m.mul(product, in_form, in_form)
+  assert_eq(m.to(product), want)
+  assert_eq(m.to(squared), want)
+}

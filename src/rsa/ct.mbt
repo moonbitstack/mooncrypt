@@ -46,6 +46,10 @@ priv struct Mont {
   // The running sum of one product, and its trial subtraction of the modulus.
   t : FixedArray[UInt64]
   u : FixedArray[UInt64]
+  // A square's full-width product, and the two halves it is reduced in.
+  sq : FixedArray[UInt64]
+  lo : FixedArray[UInt64]
+  hi : FixedArray[UInt64]
 }
 
 ///|
@@ -116,6 +120,9 @@ fn Mont::new(n : BigInt) -> Mont {
     one: limbs(r % n, size),
     t: FixedArray::make(size + 2, 0UL),
     u: FixedArray::make(size, 0UL),
+    sq: FixedArray::make(2 * size + 1, 0UL),
+    lo: FixedArray::make(size, 0UL),
+    hi: FixedArray::make(size, 0UL),
   }
 }
 
@@ -174,6 +181,103 @@ fn Mont::mul(
 }
 
 ///|
+/// `out = a^2 * R^-1 mod n`, by squaring instead of multiplying.
+///
+/// A product takes two multiplies for every pair of limbs; a square takes one per
+/// pair, because `a[i]*a[j]` and `a[j]*a[i]` are the same number — it is twice the
+/// upper triangle plus the diagonal. That is where the saving is, and it is why
+/// the four squarings of a window are worth writing out rather than calling
+/// [`Mont::mul`].
+///
+/// The square is formed at full width and then reduced in place, `n` rows of
+/// `m*n` subtracted from the low lanes. The carry out of a row lands in the lane
+/// above it and is walked from there to the top of the product; the walk's length
+/// is set by the row's index, not by any value, so the work is the same on every
+/// call. The result is below `2n` and takes the same masked subtraction `mul`
+/// ends with.
+fn Mont::sqr(
+  self : Mont,
+  out : FixedArray[UInt64],
+  a : FixedArray[UInt64],
+) -> Unit {
+  let size = self.size
+  let sq = self.sq
+  for i in 0..<(2 * size + 1) {
+    sq[i] = 0UL
+  }
+  // The upper triangle, row by row. Row `i` writes lanes `2i+1` to `i+size-1`
+  // and leaves its carry in lane `i+size`, which no earlier row reaches: earlier
+  // rows stop one lane short of it. So the carry is stored, never added.
+  for i in 0..<size {
+    let ai = a[i]
+    let mut carry = 0UL
+    for j in (i + 1)..<size {
+      let s = sq[i + j] + ai * a[j] + carry
+      sq[i + j] = s & 0xFFFFFFFFUL
+      carry = s >> 32
+    }
+    sq[i + size] = carry
+  }
+  // Twice the cross terms. The product of two 32-bit limbs is below `2^64`, so
+  // the doubling runs a lane at a time with one bit of carry.
+  let mut carry = 0UL
+  for k in 0..<(2 * size) {
+    let v = (sq[k] << 1) | carry
+    sq[k] = v & 0xFFFFFFFFUL
+    carry = v >> 32
+  }
+  // Plus the diagonal, `a[i]^2` at lane `2i`, held as its low and high halves so
+  // that the pass below stays over 32-bit lanes with a single carry.
+  let lo = self.lo
+  let hi = self.hi
+  for i in 0..<size {
+    let d = a[i] * a[i]
+    lo[i] = d & 0xFFFFFFFFUL
+    hi[i] = d >> 32
+  }
+  let mut carry = 0UL
+  for k in 0..<(2 * size) {
+    let add = if k % 2 == 0 { lo[k / 2] } else { hi[(k - 1) / 2] }
+    let s = sq[k] + add + carry
+    sq[k] = s & 0xFFFFFFFFUL
+    carry = s >> 32
+  }
+  // The reduction. Lane `i` takes the multiple of the modulus that cancels it,
+  // the row's carry goes into lane `i+size`, and the walk above it carries what
+  // is left; the last lane yields the one bit by which the result can exceed the
+  // width, since it is below `2n`.
+  let n = self.mod
+  for i in 0..<size {
+    let m = (sq[i] * self.n0) & 0xFFFFFFFFUL
+    let mut c = (sq[i] + m * n[0]) >> 32
+    for j in 1..<size {
+      let s = sq[i + j] + m * n[j] + c
+      sq[i + j] = s & 0xFFFFFFFFUL
+      c = s >> 32
+    }
+    let mut k = i + size
+    while k <= 2 * size {
+      let s = sq[k] + c
+      sq[k] = s & 0xFFFFFFFFUL
+      c = s >> 32
+      k = k + 1
+    }
+  }
+  let t = self.t
+  let mut borrow = 0UL
+  for i in 0..<size {
+    let d = sq[size + i] - n[i] - borrow
+    t[i] = d & 0xFFFFFFFFUL
+    borrow = d >> 63
+  }
+  let take = 0UL - ((sq[2 * size] | (borrow ^ 1UL)) & 1UL)
+  for i in 0..<size {
+    let v = sq[size + i]
+    out[i] = v ^ (take & (v ^ t[i]))
+  }
+}
+
+///|
 /// A copy of `a`.
 fn copied(a : FixedArray[UInt64]) -> FixedArray[UInt64] {
   let out = FixedArray::make(a.length(), 0UL)
@@ -214,7 +318,7 @@ fn Mont::pow(
   let mut w = 8 * size - 1
   while w >= 0 {
     for _ in 0..<4 {
-      self.mul(r, r, r)
+      self.sqr(r, r)
     }
     let nibble = (e[w / 8] >> (4 * (w % 8))) & 0xFUL
     for i in 0..<size {
@@ -248,7 +352,7 @@ fn Mont::pow_public(
   let r = copied(self.one)
   let mut i = bits - 1
   while i >= 0 {
-    self.mul(r, r, r)
+    self.sqr(r, r)
     if ((e[i / 32] >> (i % 32)) & 1UL) == 1UL {
       self.mul(r, r, base)
     }
