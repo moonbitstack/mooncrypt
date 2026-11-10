@@ -19,4 +19,5 @@ import {
 import {
   "moonbitstack/moonbase/base16",
   "moonbitstack/mooncrypt/drbg",
+  "moonbitlang/core/bench",
 } for "test"
