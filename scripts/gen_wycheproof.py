@@ -206,82 +206,120 @@ def brainpool_ecdh(src):
     print(f"wrote {len(rows)} brainpool vectors to {out} ({skipped} envelope-only cases left out)")
 
 
-def _pad_to_octets(hexstr, nbytes):
-    return hexstr.rjust(nbytes * 2, "0")
+RSA_SHA = {
+    "SHA-1": "Sha1",
+    "SHA-224": "Sha224",
+    "SHA-256": "Sha256",
+    "SHA-384": "Sha384",
+    "SHA-512": "Sha512",
+}
+
+VERDICT = {"valid": "Valid", "invalid": "Invalid", "acceptable": "Acceptable"}
 
 
-RSA_SHA = {"SHA-1": "Sha1", "SHA-224": "Sha224", "SHA-256": "Sha256", "SHA-384": "Sha384", "SHA-512": "Sha512"}
+def chunks(name, rows, entry, per=200):
+    """One `let` per few hundred rows, added up.
+
+    Thousands of rows in a single array literal overflow the local-variable
+    limit of a wasm initialiser, so the table is built from functions.
+    """
+    parts, body = [], []
+    for i in range(0, len(rows), per):
+        fn = f"{name}_part{i // per}"
+        parts.append(f"{fn}()")
+        body += [
+            "///|",
+            f"fn {fn}() -> Array[{entry}] {{",
+            "  [",
+            *rows[i:i + per],
+            "  ]",
+            "}",
+            "",
+        ]
+    body += ["///|", f"let {name} : Array[{entry}] = {' + '.join(parts)}", ""]
+    return body
 
 
-def rsa_sign(src):
-    """The RSA signature vectors: PKCS#1 v1.5 and PSS, 2048 bits, the digests the
-    library signs. Each case carries its own public key, so it verifies without a
-    private key — the verification path checks the padding the private path
-    builds, which is what interoperation is about.
+def rsa_verify(src):
+    """The RSA signature sets: PKCS#1 v1.5 and PSS, at every key width and digest
+    the library signs.
 
-    Wycheproof's "acceptable" marks a case whose validity depends on a choice the
-    reference makes; this library takes the deterministic side, so such a case is
-    judged by whether it verifies, the way a valid one is. The OAEP files are not
-    here: they carry a public key only, and a decryption test needs the private
-    half the set does not give."""
-    files = [
-        "rsa_signature_2048_sha224_test.json",
-        "rsa_signature_2048_sha256_test.json",
-        "rsa_signature_2048_sha384_test.json",
-        "rsa_signature_2048_sha512_test.json",
-        "rsa_pss_2048_sha1_mgf1_20_test.json",
-        "rsa_pss_2048_sha256_mgf1_0_test.json",
-        "rsa_pss_2048_sha256_mgf1_32_test.json",
-    ]
-    rows, total, skipped = [], 0, 0
-    for name in files:
-        data = json.loads((src / name).read_text(encoding="utf-8"))
+    Each case carries only a public key, so verification is all a table needs;
+    the signing direction is the `rsa_pkcs1_*_sig_gen` sets below, which hand
+    over the private key and the signature it must reproduce. Keys repeat across
+    the cases of a group, so they are held once and referred to by index.
+
+    Left out, and why: the sets whose digest is not one the library names
+    (SHA-3, SHA-512/224, SHA-512/256, SHAKE), and the PSS set whose MGF1 hash
+    differs from its message hash — `Pss` runs one digest for both."""
+    files = sorted(
+        p
+        for p in (src.glob("rsa_signature_*_test.json"))
+        if not p.name.endswith("_params_test.json") and "_8192_" not in p.name
+    )
+    keys, rows, skipped = {}, [], []
+
+    def key_id(n, e):
+        if (n, e) not in keys:
+            keys[(n, e)] = len(keys)
+        return keys[(n, e)]
+
+    for path in files:
+        data = json.loads(path.read_text(encoding="utf-8"))
         for group in data["testGroups"]:
-            is_pss = name.startswith("rsa_pss")
-            n = _pad_to_octets(group["publicKey"]["modulus"], 256)
-            e = group["publicKey"]["publicExponent"]
-            e = _pad_to_octets(e, (int(e, 16).bit_length() + 7) // 8)
-            salt = group["sLen"] if is_pss else 0
-            digest = RSA_SHA[group["sha"]]
+            sha = group.get("sha")
+            if sha not in RSA_SHA:
+                skipped.append(f"{path.name} ({sha})")
+                continue
+            digest = RSA_SHA[sha]
+            n = _pad_to_octets(group["publicKey"]["modulus"], group["keySize"] // 8)
+            e = _pad_to_octets(
+                group["publicKey"]["publicExponent"],
+                (int(group["publicKey"]["publicExponent"], 16).bit_length() + 7) // 8,
+            )
+            k = key_id(n, e)
             for t in group["tests"]:
-                # Wycheproof's zero-length file rejects a block whose salt length
-                # is not zero, but this library's zero salt is a documented
-                # wildcard that accepts any length, which is what verifying a
-                # third-party signer's signature requires. The two readings of a
-                # zero length cannot both hold, and the library's is the one the
-                # interop test depends on, so those cases are left out of the
-                # table — the way an envelope-only case is — and counted.
-                if (
-                    is_pss
-                    and group["sLen"] == 0
-                    and t["result"] == "invalid"
-                    and "s_len changed to" in t.get("comment", "")
-                ):
-                    skipped += 1
-                    continue
-                # "acceptable" is Wycheproof's either-way mark (a case that rests
-                # on a choice the reference makes, a DigestInfo missing its NULL):
-                # this library takes the canonical side, so the case passes either
-                # way and is not held to one outcome.
-                verdict = {"valid": "Valid", "invalid": "Invalid", "acceptable": "Acceptable"}[t["result"]]
-                total += 1
-                scheme = "pss" if is_pss else "pkcs1"
                 rows.append(
-                    f'    ("{scheme}", "{digest}", {salt}, "{n}", "{e}", '
-                    f'"{t["msg"]}", "{t["sig"]}", {verdict}),'
+                    f'    ({k}, "pkcs1", "{digest}", 0, "{t["msg"]}", "{t["sig"]}", '
+                    f'{VERDICT[t["result"]]}),'
                 )
-    out = [
-        "// Generated by scripts/gen_wycheproof.py from Wycheproof's rsa_signature_* and",
-        "// rsa_pss_* (2048-bit) files; rerun it rather than editing.",
+    pss_files = sorted(
+        p
+        for p in src.glob("rsa_pss_*_test.json")
+        if not p.name.endswith("_params_test.json") and "shake" not in p.name
+    )
+    for path in pss_files:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        for group in data["testGroups"]:
+            sha = group.get("sha")
+            if sha not in RSA_SHA or group.get("mgfSha") != sha:
+                skipped.append(f"{path.name} ({sha}, MGF {group.get('mgfSha')})")
+                continue
+            digest = RSA_SHA[sha]
+            n = _pad_to_octets(group["publicKey"]["modulus"], group["keySize"] // 8)
+            e = _pad_to_octets(
+                group["publicKey"]["publicExponent"],
+                (int(group["publicKey"]["publicExponent"], 16).bit_length() + 7) // 8,
+            )
+            k = key_id(n, e)
+            salt = group["sLen"]
+            for t in group["tests"]:
+                rows.append(
+                    f'    ({k}, "pss", "{digest}", {salt}, "{t["msg"]}", "{t["sig"]}", '
+                    f'{VERDICT[t["result"]]}),'
+                )
+    entry = "(Int, String, String, Int32, String, String, RsaVerdict)"
+    key_rows = [f'    ("{n}", "{e}"),' for (n, e) in keys]
+    text = [
+        "// Generated by scripts/gen_wycheproof.py --rsa from Wycheproof's",
+        "// rsa_signature_* and rsa_pss_* files; rerun it rather than editing.",
         f"// {SOURCE}",
         "//",
-        "// The OAEP files are not here: they carry a public key only, and a",
-        "// decryption test needs the private half the set does not give.",
-        f"//",
-        f"// The {skipped} zero-salt PSS cases Wycheproof marks invalid for a",
-        f"// changed salt length are not here: this library's zero salt is a",
-        f"// wildcard that accepts any length, and holding the table to",
-        f"// Wycheproof's strict reading of a zero length would contradict that.",
+        "// Every key width the library is aimed at — 2048, 3072 and 4096 bits — and",
+        "// every digest it signs: SHA-1, SHA-224, SHA-256, SHA-384 and SHA-512. The",
+        "// sets whose digest `Digest` does not name (SHA-3, SHA-512/224, SHA-512/256,",
+        "// SHAKE) are not here, nor is the PSS set whose MGF1 hash differs from its",
+        "// message hash — `Pss` runs one digest for both — nor the 8192-bit sets.",
         "",
         "///|",
         "/// Whether Wycheproof expects the signature to verify, to refuse, or",
@@ -296,62 +334,306 @@ def rsa_sign(src):
         "}",
         "",
         "///|",
-        "/// (scheme, digest, salt, modulus, exponent, message, signature, verdict)",
-        "let rsa_vectors : Array[(String, String, Int32, String, String, String, String, RsaVerdict)] = [",
-        *rows,
+        "/// (modulus, exponent) — one entry for every key the sets carry.",
+        "let rsa_public_keys : Array[(String, String)] = [",
+        *key_rows,
         "]",
         "",
+        *chunks("rsa_signatures", rows, entry),
         "///|",
         "/// The number of cases, so a gap between the table and the source is",
         "/// caught rather than silently dropped.",
-        f"let rsa_total : Int32 = {total}",
+        f"let rsa_signatures_total : Int32 = {len(rows)}",
         "",
         "///|",
-        'fn rsa_hex(s : String) -> Bytes {',
+        "fn rsa_hex(s : String) -> Bytes {",
         "  @base16.decode(s) catch {",
         '    _ => abort("a Wycheproof vector does not parse as hex")',
         "  }",
         "}",
         "",
         "///|",
-        "test \"Wycheproof: every RSA signature vector, the valid verified and the invalid refused\" {",
-        "  assert_eq(rsa_vectors.length(), rsa_total)",
-        "  for v in rsa_vectors {",
-        '    let (scheme, digest, salt, n, e, msg, sig, verdict) = v',
-        "    let d = match digest {",
-        '      "Sha1" => @rsa.Sha1',
-        '      "Sha224" => @rsa.Sha224',
-        '      "Sha256" => @rsa.Sha256',
-        '      "Sha384" => @rsa.Sha384',
-        '      _ => @rsa.Sha512',
-        "    }",
-        "    let s = if scheme == \"pss\" {",
-        "      @rsa.Pss(salt=salt)",
+        "fn rsa_digest(name : String) -> @rsa.Digest {",
+        "  match name {",
+        '    "Sha1" => @rsa.Sha1',
+        '    "Sha224" => @rsa.Sha224',
+        '    "Sha256" => @rsa.Sha256',
+        '    "Sha384" => @rsa.Sha384',
+        "    _ => @rsa.Sha512",
+        "  }",
+        "}",
+        "",
+        "///|",
+        'test "Wycheproof: every RSA signature vector, the valid verified and the invalid refused" {',
+        "  assert_eq(rsa_signatures.length(), rsa_signatures_total)",
+        "  // One key per entry, read once: the sets repeat a key across thousands of",
+        "  // cases, and reading it a case at a time is most of the run.",
+        "  let keys : Array[@rsa.PublicKey] = []",
+        "  for (n, e) in rsa_public_keys {",
+        "    keys.push(",
+        "      @rsa.PublicKey::new(rsa_hex(n)[:], rsa_hex(e)[:]) catch {",
+        '        _ => abort("a Wycheproof public key did not read")',
+        "      },",
+        "    )",
+        "  }",
+        "  for v in rsa_signatures {",
+        "    let (k, scheme, digest, salt, msg, sig, verdict) = v",
+        '    let s = if scheme == "pss" {',
+        "      @rsa.Pss(salt=@rsa.Exact(salt))",
         "    } else {",
         "      @rsa.Pkcs1",
         "    }",
-        "    let pk = @rsa.PublicKey::new(rsa_hex(n)[:], rsa_hex(e)[:], digest=d, scheme=s) catch {",
-        '      _ => abort("a Wycheproof public key did not read")',
-        "    }",
+        "    let pk = keys[k].with_scheme(digest=rsa_digest(digest), scheme=s)",
         "    let ok = pk.verify(rsa_hex(msg)[:], rsa_hex(sig)[:])",
         "    // `Acceptable` passes either way: the outcome is a choice the",
         "    // reference makes, so it is not held to one side.",
         "    if verdict != Acceptable && ok != (verdict == Valid) {",
-        '      fail("an RSA vector did not match, scheme \\{scheme} \\{digest} \\{sig}")',
+        '      fail("an RSA vector did not match, \\{scheme} \\{digest} \\{k}")',
         "    }",
         "  }",
         "}",
         "",
     ]
     dest = ROOT / "rsa" / "wycheproof_test.mbt"
-    dest.write_text("\n".join(out), encoding="utf-8", newline="\n")
-    print(f"wrote {total} RSA vectors to {dest}")
+    dest.write_text("\n".join(text), encoding="utf-8", newline="\n")
+    print(f"wrote {len(rows)} RSA verification vectors to {dest}")
+    for line in sorted(set(skipped)):
+        print(f"  left out: {line}")
+
+
+def _pad_to_octets(hexstr, nbytes):
+    return hexstr.rjust(nbytes * 2, "0")
+
+
+def rsa_sign_generation(src):
+    """The `rsa_pkcs1_*_sig_gen` sets: a private key, a message, and the
+    signature signing must produce. PKCS#1 v1.5 is deterministic, so the
+    comparison is exact."""
+    rows, keys = [], {}
+    for path in sorted(src.glob("rsa_pkcs1_*_sig_gen_test.json")):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        for group in data["testGroups"]:
+            sha = group.get("sha")
+            if sha not in RSA_SHA:
+                continue
+            k = group["privateKey"]
+            ident = (k["modulus"], k["publicExponent"], k["privateExponent"])
+            if ident not in keys:
+                keys[ident] = len(keys)
+            kid = keys[ident]
+            for t in group["tests"]:
+                rows.append(
+                    f'    ({kid}, "{RSA_SHA[sha]}", "{t["msg"]}", "{t["sig"]}", '
+                    f'{VERDICT[t["result"]]}),'
+                )
+    entry = "(Int, String, String, String, RsaVerdict)"
+    key_rows = [f'    ("{n}", "{e}", "{d}"),' for (n, e, d) in keys]
+    text = [
+        "// Generated by scripts/gen_wycheproof.py --rsa from Wycheproof's",
+        "// rsa_pkcs1_*_sig_gen_test.json; rerun it rather than editing.",
+        f"// {SOURCE}",
+        "//",
+        "// These keys carry no factors, only the exponent, so signing runs the one",
+        "// fixed-width exponentiation rather than the two halves.",
+        "",
+        "///|",
+        "/// (modulus, exponent, private exponent).",
+        "let rsa_signing_keys : Array[(String, String, String)] = [",
+        *key_rows,
+        "]",
+        "",
+        *chunks("rsa_signings", rows, entry),
+        "///|",
+        f"let rsa_signings_total : Int32 = {len(rows)}",
+        "",
+        "///|",
+        'test "Wycheproof: every RSA signing vector reproduces its signature" {',
+        "  assert_eq(rsa_signings.length(), rsa_signings_total)",
+        "  let keys : Array[@rsa.PrivateKey] = []",
+        "  for (n, e, d) in rsa_signing_keys {",
+        "    keys.push(",
+        "      @rsa.PrivateKey::new(",
+        "        rsa_hex(n)[:], rsa_hex(e)[:], rsa_hex(d)[:],",
+        "      ) catch {",
+        '        _ => abort("a Wycheproof signing key did not fit")',
+        "      },",
+        "    )",
+        "  }",
+        "  for v in rsa_signings {",
+        "    let (k, digest, msg, want, verdict) = v",
+        "    let sk = keys[k].with_scheme(digest=rsa_digest(digest), scheme=@rsa.Pkcs1)",
+        "    let sig = sk.sign(rsa_hex(msg)[:])",
+        "    let same = @spec.eq(sig[:], rsa_hex(want)[:])",
+        "    if verdict != Acceptable && same != (verdict == Valid) {",
+        '      fail("an RSA signing vector did not reproduce, \\{digest} \\{k}")',
+        "    }",
+        "  }",
+        "}",
+        "",
+    ]
+    dest = ROOT / "rsa" / "wycheproof_sign_test.mbt"
+    dest.write_text("\n".join(text), encoding="utf-8", newline="\n")
+    print(f"wrote {len(rows)} RSA signing vectors to {dest}")
+
+
+def rsa_decrypt(src):
+    """The RSA decryption sets: RSAES-OAEP and RSAES-PKCS1-v1_5, with the private
+    key each group carries.
+
+    Left out: the three-prime OAEP sets — the key type here carries two CRT
+    factors, and a three-prime key has no pair that recomposes it."""
+    keys, oaep, pkcs1, skipped = {}, [], [], []
+    entry = "(Int, String, String, String, String, String, RsaVerdict)"
+
+    def key_id(g, need_primes=True):
+        k = g["privateKey"]
+        ident = (k["modulus"], k["publicExponent"], k["privateExponent"], k["prime1"], k["prime2"])
+        if ident not in keys:
+            keys[ident] = len(keys)
+        return keys[ident]
+
+    for path in sorted(src.glob("rsa_oaep_*_test.json")):
+        if "three_primes" in path.name:
+            skipped.append(f"{path.name} (three primes)")
+            continue
+        data = json.loads(path.read_text(encoding="utf-8"))
+        for group in data["testGroups"]:
+            sha, mgf = group.get("sha"), group.get("mgfSha")
+            if sha not in RSA_SHA or mgf not in RSA_SHA:
+                skipped.append(f"{path.name} ({sha}, MGF {mgf})")
+                continue
+            if group.get("keySize", 0) > 4096:
+                skipped.append(f"{path.name} ({group['keySize']} bits)")
+                continue
+            kid = key_id(group)
+            for t in group["tests"]:
+                oaep.append(
+                    f'    ({kid}, "{RSA_SHA[sha]}", "{RSA_SHA[mgf]}", "{t["label"]}", '
+                    f'"{t["ct"]}", "{t["msg"]}", {VERDICT[t["result"]]}),'
+                )
+    for path in sorted(src.glob("rsa_pkcs1_*_test.json")):
+        if "sig_gen" in path.name:
+            continue
+        data = json.loads(path.read_text(encoding="utf-8"))
+        for group in data["testGroups"]:
+            kid = key_id(group)
+            for t in group["tests"]:
+                pkcs1.append(
+                    f'    ({kid}, "{t["ct"]}", "{t["msg"]}", {VERDICT[t["result"]]}),'
+                )
+    key_rows = [f'    ("{n}", "{e}", "{d}", "{p}", "{q}"),' for (n, e, d, p, q) in keys]
+    text = [
+        "// Generated by scripts/gen_wycheproof.py --rsa from Wycheproof's",
+        "// rsa_oaep_* and rsa_pkcs1_* files; rerun it rather than editing.",
+        f"// {SOURCE}",
+        "//",
+        "// The three-prime OAEP sets are not here: a key carries two CRT factors,",
+        "// and a three-prime key has no pair that recomposes it.",
+        "",
+        "///|",
+        "/// (modulus, exponent, private exponent, prime p, prime q).",
+        "let rsa_decryption_keys : Array[(String, String, String, String, String)] = [",
+        *key_rows,
+        "]",
+        "",
+        *chunks("rsa_oaep_vectors", oaep, entry),
+        "///|",
+        f"let rsa_oaep_total : Int32 = {len(oaep)}",
+        "",
+        *chunks("rsa_pkcs1_vectors", pkcs1, "(Int, String, String, RsaVerdict)"),
+        "///|",
+        f"let rsa_pkcs1_total : Int32 = {len(pkcs1)}",
+        "",
+        "///|",
+        "fn rsa_decryption_key(index : Int) -> @rsa.PrivateKey {",
+        "  let (n, e, d, p, q) = rsa_decryption_keys[index]",
+        "  @rsa.PrivateKey::new_crt(",
+        "    rsa_hex(n)[:], rsa_hex(e)[:], rsa_hex(d)[:], rsa_hex(p)[:], rsa_hex(q)[:],",
+        "  ) catch {",
+        '    _ => abort("a Wycheproof decryption key did not fit")',
+        "  }",
+        "}",
+        "",
+        "///|",
+        'test "Wycheproof: every RSA OAEP vector, the valid decrypted and the invalid refused" {',
+        "  assert_eq(rsa_oaep_vectors.length(), rsa_oaep_total)",
+        "  let keys : Array[@rsa.PrivateKey] = []",
+        "  for i in 0..<rsa_decryption_keys.length() {",
+        "    keys.push(rsa_decryption_key(i))",
+        "  }",
+        "  for v in rsa_oaep_vectors {",
+        "    let (k, digest, mgf, label, ct, msg, verdict) = v",
+        "    let out = try {",
+        "      Ok(",
+        "        keys[k].decrypt(",
+        "          rsa_hex(ct)[:],",
+        "          digest=rsa_digest(digest),",
+        "          mgf=rsa_digest(mgf),",
+        "          label=rsa_hex(label)[:],",
+        "        ),",
+        "      )",
+        "    } catch {",
+        "      err => Err(err)",
+        "    }",
+        "    let good = match out {",
+        "      Ok(plain) =>",
+        "        if verdict == Invalid {",
+        "          false",
+        "        } else {",
+        "          @spec.eq(plain[:], rsa_hex(msg)[:])",
+        "        }",
+        "      Err(_) => verdict != Valid",
+        "    }",
+        "    if !good {",
+        '      fail("an OAEP vector did not match, \\{digest} \\{mgf} \\{ct}")',
+        "    }",
+        "  }",
+        "}",
+        "",
+        "///|",
+        'test "Wycheproof: every RSAES-PKCS1-v1_5 vector, the valid decrypted and the invalid refused" {',
+        "  assert_eq(rsa_pkcs1_vectors.length(), rsa_pkcs1_total)",
+        "  let keys : Array[@rsa.PrivateKey] = []",
+        "  for i in 0..<rsa_decryption_keys.length() {",
+        "    keys.push(rsa_decryption_key(i))",
+        "  }",
+        "  for v in rsa_pkcs1_vectors {",
+        "    let (k, ct, msg, verdict) = v",
+        "    let out = try {",
+        "      Ok(keys[k].decrypt_pkcs1(rsa_hex(ct)[:]))",
+        "    } catch {",
+        "      err => Err(err)",
+        "    }",
+        "    let good = match out {",
+        "      Ok(plain) =>",
+        "        if verdict == Invalid {",
+        "          false",
+        "        } else {",
+        "          @spec.eq(plain[:], rsa_hex(msg)[:])",
+        "        }",
+        "      Err(_) => verdict != Valid",
+        "    }",
+        "    if !good {",
+        '      fail("an RSAES-PKCS1-v1_5 vector did not match, \\{ct}")',
+        "    }",
+        "  }",
+        "}",
+        "",
+    ]
+    dest = ROOT / "rsa" / "wycheproof_decrypt_test.mbt"
+    dest.write_text("\n".join(text), encoding="utf-8", newline="\n")
+    print(f"wrote {len(oaep)} OAEP and {len(pkcs1)} RSAES-PKCS1-v1_5 vectors to {dest}")
+    for line in sorted(set(skipped)):
+        print(f"  left out: {line}")
 
 
 if __name__ == "__main__":
     if len(sys.argv) > 2 and sys.argv[2] == "--brainpool":
         brainpool_ecdh(pathlib.Path(sys.argv[1]))
     elif len(sys.argv) > 2 and sys.argv[2] == "--rsa":
-        rsa_sign(pathlib.Path(sys.argv[1]))
+        src = pathlib.Path(sys.argv[1])
+        rsa_verify(src)
+        rsa_sign_generation(src)
+        rsa_decrypt(src)
     else:
         main()
