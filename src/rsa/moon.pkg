@@ -21,3 +21,11 @@ import {
   "moonbitstack/mooncrypt/drbg",
   "moonbitlang/core/bench",
 } for "test"
+
+options(
+  targets: {
+    "wycheproof_test.mbt": [ "native", "wasm-gc" ],
+    "wycheproof_sign_test.mbt": [ "native", "wasm-gc" ],
+    "wycheproof_decrypt_test.mbt": [ "native", "wasm-gc" ],
+  },
+)
