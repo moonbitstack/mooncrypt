@@ -246,23 +246,31 @@ fn Mont::sqr(
   // the row's carry goes into lane `i+size`, and the walk above it carries what
   // is left; the last lane yields the one bit by which the result can exceed the
   // width, since it is below `2n`.
+  //
+  // The row's carry out of its top lane belongs in the lane above, which is the
+  // top lane of the *next* row — so it is held in `pending` and added there,
+  // where that row's own carry chain is running anyway. That is what keeps this
+  // to `n` rows of `n` and no walk up the product, which would cost as much as
+  // the rows themselves.
   let n = self.mod
+  let mut pending = 0UL
   for i in 0..<size {
     let m = (sq[i] * self.n0) & 0xFFFFFFFFUL
-    let mut c = (sq[i] + m * n[0]) >> 32
-    for j in 1..<size {
+    let mut c = 0UL
+    for j in 0..<(size - 1) {
       let s = sq[i + j] + m * n[j] + c
       sq[i + j] = s & 0xFFFFFFFFUL
       c = s >> 32
     }
-    let mut k = i + size
-    while k <= 2 * size {
-      let s = sq[k] + c
-      sq[k] = s & 0xFFFFFFFFUL
-      c = s >> 32
-      k = k + 1
-    }
+    let s = sq[i + size - 1] + m * n[size - 1] + c + pending
+    sq[i + size - 1] = s & 0xFFFFFFFFUL
+    pending = s >> 32
   }
+  // The last row's carry belongs above the product's top lane, where the result
+  // may still hold a bit: it is below `2n`, and the top lane is where that one
+  // bit lands.
+  let top = sq[2 * size - 1] + pending
+  sq[2 * size - 1] = top & 0xFFFFFFFFUL
   let t = self.t
   let mut borrow = 0UL
   for i in 0..<size {
@@ -270,7 +278,7 @@ fn Mont::sqr(
     t[i] = d & 0xFFFFFFFFUL
     borrow = d >> 63
   }
-  let take = 0UL - ((sq[2 * size] | (borrow ^ 1UL)) & 1UL)
+  let take = 0UL - (((top >> 32) | (borrow ^ 1UL)) & 1UL)
   for i in 0..<size {
     let v = sq[size + i]
     out[i] = v ^ (take & (v ^ t[i]))

@@ -57,7 +57,11 @@ fn bench_key(w : Int32) -> @rsa.PrivateKey raise {
     (bench4096_n, bench4096_e, bench4096_d, bench4096_p, bench4096_q)
   }
   @rsa.PrivateKey::new_crt(
-    rsa_hex(n)[:], rsa_hex(e)[:], rsa_hex(d)[:], rsa_hex(p)[:], rsa_hex(q)[:],
+    raw(n)[:],
+    raw(e)[:],
+    raw(d)[:],
+    raw(p)[:],
+    raw(q)[:],
   )
 }
 
@@ -70,8 +74,14 @@ test "bench RSA-2048 sign, PKCS#1 v1.5" (it : @bench.T) {
 ///|
 test "bench RSA-2048 decrypt, PKCS#1 v1.5" (it : @bench.T) {
   let key = bench_key(2048) catch { _ => abort("rsa: the benchmark key") }
-  let cipher = rsa_hex(bench2048_ct)
-  it.bench(fn() { it.keep(key.decrypt_pkcs1(cipher[:]) catch { _ => abort("rsa: the benchmark ciphertext") }) })
+  let cipher = raw(bench2048_ct)
+  it.bench(fn() {
+    it.keep(
+      key.decrypt_pkcs1(cipher[:]) catch {
+        _ => abort("rsa: the benchmark ciphertext")
+      },
+    )
+  })
 }
 
 ///|
@@ -83,6 +93,12 @@ test "bench RSA-4096 sign, PKCS#1 v1.5" (it : @bench.T) {
 ///|
 test "bench RSA-4096 decrypt, PKCS#1 v1.5" (it : @bench.T) {
   let key = bench_key(4096) catch { _ => abort("rsa: the benchmark key") }
-  let cipher = rsa_hex(bench4096_ct)
-  it.bench(fn() { it.keep(key.decrypt_pkcs1(cipher[:]) catch { _ => abort("rsa: the benchmark ciphertext") }) })
+  let cipher = raw(bench4096_ct)
+  it.bench(fn() {
+    it.keep(
+      key.decrypt_pkcs1(cipher[:]) catch {
+        _ => abort("rsa: the benchmark ciphertext")
+      },
+    )
+  })
 }

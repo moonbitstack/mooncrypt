@@ -26,6 +26,7 @@ pub fn Digest::to_repr(Self) -> @debug.Repr
 
 type PrivateKey
 pub fn PrivateKey::decrypt(Self, BytesView, digest? : Digest, mgf? : Digest, label? : BytesView) -> Bytes raise @spec.Broken
+pub fn PrivateKey::decrypt_pkcs1(Self, BytesView) -> Bytes raise @spec.Broken
 pub fn[S : @moonseed.Source] PrivateKey::generate(S, bits? : Int32, digest? : Digest, scheme? : Scheme) -> Self raise @moonseed.Unavailable
 pub fn PrivateKey::new(BytesView, BytesView, BytesView, digest? : Digest, scheme? : Scheme) -> Self raise @spec.Broken
 pub fn PrivateKey::new_crt(BytesView, BytesView, BytesView, BytesView, BytesView, digest? : Digest, scheme? : Scheme) -> Self raise @spec.Broken
@@ -38,6 +39,7 @@ pub impl @spec.Signer for PrivateKey
 
 type PublicKey
 pub fn PublicKey::encrypt(Self, BytesView, seed~ : BytesView, digest? : Digest, mgf? : Digest, label? : BytesView) -> Bytes raise @spec.Broken
+pub fn PublicKey::encrypt_pkcs1(Self, BytesView, pad~ : BytesView) -> Bytes raise @spec.Broken
 pub fn PublicKey::exponent(Self) -> Bytes
 pub fn PublicKey::modulus(Self) -> Bytes
 pub fn PublicKey::new(BytesView, BytesView, digest? : Digest, scheme? : Scheme) -> Self raise @spec.Broken
@@ -48,9 +50,18 @@ pub fn PublicKey::with_scheme(Self, digest~ : Digest, scheme~ : Scheme) -> Self
 pub impl @spec.Verifier for PublicKey
 
 #derive(Eq, @debug.Debug)
+pub(all) enum Salt {
+  Auto
+  Exact(Int32)
+}
+pub fn Salt::equal(Self, Self) -> Bool
+pub fn Salt::not_equal(Self, Self) -> Bool
+pub fn Salt::to_repr(Self) -> @debug.Repr
+
+#derive(Eq, @debug.Debug)
 pub(all) enum Scheme {
   Pkcs1
-  Pss(salt~ : Int32)
+  Pss(salt~ : Salt)
 }
 pub fn Scheme::equal(Self, Self) -> Bool
 pub fn Scheme::not_equal(Self, Self) -> Bool
