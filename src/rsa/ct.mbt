@@ -190,11 +190,11 @@ fn Mont::mul(
 /// [`Mont::mul`].
 ///
 /// The square is formed at full width and then reduced in place, `n` rows of
-/// `m*n` subtracted from the low lanes. The carry out of a row lands in the lane
-/// above it and is walked from there to the top of the product; the walk's length
-/// is set by the row's index, not by any value, so the work is the same on every
-/// call. The result is below `2n` and takes the same masked subtraction `mul`
-/// ends with.
+/// `m*n` added below the modulus's own width. A row's carry out of its top lane
+/// belongs one lane above, which is the *next* row's top lane, so it waits in a
+/// variable and is added there — no walk up the product, which would cost as much
+/// as the rows themselves. The result is below `2n` and takes the same masked
+/// subtraction `mul` ends with.
 fn Mont::sqr(
   self : Mont,
   out : FixedArray[UInt64],
@@ -242,16 +242,9 @@ fn Mont::sqr(
     sq[k] = s & 0xFFFFFFFFUL
     carry = s >> 32
   }
-  // The reduction. Lane `i` takes the multiple of the modulus that cancels it,
-  // the row's carry goes into lane `i+size`, and the walk above it carries what
-  // is left; the last lane yields the one bit by which the result can exceed the
-  // width, since it is below `2n`.
-  //
-  // The row's carry out of its top lane belongs in the lane above, which is the
-  // top lane of the *next* row — so it is held in `pending` and added there,
-  // where that row's own carry chain is running anyway. That is what keeps this
-  // to `n` rows of `n` and no walk up the product, which would cost as much as
-  // the rows themselves.
+  // The reduction. Lane `i` takes the multiple of the modulus that cancels it;
+  // the row's carry out of its top lane is held in `pending` for the next row,
+  // whose top lane is where it belongs.
   let n = self.mod
   let mut pending = 0UL
   for i in 0..<size {
