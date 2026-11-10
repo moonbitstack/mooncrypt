@@ -265,18 +265,37 @@ fn blind_op(key : PrivateKey, value : BigInt) -> BigInt {
   let raw = @moonseed.bytes(key.size, @system.source) catch {
     _ => Bytes::make(0, b'\x00')
   }
+  blind_with(key, value, raw[:])
+}
+
+///|
+/// The blind with the random handed in rather than drawn.
+///
+/// Split out from the draw so a test can hold the random still and read what the
+/// secret exponentiation is given: `value * r^e mod n`, a fresh number on every
+/// call, and never `value` itself. What comes back is `value^d mod n` whatever
+/// `r` was — the inverse divides out exactly what the power multiplied in — and
+/// `r` is not secret in any lasting sense, only the value and the exponent are.
+fn blind_with(key : PrivateKey, value : BigInt, raw : BytesView) -> BigInt {
   if raw.length() == 0 {
     return exp_d(key, value)
   }
-  let r = BigInt::from_octets(raw[:]) % key.n
+  let r = BigInt::from_octets(raw) % key.n
   if r <= 0N {
     return exp_d(key, value)
   }
-  let r_e = pow_public_mod(r, key.e, key.n)
-  let blinded = value * r_e % key.n
+  let blinded = blinder_apply(key, value, r)
   let powered = exp_d(key, blinded)
   let r_inv = modinv(r, key.n)
   powered * r_inv % key.n
+}
+
+///|
+/// The value the secret exponentiation is handed: `value * r^e mod n`, where `r`
+/// is random under the modulus, so the running time of that exponentiation stops
+/// following the value it is really raising.
+fn blinder_apply(key : PrivateKey, value : BigInt, r : BigInt) -> BigInt {
+  value * pow_public_mod(r, key.e, key.n) % key.n
 }
 
 ///|
@@ -504,10 +523,7 @@ fn pss_check(d : Digest, msg : BytesView, em : Bytes, salt : Salt) -> Bool {
   }
   match salt {
     Auto => ()
-    Exact(len) =>
-      if db_len - at - 1 != len {
-        return false
-      }
+    Exact(len) => if db_len - at - 1 != len { return false }
   }
   let salt = db[at + 1:]
   let m_hash = @spec.digest(hasher(d), msg)
@@ -741,7 +757,8 @@ pub fn PrivateKey::decrypt_pkcs1(
 
 ///|
 /// The digest of one message, for the label hash both directions need.
-fn digest_of(d : Digest, msg : BytesView) -> Bytes {  let h = hasher(d)
+fn digest_of(d : Digest, msg : BytesView) -> Bytes {
+  let h = hasher(d)
   h.write(msg)
   h.finish()
 }

@@ -402,9 +402,24 @@ test "PSS: an auto salt signs at the digest length, and an exact salt is exact" 
   let short = sk.with_scheme(digest=Sha256, scheme=Pss(salt=Exact(16)))
   let sig = short.sign(b"message"[:])
   assert_not_eq(sig, auto.sign(b"message"[:]))
-  assert_true(sk.public().with_scheme(digest=Sha256, scheme=Pss(salt=Auto)).verify(b"message"[:], sig[:]))
-  assert_false(sk.public().with_scheme(digest=Sha256, scheme=Pss(salt=Exact(32))).verify(b"message"[:], sig[:]))
-  assert_true(sk.public().with_scheme(digest=Sha256, scheme=Pss(salt=Exact(16))).verify(b"message"[:], sig[:]))
+  assert_true(
+    sk
+    .public()
+    .with_scheme(digest=Sha256, scheme=Pss(salt=Auto))
+    .verify(b"message"[:], sig[:]),
+  )
+  assert_false(
+    sk
+    .public()
+    .with_scheme(digest=Sha256, scheme=Pss(salt=Exact(32)))
+    .verify(b"message"[:], sig[:]),
+  )
+  assert_true(
+    sk
+    .public()
+    .with_scheme(digest=Sha256, scheme=Pss(salt=Exact(16)))
+    .verify(b"message"[:], sig[:]),
+  )
 }
 
 ///|
@@ -416,9 +431,19 @@ test "PSS: an exact zero salt is deterministic and is refused by another length"
   let a = none.sign(b"message"[:])
   assert_eq(none.sign(b"message"[:]), a)
   assert_true(none.public().verify(b"message"[:], a[:]))
-  assert_false(sk.public().with_scheme(digest=Sha256, scheme=Pss(salt=Exact(32))).verify(b"message"[:], a[:]))
+  assert_false(
+    sk
+    .public()
+    .with_scheme(digest=Sha256, scheme=Pss(salt=Exact(32)))
+    .verify(b"message"[:], a[:]),
+  )
   // `Auto` on the verifying side reads the block, so it takes a zero-salt one.
-  assert_true(sk.public().with_scheme(digest=Sha256, scheme=Pss(salt=Auto)).verify(b"message"[:], a[:]))
+  assert_true(
+    sk
+    .public()
+    .with_scheme(digest=Sha256, scheme=Pss(salt=Auto))
+    .verify(b"message"[:], a[:]),
+  )
 }
 
 ///|
@@ -439,15 +464,15 @@ test "PKCS#1 v1.5 encryption round-trips, and a bent block is refused" {
   for i in [0, 1, 2, 128, 255] {
     let bent = ct.to_array()
     bent[i] = (bent[i].to_int() ^ 1).to_byte()
-    let out = try {
-      Ok(sk.decrypt_pkcs1(Bytes::from_array(bent)[:]))
-    } catch {
+    let out = Ok(sk.decrypt_pkcs1(Bytes::from_array(bent)[:])) catch {
       err => Err(err)
     }
-    assert_true(match out {
-      Ok(_) => false
-      Err(_) => true
-    })
+    assert_true(
+      match out {
+        Ok(_) => false
+        Err(_) => true
+      },
+    )
   }
 }
 
@@ -457,32 +482,37 @@ test "PKCS#1 v1.5 encryption round-trips, and a bent block is refused" {
 /// eight octets of padding.
 test "PKCS#1 v1.5 encryption refuses a padding it cannot use" {
   let pk = @rsa.PrivateKey::new(raw(n2048)[:], raw(e)[:], raw(d2048)[:]).public()
-  let zero = try {
-    Ok(pk.encrypt_pkcs1(b"hello"[:], pad=Bytes::make(248, b'\x00')[:]))
-  } catch {
+  let zero = Ok(pk.encrypt_pkcs1(b"hello"[:], pad=Bytes::make(248, b'\x00')[:])) catch {
     err => Err(err)
   }
-  assert_true(match zero {
-    Ok(_) => false
-    Err(@spec.Weak) => true
-    Err(_) => false
-  })
-  let short = try {
-    Ok(pk.encrypt_pkcs1(b"hello"[:], pad=Bytes::make(10, b'\x2a')[:]))
-  } catch {
+  assert_true(
+    match zero {
+      Ok(_) => false
+      Err(@spec.Weak) => true
+      Err(_) => false
+    },
+  )
+  let short = Ok(pk.encrypt_pkcs1(b"hello"[:], pad=Bytes::make(10, b'\x2a')[:])) catch {
     err => Err(err)
   }
-  assert_true(match short {
-    Ok(_) => false
-    Err(_) => true
-  })
-  let long = try {
-    Ok(pk.encrypt_pkcs1(Bytes::make(246, b'\x2a')[:], pad=Bytes::make(8, b'\x2a')[:]))
-  } catch {
+  assert_true(
+    match short {
+      Ok(_) => false
+      Err(_) => true
+    },
+  )
+  let long = Ok(
+    pk.encrypt_pkcs1(
+      Bytes::make(246, b'\x2a')[:],
+      pad=Bytes::make(8, b'\x2a')[:],
+    ),
+  ) catch {
     err => Err(err)
   }
-  assert_true(match long {
-    Ok(_) => false
-    Err(_) => true
-  })
+  assert_true(
+    match long {
+      Ok(_) => false
+      Err(_) => true
+    },
+  )
 }

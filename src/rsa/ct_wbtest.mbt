@@ -87,3 +87,45 @@ fn check_square(m : Mont, n : BigInt, b : BigInt) -> Unit raise {
   assert_eq(m.to(product), want)
   assert_eq(m.to(squared), want)
 }
+
+///|
+/// A small key, so the blind can be held still cheaply: `2^32 - 5` and
+/// `2^32 - 11` are primes, and the exponents follow from them.
+fn blind_key() -> PrivateKey raise {
+  let p = 4294967291N
+  let q = 4294967279N
+  let n = p * q
+  let e = 65537N
+  let d = modinv(e, (p - 1N) * (q - 1N))
+  PrivateKey::new(n.to_octets(), e.to_octets(), d.to_octets())
+}
+
+///|
+/// What the blinder exists for, read off the seam rather than the clock: hold
+/// the random still and the value the secret exponentiation is handed is
+/// `value * r^e mod n`, which is not the value. Without the blind that value is
+/// the caller's own, and its running time follows its Hamming weight.
+test "the blinder hands the exponentiation a blinded value, not the value" {
+  let key = blind_key()
+  let n = key.n
+  let d = key.d
+  for value in [1N, 1234567N, (1N << 31) + 12345N, n - 1N] {
+    let r = 987654321N
+    let handed = blinder_apply(key, value, r)
+    assert_true(handed != value)
+    assert_eq(handed, value * pow_public_mod(r, key.e, n) % n)
+    // Two randoms, one answer: the blind divides out exactly.
+    let a = blind_with(key, value, r.to_octets()[:])
+    let b = blind_with(key, value, (r + 1N).to_octets()[:])
+    assert_eq(a, b)
+    assert_eq(a, value.pow(d, modulus=n))
+  }
+}
+
+///|
+/// A host with no entropy draws nothing, and the operation still answers: the
+/// same fixed-width exponentiation, on the value itself.
+test "an empty draw falls back to the value, and still gets the answer" {
+  let key = blind_key()
+  assert_eq(blind_with(key, 12345N, b""[:]), 12345N.pow(key.d, modulus=key.n))
+}
