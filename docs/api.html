@@ -74,7 +74,7 @@
         <h1>Every package, in order</h1>
         <p class="lede">
           Generated from each package's interface file and the comments above its
-          declarations. 709 public declarations across 64
+          declarations. 712 public declarations across 64
           packages.
         </p>
       </div>
@@ -2171,16 +2171,27 @@
   Sha512
 }</div></div>
 </div>
+<div class="item" id="rsa-salt">
+<div class="name"><span class="kind">type</span>Salt</div>
+<div class="body"><div class="sig">pub(all) enum Salt {
+  Auto
+  Exact(Int32)
+}</div></div>
+</div>
 <div class="item" id="rsa-scheme">
 <div class="name"><span class="kind">type</span>Scheme</div>
 <div class="body"><div class="sig">pub(all) enum Scheme {
   Pkcs1
-  Pss(salt~ : Int32)
+  Pss(salt~ : Salt)
 }</div></div>
 </div>
 <div class="item" id="rsa-privatekey-decrypt">
 <div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>decrypt</div>
 <div class="body"><div class="sig">pub fn PrivateKey::decrypt(Self, BytesView, digest? : Digest, mgf? : Digest, label? : BytesView) -&gt; Bytes raise @spec.Broken</div><p>Decrypt an RSAES-OAEP block (RFC 8017 §7.1.2).</p><p>Every way the block can be wrong reports the same [`@spec.Tag`], and the checks all run before any of them is acted on: which check failed is exactly what Manger's 2001 attack reads off, so it is not told apart here.</p><p>`digest`, `mgf` and `label` mean what they do in [`PublicKey::encrypt`] and must match what encrypted the block.</p></div>
+</div>
+<div class="item" id="rsa-privatekey-decrypt-pkcs1">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>decrypt_pkcs1</div>
+<div class="body"><div class="sig">pub fn PrivateKey::decrypt_pkcs1(Self, BytesView) -&gt; Bytes raise @spec.Broken</div><p>Decrypt an RSAES-PKCS1-v1_5 block (RFC 8017 §7.2.2).</p><p>Every way the block can be wrong reports the same [`@spec.Tag`], and every check runs before any of them is acted on — distinguishing "no separator" from "padding too short" is what Bleichenbacher's 1998 attack reads off, and what a great many implementations have been broken by since. A caller that puts this behind a network interface has to go further and make the failure indistinguishable from a valid one — a fresh random of the right length, the same work either way — because the timing of the answer is as good an oracle as the error is.</p></div>
 </div>
 <div class="item" id="rsa-privatekey-generate">
 <div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>generate</div>
@@ -2217,6 +2228,10 @@
 <div class="item" id="rsa-publickey-encrypt">
 <div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>encrypt</div>
 <div class="body"><div class="sig">pub fn PublicKey::encrypt(Self, BytesView, seed~ : BytesView, digest? : Digest, mgf? : Digest, label? : BytesView) -&gt; Bytes raise @spec.Broken</div><p>Encrypt under RSAES-OAEP (RFC 8017 §7.1.1), returning a block exactly as wide as the modulus.</p><p>`seed` is the `hLen` random octets OAEP masks with, and it is a required parameter rather than something drawn here: this library holds no entropy source, and the seed is what makes the same message encrypt differently twice. Go's `rsa.EncryptOAEP` and Rust's `rsa` crate take the randomness the same way. **Reusing a seed across messages destroys OAEP's security** — draw it fresh from the platform's CSPRNG for every call.</p><p>`digest` is the hash OAEP runs, and `mgf` the one MGF1 masks with; leaving `mgf` out uses `digest`, which is what Go and Node do, while Python and Java let the two differ, which is why it is a parameter here.</p><p>`digest` defaults to SHA-1: it is RFC 8017's own default, and what OpenSSL, Java's `OAEPParameterSpec.DEFAULT` and Node all take. OAEP does not rest on the hash's collision resistance, so this is not the choice it would be for a signature — but Go and Python require the caller to name it, and a new design should pass `digest=Sha256`.</p><p>The key's own `digest` and `scheme` govern signatures and are not consulted here; encryption and signing are separate schemes over the same key.</p></div>
+</div>
+<div class="item" id="rsa-publickey-encrypt-pkcs1">
+<div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>encrypt_pkcs1</div>
+<div class="body"><div class="sig">pub fn PublicKey::encrypt_pkcs1(Self, BytesView, pad~ : BytesView) -&gt; Bytes raise @spec.Broken</div><p>Encrypt under RSAES-PKCS1-v1_5 (RFC 8017 §7.2.1), returning a block exactly as wide as the modulus.</p><p>Legacy, and dangerous where a peer can see the answer: the padding carries no integrity, so a responder that tells a bad block from a bad padding hands over a Bleichenbacher oracle, and the scheme has no place in a new design. It is here because TLS's RSA key exchange, older CMS messages and a great deal of deployed data are built on it.</p><p>`pad` is the `PS` octets, and it has to be `k - 3 - plain.length()` of them, none zero: draw it fresh from a CSPRNG for every message, as RFC 8017 §7.2.1 step 3 asks, and draw again if it comes back with a zero in it. A fixed `pad` makes the ciphertext deterministic, which is the one thing this scheme must not be.</p></div>
 </div>
 <div class="item" id="rsa-publickey-exponent">
 <div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>exponent</div>

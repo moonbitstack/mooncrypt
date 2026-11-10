@@ -86,7 +86,7 @@ Import the ones you use. A package nothing imports is not linked, which is what
 | `sign/schnorr` | Schnorr over secp256k1, x-only keys and all | BIP 340 |
 | `sign/sm2` | SM2, with the signer identity mixed into the hash | GB/T 32918.2-2016 |
 | `sign/dsa` | DSA over FIPS 186-4 domains, with RFC 6979 nonces | FIPS 186-4, RFC 6979 |
-| `rsa` | RSA PKCS#1 v1.5 and PSS signatures, OAEP encryption, and key generation from a source; the private exponentiation is a fixed-width Montgomery with a fresh random blinder, and a key that carries its CRT factors signs through the two fixed-width halves | RFC 8017, FIPS 186-5 |
+| `rsa` | RSA PKCS#1 v1.5 and PSS signatures, OAEP and RSAES-PKCS1-v1_5 encryption, and key generation from a source; the private exponentiation is a fixed-width Montgomery with a square of its own and a fresh random blinder, and a key that carries its CRT factors signs through the two fixed-width halves | RFC 8017, FIPS 186-5 |
 | `cipher/aes` | AES-128, AES-192 and AES-256, both directions | FIPS 197 |
 | `cipher/sm4` | SM4 | GB/T 32907-2016 |
 | `cipher/camellia` | Camellia-128/192/256 | RFC 3713 |
@@ -150,7 +150,7 @@ BLAKE2, KMAC, xxHash or CTR-DRBG variant, `curve` the ECDSA curve, `digest` and 
 the RSA padding and its hash, `salt` and `info` the HKDF inputs, `params` the
 scrypt and Argon2 cost, `cost` bcrypt's, `tag` the CCM, SIV and GMAC tag length,
 `group` the RFC 7919 group, `digits` the one-time password length, and
-`Pss(salt=32)` carries its own salt length rather than assuming one, and
+`Pss(salt=Exact(32))` names a salt length and `Pss(salt=Auto)` takes the digest's, and
 `interval` the requests a DRBG serves between reseeds, defaulting to the 2^48
 SP 800-90A §10 caps it at.
 
@@ -217,10 +217,15 @@ never reaches.
 The official and authoritative suites that run in CI, and how they do:
 
 - **Wycheproof** — the vectors its repository publishes, taken into the tree by
-  `scripts/gen_wycheproof.py` and rerun on every build. RSA runs its 2048-bit
-  PKCS#1 v1.5 and PSS signature sets (1329 cases, all passing): each case carries
-  its own public key, so it verifies without a private key, and the verification
-  path checks the padding the private path builds. The brainpool curves run
+  `scripts/gen_wycheproof.py` and rerun on every build. RSA runs 5048 of its
+  cases, all passing: 3771 signatures (PKCS#1 v1.5 and PSS at 2048, 3072 and
+  4096 bits, SHA-1 to SHA-512, every salt length), 158 signing vectors whose
+  signature must come out byte for byte, 918 OAEP decryptions (every digest and
+  MGF1 pairing, with and without a label) and 201 RSAES-PKCS1-v1_5 decryptions
+  — the last two on the private keys the sets carry. The replay runs on the
+  `native` and `wasm-gc` backends; on `js` and `wasm` the engine's 64-bit lanes
+  are emulated and the 5048 cases take longer than the whole rest of the suite,
+  so those two backends run the package's other tests. The brainpool curves run
   against its ECDH sets the same way; AES-GCM and ChaCha20-Poly1305 against its
   AEAD sets.
 - **NIST ACVP** — the vectors `scripts/gen_acvp_vectors.py` writes for the
@@ -231,20 +236,17 @@ The official and authoritative suites that run in CI, and how they do:
 Where a suite does not pass, the reason is here rather than swept under the
 table:
 
-- **Wycheproof's RSA OAEP sets are not run.** They publish a public key only,
-  and a decryption test needs the private half the set does not carry, so the
-  OAEP direction is checked the other way — the script that made a ciphertext
-  decrypts what this library produces — the way the other OAEP fixtures do.
-- **Four Wycheproof PSS cases are left out of the table**, by design. They are
-  the "salt length changed to 1 / 20 / 32 / 222" cases from the zero-length file,
-  and Wycheproof marks them invalid: it reads a declared salt length of zero as
-  *exactly* zero. This library's `Pss(salt=0)` is a documented wildcard that
-  accepts any salt length — that is what lets a verifier read a third-party
-  signer's block back out instead of assuming it, which the existing "RSA PSS
-  verifies a third-party signer" test holds it to. The two readings of a zero
-  length cannot both hold, so those four cases are not in the table; every other
-  PSS case, including the six "salt length changed" cases under the declared
-  `sLen = 20` and `sLen = 32` keys, is in the table and passes.
+- **Some Wycheproof RSA sets are not taken in**, and the reason is a shape this
+  library does not have rather than a case it fails. The sets whose digest
+  `Digest` does not name — SHA-3, SHA-512/224, SHA-512/256, and the SHAKE-based
+  PSS sets; the one PSS set whose MGF1 hash differs from its message hash, since
+  `Pss` runs one digest for both; the three-prime OAEP sets, since a key carries
+  two CRT factors and three-prime moduli have no such pair; and the 8192-bit
+  sets. Every set at 2048, 3072 and 4096 bits with a digest the library has is
+  in the table, including the four zero-salt "salt length changed" PSS cases
+  that used to be excluded: `Pss(salt=Exact(0))` is now a salt of no bytes, and
+  a block made with any other length is refused, which is what Wycheproof
+  expects.
 - **The constant-time claim rests on the construction, not the number.** The
   two-class t in "Constant time" is a statistic on the clock, so it can only
   separate an implementation whose running time follows its inputs from one
@@ -275,12 +277,12 @@ every call, so the running time stops following the input.
 
 | Operation | Samples per class | t |
 |:--|--:|--:|
-| AES-128 encrypt | 99639 | 0.27 |
-| P-256 `[k]G` | 3952 | −0.24 |
-| secp256k1 `[k]P` | 4029 | −2.33 |
-| Curve25519 shared | 4047 | 0.89 |
-| RSA-2048 private operation | 293 | 0.02 |
-| RSA-2048 CRT private operation | 313 | −1.33 |
+| AES-128 encrypt | 99639 | −0.49 |
+| P-256 `[k]G` | 3952 | 2.31 |
+| secp256k1 `[k]P` | 4029 | 2.67 |
+| Curve25519 shared | 4047 | −0.98 |
+| RSA-2048 private operation | 293 | 0.87 |
+| RSA-2048 CRT private operation | 313 | 0.95 |
 
 `scripts/run_dudect.sh` reproduces the table at those sample counts. A t under
 the threshold is evidence, not proof: it says the two classes are
@@ -302,18 +304,27 @@ comparison is against Go's `crypto/ecdsa`, measured on that machine with
 | ECDSA P-256 sign | 636 us | 73 us |
 | ECDSA P-256 verify | 2315 us | 124 us |
 
-Everything else, through the same harness (`--bench`):
+Everything else, through the same harness (`--bench`), the best of three runs:
 
 | Operation | Rate |
 |:--|--:|
-| SHA-256 | 74 MB/s |
-| ChaCha20-Poly1305 | 63 MB/s |
-| AES-128-GCM | 27 MB/s |
-| Ed25519 sign | 4.5 ms |
-| Ed25519 verify | 8.5 ms |
-| X25519 shared | 1.5 ms |
-| RSA-2048 private operation, blinded | 78 ms |
-| RSA-2048 private operation, CRT, blinded | 68 ms |
+| SHA-256 | 150 MB/s |
+| ChaCha20-Poly1305 | 136 MB/s |
+| AES-128-GCM | 53 MB/s |
+| Ed25519 sign | 2.0 ms |
+| Ed25519 verify | 3.5 ms |
+| X25519 shared | 0.70 ms |
+| RSA-2048 private operation, blinded, no CRT factors | 21.6 ms |
+
+`moon bench src/rsa` times what RSA is actually asked for, at both widths and on
+keys that carry their CRT factors:
+
+| Operation | Time |
+|:--|--:|
+| RSA-2048 sign | 7.5 ms |
+| RSA-2048 decrypt | 7.6 ms |
+| RSA-4096 sign | 47 ms |
+| RSA-4096 decrypt | 44 ms |
 
 These are one machine's numbers, from the build the MoonBit toolchain produces
 for the native target; an optimising C compiler is where most of the gap to a

@@ -48,6 +48,27 @@ assert_true(sk.public().verify(b"the quick brown fox"[:], sig[:]))
 assert_false(sk.public().verify(b"the quick brown fox!"[:], sig[:]))
 ```
 
+## Sign with RSA, and name the salt
+
+RSA is one key doing two jobs. `Pkcs1` is what certificates already carry; `Pss`
+is what a new design should use. `Pss(salt=Auto)` signs at the digest's own
+length — what TLS 1.3 and JOSE's PS256 require — and reads the length back out
+of the block when verifying, so a signature a peer made with its own salt still
+verifies. `Pss(salt=Exact(32))` holds both directions to the number given.
+
+```mbt
+let sk = @rsa.PrivateKey::generate(@system.source, scheme=@rsa.Pss(salt=@rsa.Auto))
+let sig = sk.sign(b"the quick brown fox"[:])
+assert_eq(sig.length(), 256)
+assert_true(sk.public().verify(b"the quick brown fox"[:], sig[:]))
+let strict = sk.public().with_scheme(digest=@rsa.Sha256, scheme=@rsa.Pss(salt=@rsa.Exact(16)))
+assert_false(strict.verify(b"the quick brown fox"[:], sig[:]))
+```
+
+Encryption is OAEP — `encrypt` takes the seed OAEP masks with, because the
+library holds no entropy source of its own — or RSAES-PKCS1-v1_5 through
+`encrypt_pkcs1` and `decrypt_pkcs1` for the older data that still uses it.
+
 ## Rules that catch people out
 
 - **Nonces are consumed.** Draw a fresh nonce from a CSPRNG for every message;
@@ -56,6 +77,10 @@ assert_false(sk.public().verify(b"the quick brown fox!"[:], sig[:]))
 - **A signature is compared, not parsed.** A verifier that looks at the bytes
   instead of comparing them is where forgeries get in; the verify methods
   compare, and a bent byte or a truncated tag is refused.
+- **A PSS salt length is a setting, not a guess.** `Auto` is the one to use
+  unless a protocol names a number; a verifier built with `Exact(n)` refuses a
+  signature whose salt is any other length, which is what RFC 8017 section 9.1.2
+  asks for. Zero is a salt of no bytes, not a wildcard.
 - **The padding and the hash travel together.** A signature under SHA-256 does
   not verify under SHA-1 with the same key, and the same key signs under
   whichever digest it is asked to.

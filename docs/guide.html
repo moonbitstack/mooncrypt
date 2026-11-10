@@ -342,6 +342,19 @@ true</div>
             against the trait verifies either without knowing which it has.
           </p>
 
+          <p>
+            RSA is the same trait over a key that does two jobs. The scheme names
+            the padding: <code>Pkcs1</code> for what certificates already carry,
+            <code>Pss(salt=Auto)</code> for a new design — it signs at the
+            digest's own length and reads the length back out when verifying, so
+            a peer's signature with its own salt still checks out. A salt of
+            <code>Exact(32)</code> holds both directions to the number given, and
+            zero is a salt of no bytes rather than a wildcard. Encryption comes in
+            two shapes as well: <code>encrypt</code> and <code>decrypt</code> are
+            OAEP, and <code>encrypt_pkcs1</code> and <code>decrypt_pkcs1</code>
+            are the older block TLS's RSA key exchange still uses.
+          </p>
+
           <h2 id="kex">Agreeing on a secret</h2>
           <p>
             Two private scalars, two public points, one shared secret. The
