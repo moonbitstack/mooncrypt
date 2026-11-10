@@ -13343,7 +13343,7 @@ test "Wycheproof: every RSA signature vector, the valid verified and the invalid
       "Sha384" => @rsa.Sha384
       _ => @rsa.Sha512
     }
-    let s = if scheme == "pss" { @rsa.Pss(salt~) } else { @rsa.Pkcs1 }
+    let s = if scheme == "pss" { @rsa.Pss(salt=@rsa.Exact(salt)) } else { @rsa.Pkcs1 }
     let pk = @rsa.PublicKey::new(
       rsa_hex(n)[:],
       rsa_hex(e)[:],

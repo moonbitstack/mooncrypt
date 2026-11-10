@@ -324,7 +324,7 @@ test "RSA PSS verifies a third-party signer" {
       raw(n)[:],
       raw(e)[:],
       digest~,
-      scheme=Pss(salt=0),
+      scheme=Pss(salt=Auto),
     )
     assert_true(pk.verify(raw(msg)[:], raw(want)[:]))
   }
@@ -338,7 +338,7 @@ test "RSA PSS round-trips at every salt length" {
       raw(n2048)[:],
       raw(e)[:],
       raw(d2048)[:],
-      scheme=Pss(salt~),
+      scheme=Pss(salt=Exact(salt)),
     )
     let pk = sk.public()
     let sig = sk.sign(b"attack at dawn"[:])
@@ -375,13 +375,48 @@ test "a bad RSA signature is refused" {
 ///|
 test "with_scheme: a PKCS#1 key re-read for PSS signs what a PSS verifier accepts" {
   let sk = @rsa.PrivateKey::new(raw(n2048)[:], raw(e)[:], raw(d2048)[:])
-  let pss = sk.with_scheme(digest=Sha384, scheme=Pss(salt=48))
+  let pss = sk.with_scheme(digest=Sha384, scheme=Pss(salt=Exact(48)))
   let sig = pss.sign(b"message"[:])
   let pk = sk.public()
   assert_true(
     pk
-    .with_scheme(digest=Sha384, scheme=Pss(salt=48))
+    .with_scheme(digest=Sha384, scheme=Pss(salt=Exact(48)))
     .verify(b"message"[:], sig[:]),
   )
   assert_false(pk.verify(b"message"[:], sig[:]))
 }
+///|
+/// The salt length is a setting with two shapes now: the digest's own, for
+/// signing, with a verifier that reads the length back out of the block; and an
+/// exact number, which holds both directions.
+test "PSS: an auto salt signs at the digest length, and an exact salt is exact" {
+  let sk = @rsa.PrivateKey::new(raw(n2048)[:], raw(e)[:], raw(d2048)[:])
+  let auto = sk.with_scheme(digest=Sha256, scheme=Pss(salt=Auto))
+  let exact = sk.with_scheme(digest=Sha256, scheme=Pss(salt=Exact(32)))
+  // Auto signs at the digest's own length, which is what `Exact(32)` names for
+  // SHA-256 — so the two signatures are the same bytes.
+  assert_eq(auto.sign(b"message"[:]), exact.sign(b"message"[:]))
+  // A different exact length is a different block, and the strict verifier
+  // refuses it.
+  let short = sk.with_scheme(digest=Sha256, scheme=Pss(salt=Exact(16)))
+  let sig = short.sign(b"message"[:])
+  assert_not_eq(sig, auto.sign(b"message"[:]))
+  assert_true(sk.public().with_scheme(digest=Sha256, scheme=Pss(salt=Auto)).verify(b"message"[:], sig[:]))
+  assert_false(sk.public().with_scheme(digest=Sha256, scheme=Pss(salt=Exact(32))).verify(b"message"[:], sig[:]))
+  assert_true(sk.public().with_scheme(digest=Sha256, scheme=Pss(salt=Exact(16))).verify(b"message"[:], sig[:]))
+}
+
+///|
+/// A zero salt is a salt of nothing, not a wildcard: the signature is
+/// deterministic, and a verifier naming a length refuses it.
+test "PSS: an exact zero salt is deterministic and is refused by another length" {
+  let sk = @rsa.PrivateKey::new(raw(n2048)[:], raw(e)[:], raw(d2048)[:])
+  let none = sk.with_scheme(digest=Sha256, scheme=Pss(salt=Exact(0)))
+  let a = none.sign(b"message"[:])
+  assert_eq(none.sign(b"message"[:]), a)
+  assert_true(none.public().verify(b"message"[:], a[:]))
+  assert_false(sk.public().with_scheme(digest=Sha256, scheme=Pss(salt=Exact(32))).verify(b"message"[:], a[:]))
+  // `Auto` on the verifying side reads the block, so it takes a zero-salt one.
+  assert_true(sk.public().with_scheme(digest=Sha256, scheme=Pss(salt=Auto)).verify(b"message"[:], a[:]))
+}
+

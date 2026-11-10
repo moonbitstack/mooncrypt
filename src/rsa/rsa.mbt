@@ -24,6 +24,28 @@ pub extend Digest with Eq::{equal, not_equal}
 pub extend Digest with Debug::{to_repr}
 
 ///|
+/// How long a PSS salt is.
+///
+/// RFC 8017 §9.1 lets the signer choose and recommends the digest's own length,
+/// which is what TLS 1.3 and JOSE's PS256 require; [`Auto`] is that. On
+/// verification it reads the length back out of the block instead, because a
+/// peer that signed chose its own, and refusing anything but one length would
+/// refuse most of the signatures in the world. [`Exact`] holds both directions
+/// to the number given — zero included, which is a salt of no bytes and a
+/// deterministic signature, not a wildcard.
+#derive(Eq, Debug)
+pub(all) enum Salt {
+  Auto
+  Exact(Int32)
+}
+
+///|
+pub extend Salt with Eq::{equal, not_equal}
+
+///|
+pub extend Salt with Debug::{to_repr}
+
+///|
 /// Which padding a signature uses.
 ///
 /// `Pkcs1` is the deterministic block of RFC 8017 §9.2, which JOSE calls RS256
@@ -33,9 +55,7 @@ pub extend Digest with Debug::{to_repr}
 #derive(Eq, Debug)
 pub(all) enum Scheme {
   Pkcs1
-  /// The salt length in bytes. RFC 8017 recommends the digest's own length;
-  /// zero is permitted and makes the signature deterministic.
-  Pss(salt~ : Int32)
+  Pss(salt~ : Salt)
 }
 
 ///|
@@ -204,7 +224,14 @@ pub impl @spec.Signer for PrivateKey with fn sign(
 ) -> Bytes {
   let em = match self.scheme {
     Pkcs1 => pkcs1_encode(self.digest, msg, self.size)
-    Pss(salt~) => pss_encode(self.digest, msg, self.size, salt, self.d)
+    Pss(salt~) => {
+      // `Auto` signs at the digest's own length, the RFC's recommendation.
+      let len = match salt {
+        Auto => hasher(self.digest).size()
+        Exact(n) => n
+      }
+      pss_encode(self.digest, msg, self.size, len, self.d)
+    }
   }
   blind_op(self, BigInt::from_octets(em[:])).to_octets(length=self.size)
 }
@@ -446,11 +473,12 @@ fn pss_encode(
 /// EMSA-PSS-VERIFY (RFC 8017 §9.1.2).
 ///
 /// The salt is read back out of the block rather than assumed, so a signature
-/// made with any salt length at or above the one the key names verifies — which
-/// is what interoperating with other implementations requires. A signature whose
-/// salt is shorter than the key's is refused, the way RFC 8017 §9.1.2 step 11
-/// requires: it is a valid PSS block under a weaker setting, not under this key.
-fn pss_check(d : Digest, msg : BytesView, em : Bytes, salt_len : Int32) -> Bool {
+/// made with any salt length verifies under [`Salt::Auto`] — which is what
+/// interoperating with a peer who chose his own requires. A key that names an
+/// exact length holds the block to it, the way RFC 8017 §9.1.2 step 11 requires:
+/// a block made with a different salt is a valid PSS block under another
+/// setting, not under this key.
+fn pss_check(d : Digest, msg : BytesView, em : Bytes, salt : Salt) -> Bool {
   let hlen = hasher(d).size()
   let size = em.length()
   if size < hlen + 2 || em[size - 1] != b'\xBC' {
@@ -474,16 +502,12 @@ fn pss_check(d : Digest, msg : BytesView, em : Bytes, salt_len : Int32) -> Bool 
   if at >= db_len || db[at] != b'\x01' {
     return false
   }
-  // The salt runs to the end of the database. A key that names a salt length
-  // holds the block to exactly that length, the way RFC 8017 §9.1.2 step 11
-  // requires: a block made with a longer or shorter salt is a valid one under a
-  // different setting, not this key. A key that names none (salt 0) reads the
-  // length back out of the block and accepts any, which is what verifying a
-  // signature from a peer who chose his own salt requires — a deliberate
-  // deviation from the RFC's exact match, and the reason Wycheproof's zero-length
-  // "salt length changed" cases verify here and are noted in the README.
-  if salt_len > 0 && db_len - at - 1 != salt_len {
-    return false
+  match salt {
+    Auto => ()
+    Exact(len) =>
+      if db_len - at - 1 != len {
+        return false
+      }
   }
   let salt = db[at + 1:]
   let m_hash = @spec.digest(hasher(d), msg)
@@ -572,8 +596,7 @@ pub fn PublicKey::encrypt(
   for b in masked_db {
     em.push(b)
   }
-  BigInt::from_octets(Bytes::from_array(em)[:])
-  .pow(self.e, modulus=self.n)
+  pow_public_mod(BigInt::from_octets(Bytes::from_array(em)[:]), self.e, self.n)
   .to_octets(length=k)
 }
 
@@ -633,8 +656,7 @@ pub fn PrivateKey::decrypt(
 
 ///|
 /// The digest of one message, for the label hash both directions need.
-fn digest_of(d : Digest, msg : BytesView) -> Bytes {
-  let h = hasher(d)
+fn digest_of(d : Digest, msg : BytesView) -> Bytes {  let h = hasher(d)
   h.write(msg)
   h.finish()
 }
@@ -661,7 +683,7 @@ pub fn PublicKey::rsaep(
   }
   let m = BigInt::from_octets(message)
   guard m < self.n else { raise @spec.Tag }
-  m.pow(self.e, modulus=self.n).to_octets(length=self.size)
+  pow_public_mod(m, self.e, self.n).to_octets(length=self.size)
 }
 
 ///|
