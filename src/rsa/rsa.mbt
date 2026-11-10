@@ -596,7 +596,8 @@ pub fn PublicKey::encrypt(
   for b in masked_db {
     em.push(b)
   }
-  pow_public_mod(BigInt::from_octets(Bytes::from_array(em)[:]), self.e, self.n)
+  BigInt::from_octets(Bytes::from_array(em)[:])
+  .pow(self.e, modulus=self.n)
   .to_octets(length=k)
 }
 
@@ -655,6 +656,90 @@ pub fn PrivateKey::decrypt(
 }
 
 ///|
+/// Encrypt under RSAES-PKCS1-v1_5 (RFC 8017 §7.2.1), returning a block exactly as
+/// wide as the modulus.
+///
+/// Legacy, and dangerous where a peer can see the answer: the padding carries no
+/// integrity, so a responder that tells a bad block from a bad padding hands over
+/// a Bleichenbacher oracle, and the scheme has no place in a new design. It is
+/// here because TLS's RSA key exchange, older CMS messages and a great deal of
+/// deployed data are built on it.
+///
+/// `pad` is the `PS` octets, and it has to be `k - 3 - plain.length()` of them,
+/// none zero: draw it fresh from a CSPRNG for every message, as RFC 8017 §7.2.1
+/// step 3 asks, and draw again if it comes back with a zero in it. A fixed `pad`
+/// makes the ciphertext deterministic, which is the one thing this scheme must
+/// not be.
+pub fn PublicKey::encrypt_pkcs1(
+  self : PublicKey,
+  plain : BytesView,
+  pad~ : BytesView,
+) -> Bytes raise @spec.Broken {
+  let k = self.size
+  // Two octets of header, a zero separator, and eight octets of padding at the
+  // least — the width below which the encoding is not defined.
+  guard k >= plain.length() + 11 else {
+    raise @spec.Size(want=k - 11, got=plain.length())
+  }
+  let room = k - plain.length() - 3
+  guard pad.length() == room else {
+    raise @spec.Size(want=room, got=pad.length())
+  }
+  let em : Array[Byte] = [0, 2]
+  for b in pad {
+    guard b != (0 : Byte) else { raise @spec.Weak }
+    em.push(b)
+  }
+  em.push(0)
+  for b in plain {
+    em.push(b)
+  }
+  BigInt::from_octets(Bytes::from_array(em)[:])
+  .pow(self.e, modulus=self.n)
+  .to_octets(length=k)
+}
+
+///|
+/// Decrypt an RSAES-PKCS1-v1_5 block (RFC 8017 §7.2.2).
+///
+/// Every way the block can be wrong reports the same [`@spec.Tag`], and every
+/// check runs before any of them is acted on — distinguishing "no separator"
+/// from "padding too short" is what Bleichenbacher's 1998 attack reads off, and
+/// what a great many implementations have been broken by since. A caller that
+/// puts this behind a network interface has to go further and make the failure
+/// indistinguishable from a valid one — a fresh random of the right length, the
+/// same work either way — because the timing of the answer is as good an oracle
+/// as the error is.
+pub fn PrivateKey::decrypt_pkcs1(
+  self : PrivateKey,
+  cipher : BytesView,
+) -> Bytes raise @spec.Broken {
+  let k = self.size
+  guard cipher.length() == k && k >= 11 else {
+    raise @spec.Size(want=k, got=cipher.length())
+  }
+  let c = BigInt::from_octets(cipher)
+  guard c < self.n else { raise @spec.Tag }
+  let em = blind_op(self, c).to_octets(length=k)
+  // EM = 00 || 02 || PS || 00 || M, with PS at least eight octets and no zero in
+  // it. The separator is the first zero after the header; the eight is what the
+  // standard requires of the padding, and a block that has less is a forgery
+  // dressed as a short message.
+  let mut bad = em[0] != (0 : Byte) || em[1] != (2 : Byte)
+  let mut at = -1
+  for i in 2..<k {
+    if em[i] == (0 : Byte) && at < 0 {
+      at = i
+    }
+  }
+  if at < 0 || at < 10 {
+    bad = true
+  }
+  guard !bad else { raise @spec.Tag }
+  Bytes::from_array(em[at + 1:].to_array())
+}
+
+///|
 /// The digest of one message, for the label hash both directions need.
 fn digest_of(d : Digest, msg : BytesView) -> Bytes {  let h = hasher(d)
   h.write(msg)
@@ -683,7 +768,7 @@ pub fn PublicKey::rsaep(
   }
   let m = BigInt::from_octets(message)
   guard m < self.n else { raise @spec.Tag }
-  pow_public_mod(m, self.e, self.n).to_octets(length=self.size)
+  m.pow(self.e, modulus=self.n).to_octets(length=self.size)
 }
 
 ///|

@@ -385,6 +385,7 @@ test "with_scheme: a PKCS#1 key re-read for PSS signs what a PSS verifier accept
   )
   assert_false(pk.verify(b"message"[:], sig[:]))
 }
+
 ///|
 /// The salt length is a setting with two shapes now: the digest's own, for
 /// signing, with a verifier that reads the length back out of the block; and an
@@ -420,3 +421,68 @@ test "PSS: an exact zero salt is deterministic and is refused by another length"
   assert_true(sk.public().with_scheme(digest=Sha256, scheme=Pss(salt=Auto)).verify(b"message"[:], a[:]))
 }
 
+///|
+/// RSAES-PKCS1-v1_5 (RFC 8017 §7.2): the block carries a random string, comes
+/// back as the message, and anything bent is refused.
+test "PKCS#1 v1.5 encryption round-trips, and a bent block is refused" {
+  let sk = @rsa.PrivateKey::new(raw(n2048)[:], raw(e)[:], raw(d2048)[:])
+  let pk = sk.public()
+  let room = 256 - 3 - 5
+  let ct = pk.encrypt_pkcs1(b"hello"[:], pad=Bytes::make(room, b'\x2a')[:])
+  assert_eq(ct.length(), 256)
+  assert_eq(sk.decrypt_pkcs1(ct[:]), b"hello")
+  // A different padding string is a different block for the same message, which
+  // is what keeps the scheme from being a codebook.
+  let other = pk.encrypt_pkcs1(b"hello"[:], pad=Bytes::make(room, b'\x2b')[:])
+  assert_not_eq(ct, other)
+  assert_eq(sk.decrypt_pkcs1(other[:]), b"hello")
+  for i in [0, 1, 2, 128, 255] {
+    let bent = ct.to_array()
+    bent[i] = (bent[i].to_int() ^ 1).to_byte()
+    let out = try {
+      Ok(sk.decrypt_pkcs1(Bytes::from_array(bent)[:]))
+    } catch {
+      err => Err(err)
+    }
+    assert_true(match out {
+      Ok(_) => false
+      Err(_) => true
+    })
+  }
+}
+
+///|
+/// The encoding refuses what RFC 8017 §7.2 says it must: a padding string with a
+/// zero in it, one of the wrong length, and a message that leaves no room for
+/// eight octets of padding.
+test "PKCS#1 v1.5 encryption refuses a padding it cannot use" {
+  let pk = @rsa.PrivateKey::new(raw(n2048)[:], raw(e)[:], raw(d2048)[:]).public()
+  let zero = try {
+    Ok(pk.encrypt_pkcs1(b"hello"[:], pad=Bytes::make(248, b'\x00')[:]))
+  } catch {
+    err => Err(err)
+  }
+  assert_true(match zero {
+    Ok(_) => false
+    Err(@spec.Weak) => true
+    Err(_) => false
+  })
+  let short = try {
+    Ok(pk.encrypt_pkcs1(b"hello"[:], pad=Bytes::make(10, b'\x2a')[:]))
+  } catch {
+    err => Err(err)
+  }
+  assert_true(match short {
+    Ok(_) => false
+    Err(_) => true
+  })
+  let long = try {
+    Ok(pk.encrypt_pkcs1(Bytes::make(246, b'\x2a')[:], pad=Bytes::make(8, b'\x2a')[:]))
+  } catch {
+    err => Err(err)
+  }
+  assert_true(match long {
+    Ok(_) => false
+    Err(_) => true
+  })
+}
