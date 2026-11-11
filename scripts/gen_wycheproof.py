@@ -1,8 +1,12 @@
-"""Write the Wycheproof AEAD vectors as MoonBit test tables.
+"""Write the Wycheproof vectors as MoonBit test tables.
 
-    python scripts/gen_wycheproof.py <dir holding aes_gcm_test.json and chacha20_poly1305_test.json>
+    python scripts/gen_wycheproof.py <dir holding the JSON files>
+    python scripts/gen_wycheproof.py <dir> --rsa
+    python scripts/gen_wycheproof.py <dir> --brainpool
 
 The JSON files are C2SP/wycheproof's testvectors_v1; rerun after they change.
+Rows are written one per line, so run `moon fmt` afterwards — the formatter
+wraps the long ones, and the committed tables are the formatted ones.
 """
 
 import json
