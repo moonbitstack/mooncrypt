@@ -7,7 +7,13 @@
 /// PKCS#1 v1.5 embeds an ASN.1 algorithm identifier in the block it signs, so
 /// the scheme cannot be written over an arbitrary hash the way HMAC can: only a
 /// digest with a registered identifier is signable. That constraint is this
-/// enum.
+/// enum, and it is why the set is closed rather than a [`@spec.Hash`].
+///
+/// The set is every digest an RSA encoding has a registered identifier for, in
+/// both families the library carries: SHA-2 including its two truncated forms,
+/// and SHA-3. The truncated forms are digests in their own right with their own
+/// initial vectors, not a SHA-512 cut short, and they carry their own
+/// identifiers.
 #derive(Eq, Debug)
 pub(all) enum Digest {
   Sha1
@@ -15,6 +21,12 @@ pub(all) enum Digest {
   Sha256
   Sha384
   Sha512
+  Sha512_224
+  Sha512_256
+  Sha3_224
+  Sha3_256
+  Sha3_384
+  Sha3_512
 }
 
 ///|
@@ -52,10 +64,17 @@ pub extend Salt with Debug::{to_repr}
 /// and almost every certificate in existence carries. `Pss` is the probabilistic
 /// scheme of §9.1, which JOSE calls PS256 and which new designs should prefer —
 /// its security rests on a proof rather than on the absence of a known attack.
+///
+/// `PssMgf` is the same scheme with MGF1 masking under a hash of its own, which
+/// §9.1 defines as a parameter separate from the message's: every profile in use
+/// sets the two alike, which is what [`Pss`] is, but blocks exist that carry
+/// SHA-1 under a SHA-256 message, and verifying one must not mean weakening the
+/// message hash to match.
 #derive(Eq, Debug)
 pub(all) enum Scheme {
   Pkcs1
   Pss(salt~ : Salt)
+  PssMgf(salt~ : Salt, mgf~ : Digest)
 }
 
 ///|
@@ -152,7 +171,53 @@ pub fn PrivateKey::new_crt(
   let p = BigInt::from_octets(prime_p)
   let q = BigInt::from_octets(prime_q)
   guard p * q == n else { raise @spec.Weak }
-  { n, e, d, size: octets(n), digest, scheme, crt: Some(Crt::new(p, q, d, e)), }
+  {
+    n,
+    e,
+    d,
+    size: octets(n),
+    digest,
+    scheme,
+    crt: Some(Crt::new([p, q], d, e)),
+  }
+}
+
+///|
+/// Read a signing key whose modulus is the product of three primes, as PKCS#1's
+/// multi-prime form allows. The three are checked against the modulus and
+/// against `d` before the key is returned, the same way the two-prime form is.
+///
+/// A key like this signs and decrypts through three fixed-width
+/// exponentiations, one per prime, each a third of the modulus's width — the
+/// reason multi-prime keys exist at all. Everything else about it is ordinary:
+/// the public operation never learns how many factors there are.
+pub fn PrivateKey::new_crt3(
+  modulus : BytesView,
+  exponent : BytesView,
+  private_exponent : BytesView,
+  prime_p : BytesView,
+  prime_q : BytesView,
+  prime_r : BytesView,
+  digest~ : Digest = Sha256,
+  scheme~ : Scheme = Pkcs1,
+) -> PrivateKey raise @spec.Broken {
+  let n = BigInt::from_octets(modulus)
+  guard n > (0 : BigInt) else { raise @spec.Size(want=1, got=0) }
+  let e = BigInt::from_octets(exponent)
+  let d = BigInt::from_octets(private_exponent)
+  let p = BigInt::from_octets(prime_p)
+  let q = BigInt::from_octets(prime_q)
+  let r = BigInt::from_octets(prime_r)
+  guard p * q * r == n else { raise @spec.Weak }
+  {
+    n,
+    e,
+    d,
+    size: octets(n),
+    digest,
+    scheme,
+    crt: Some(Crt::new([p, q, r], d, e)),
+  }
 }
 
 ///|
@@ -224,13 +289,20 @@ pub impl @spec.Signer for PrivateKey with fn sign(
 ) -> Bytes {
   let em = match self.scheme {
     Pkcs1 => pkcs1_encode(self.digest, msg, self.size)
-    Pss(salt~) => {
+    Pss(salt~) | PssMgf(salt~, mgf=_) => {
       // `Auto` signs at the digest's own length, the RFC's recommendation.
       let len = match salt {
         Auto => hasher(self.digest).size()
         Exact(n) => n
       }
-      pss_encode(self.digest, msg, self.size, len, self.d)
+      pss_encode(
+        self.digest,
+        mask_of(self.scheme, self.digest),
+        msg,
+        self.size,
+        len,
+        self.d,
+      )
     }
   }
   blind_op(self, BigInt::from_octets(em[:])).to_octets(length=self.size)
@@ -333,7 +405,8 @@ pub impl @spec.Verifier for PublicKey with fn verify(
   let em = pow_public_mod(s, self.e, self.n).to_octets(length=self.size)
   match self.scheme {
     Pkcs1 => @spec.eq(em[:], pkcs1_encode(self.digest, msg, self.size)[:])
-    Pss(salt~) => pss_check(self.digest, msg, em, salt)
+    Pss(salt~) | PssMgf(salt~, mgf=_) =>
+      pss_check(self.digest, mask_of(self.scheme, self.digest), msg, em, salt)
   }
 }
 
@@ -359,12 +432,34 @@ fn hasher(d : Digest) -> &@spec.Hash {
     Sha256 => return @sha2.Hasher::new()
     Sha384 => return @sha2.Hasher::new(kind=Sha384)
     Sha512 => return @sha2.Hasher::new(kind=Sha512)
+    Sha512_224 => return @sha2.Hasher::new(kind=Sha512_224)
+    Sha512_256 => return @sha2.Hasher::new(kind=Sha512_256)
+    Sha3_224 => return @sha3.Hasher::new(kind=Sha3_224)
+    Sha3_256 => return @sha3.Hasher::new(kind=Sha3_256)
+    Sha3_384 => return @sha3.Hasher::new(kind=Sha3_384)
+    Sha3_512 => return @sha3.Hasher::new(kind=Sha3_512)
+  }
+}
+
+///|
+/// The hash MGF1 runs under `scheme`: the message digest for [`Pss`], the one it
+/// names for [`PssMgf`].
+fn mask_of(scheme : Scheme, digest : Digest) -> Digest {
+  match scheme {
+    PssMgf(mgf~, salt=_) => mgf
+    _ => digest
   }
 }
 
 ///|
 /// The DER `DigestInfo` header for each digest (RFC 8017 §9.2, note 1): an
 /// `AlgorithmIdentifier` with a NULL parameter, then the `OCTET STRING` header.
+///
+/// The identifiers below SHA-1, SHA-2's and SHA-3's are all in NIST's arc
+/// (`2.16.840.1.101.3.4.2`), which is why only the last arc differs between the
+/// two families. They carry an explicit NULL parameter, which is what OpenSSL
+/// writes and what the signatures in the vectors carry; RFC 8702 for PKCS#1 v1.5
+/// with SHA-3 asks for the same.
 fn prefix(d : Digest) -> Bytes {
   match d {
     Sha1 => b"\x30\x21\x30\x09\x06\x05\x2b\x0e\x03\x02\x1a\x05\x00\x04\x14"
@@ -376,6 +471,18 @@ fn prefix(d : Digest) -> Bytes {
       b"\x30\x41\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x02\x05\x00\x04\x30"
     Sha512 =>
       b"\x30\x51\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x03\x05\x00\x04\x40"
+    Sha512_224 =>
+      b"\x30\x2d\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x05\x05\x00\x04\x1c"
+    Sha512_256 =>
+      b"\x30\x31\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x06\x05\x00\x04\x20"
+    Sha3_224 =>
+      b"\x30\x2d\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x07\x05\x00\x04\x1c"
+    Sha3_256 =>
+      b"\x30\x31\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x08\x05\x00\x04\x20"
+    Sha3_384 =>
+      b"\x30\x41\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x09\x05\x00\x04\x30"
+    Sha3_512 =>
+      b"\x30\x51\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x0a\x05\x00\x04\x40"
   }
 }
 
@@ -434,8 +541,13 @@ fn mgf1(d : Digest, seed : BytesView, len : Int32) -> Bytes {
 /// drawn at random. Any salt gives a valid signature — a length of zero is
 /// explicitly permitted — so deriving it keeps signing reproducible and removes
 /// the entropy source, exactly as RFC 6979 does for ECDSA.
+///
+/// `mgf` is the hash MGF1 runs, which §9.1.1 step 6 lets differ from the one
+/// `d` takes the message with; the salt's derivation follows `d`, because it is
+/// this implementation's own and only the block's shape is standardised.
 fn pss_encode(
   d : Digest,
+  mgf : Digest,
   msg : BytesView,
   size : Int32,
   salt_len : Int32,
@@ -451,7 +563,7 @@ fn pss_encode(
     b""
   } else {
     let seed = @hmac.mac(secret.to_octets()[:], m_hash[:], fn() { hasher(d) })
-    mgf1(d, seed[:], salt_len)
+    mgf1(mgf, seed[:], salt_len)
   }
   // M' = eight zero octets ∥ mHash ∥ salt
   let primed : Array[Byte] = []
@@ -474,7 +586,7 @@ fn pss_encode(
   for b in salt {
     db.push(b)
   }
-  let mask = mgf1(d, digest[:], db_len)
+  let mask = mgf1(mgf, digest[:], db_len)
   let em : Array[Byte] = []
   for i in 0..<db_len {
     em.push((db[i].to_int() ^ mask[i].to_int()).to_byte())
@@ -497,7 +609,13 @@ fn pss_encode(
 /// exact length holds the block to it, the way RFC 8017 §9.1.2 step 11 requires:
 /// a block made with a different salt is a valid PSS block under another
 /// setting, not under this key.
-fn pss_check(d : Digest, msg : BytesView, em : Bytes, salt : Salt) -> Bool {
+fn pss_check(
+  d : Digest,
+  mgf : Digest,
+  msg : BytesView,
+  em : Bytes,
+  salt : Salt,
+) -> Bool {
   let hlen = hasher(d).size()
   let size = em.length()
   if size < hlen + 2 || em[size - 1] != b'\xBC' {
@@ -508,7 +626,7 @@ fn pss_check(d : Digest, msg : BytesView, em : Bytes, salt : Salt) -> Bool {
   }
   let db_len = size - hlen - 1
   let digest = em[db_len:size - 1]
-  let mask = mgf1(d, digest, db_len)
+  let mask = mgf1(mgf, digest, db_len)
   let db : Array[Byte] = []
   for i in 0..<db_len {
     db.push((em[i].to_int() ^ mask[i].to_int()).to_byte())
@@ -612,8 +730,9 @@ pub fn PublicKey::encrypt(
   for b in masked_db {
     em.push(b)
   }
-  pow_public_mod(BigInt::from_octets(Bytes::from_array(em)[:]), self.e, self.n)
-  .to_octets(length=k)
+  pow_public_mod(BigInt::from_octets(Bytes::from_array(em)[:]), self.e, self.n).to_octets(
+    length=k,
+  )
 }
 
 ///|
@@ -709,8 +828,9 @@ pub fn PublicKey::encrypt_pkcs1(
   for b in plain {
     em.push(b)
   }
-  pow_public_mod(BigInt::from_octets(Bytes::from_array(em)[:]), self.e, self.n)
-  .to_octets(length=k)
+  pow_public_mod(BigInt::from_octets(Bytes::from_array(em)[:]), self.e, self.n).to_octets(
+    length=k,
+  )
 }
 
 ///|

@@ -81,6 +81,17 @@ pub(all) struct RsaPrivate {
 }
 
 ///|
+/// One prime beyond the first two of a multi-prime key, as PKCS#1's
+/// `OtherPrimeInfo` holds it: the prime, its own private exponent and the
+/// coefficient that carries the chain of products along.
+#derive(Eq)
+pub(all) struct OtherPrime {
+  prime : BigInt
+  exponent : BigInt
+  coefficient : BigInt
+}
+
+///|
 /// The PKCS#1 `RSAPublicKey` of RFC 8017 §A.1.1.
 pub fn rsa_public_der(modulus : BytesView, exponent : BytesView) -> Bytes {
   @asn1.sequence([
@@ -102,9 +113,8 @@ pub fn parse_rsa_public(der : BytesView) -> RsaPublic raise @asn1.Refused {
 ///|
 /// The PKCS#1 `RSAPrivateKey` of RFC 8017 §A.1.2, version 0.
 ///
-/// The two-prime form is the only one written: `version` 1 exists for keys with
-/// more than two primes, which no library here generates and no format in
-/// practice carries.
+/// The two-prime form is the only one written here: `version` 1 exists for keys
+/// with more than two primes, which [`rsa_private_multi_der`] writes.
 pub fn rsa_private_der(key : RsaPrivate) -> Bytes {
   @asn1.sequence([
     @asn1.integer(b"\x00"),
@@ -121,15 +131,73 @@ pub fn rsa_private_der(key : RsaPrivate) -> Bytes {
 
 ///|
 /// Read a PKCS#1 `RSAPrivateKey`.
+///
+/// A version-1 key — one whose modulus has more than two prime factors — is
+/// refused here rather than silently read as its first two factors, which would
+/// be a key that signs to the wrong modulus. [`parse_rsa_private_multi`] reads
+/// those.
 pub fn parse_rsa_private(der : BytesView) -> RsaPrivate raise @asn1.Refused {
-  let fields = members(@asn1.only(der))
-  guard fields.length() == 9 else {
-    raise @asn1.Malformed("RSAPrivateKey is not nine integers")
-  }
-  guard fields[0].int() == (0 : BigInt) else {
+  let (key, others) = parse_rsa_private_multi(der)
+  guard others.length() == 0 else {
     raise @asn1.Unsupported("RSAPrivateKey with otherPrimeInfos")
   }
-  {
+  key
+}
+
+///|
+/// The PKCS#1 `RSAPrivateKey` of RFC 8017 §A.1.2 in its multi-prime form,
+/// version 1: the nine fields of the two-prime object, then `otherPrimeInfos`
+/// holding one `(prime, exponent, coefficient)` triple per further factor.
+///
+/// `version` is written as the format requires — 0 when there is nothing beyond
+/// the first two primes, 1 when there is — so a key read by
+/// [`parse_rsa_private_multi`] and written back is byte-identical.
+pub fn rsa_private_multi_der(
+  key : RsaPrivate,
+  others : Array[OtherPrime],
+) -> Bytes {
+  let version = if others.length() == 0 { b"\x00" } else { b"\x01" }
+  let fields : Array[Bytes] = [
+    @asn1.integer(version),
+    @asn1.integer(key.modulus.to_octets()),
+    @asn1.integer(key.public_exponent.to_octets()),
+    @asn1.integer(key.private_exponent.to_octets()),
+    @asn1.integer(key.prime1.to_octets()),
+    @asn1.integer(key.prime2.to_octets()),
+    @asn1.integer(key.exponent1.to_octets()),
+    @asn1.integer(key.exponent2.to_octets()),
+    @asn1.integer(key.coefficient.to_octets()),
+  ]
+  if others.length() > 0 {
+    let infos : Array[Bytes] = []
+    for p in others {
+      infos.push(
+        @asn1.sequence([
+          @asn1.integer(p.prime.to_octets()),
+          @asn1.integer(p.exponent.to_octets()),
+          @asn1.integer(p.coefficient.to_octets()),
+        ]),
+      )
+    }
+    fields.push(@asn1.sequence(infos))
+  }
+  @asn1.sequence(fields)
+}
+
+///|
+/// Read a PKCS#1 `RSAPrivateKey` of either version: the two-prime object and the
+/// primes a version-1 key carries beyond it, in the order the format lists them.
+pub fn parse_rsa_private_multi(
+  der : BytesView,
+) -> (RsaPrivate, Array[OtherPrime]) raise @asn1.Refused {
+  let fields = members(@asn1.only(der))
+  guard fields.length() == 9 || fields.length() == 10 else {
+    raise @asn1.Malformed(
+      "RSAPrivateKey is not nine integers and an optional tenth",
+    )
+  }
+  let version = fields[0].int()
+  let key = {
     modulus: fields[1].int(),
     public_exponent: fields[2].int(),
     private_exponent: fields[3].int(),
@@ -139,6 +207,28 @@ pub fn parse_rsa_private(der : BytesView) -> RsaPrivate raise @asn1.Refused {
     exponent2: fields[7].int(),
     coefficient: fields[8].int(),
   }
+  if fields.length() == 9 {
+    guard version == (0 : BigInt) else {
+      raise @asn1.Malformed("a version-1 RSAPrivateKey with no otherPrimeInfos")
+    }
+    return (key, [])
+  }
+  guard version == (1 : BigInt) else {
+    raise @asn1.Malformed("a version-0 RSAPrivateKey with otherPrimeInfos")
+  }
+  let others : Array[OtherPrime] = []
+  for info in members(fields[9]) {
+    let parts = members(info)
+    guard parts.length() == 3 else {
+      raise @asn1.Malformed("OtherPrimeInfo is not three integers")
+    }
+    others.push({
+      prime: parts[0].int(),
+      exponent: parts[1].int(),
+      coefficient: parts[2].int(),
+    })
+  }
+  (key, others)
 }
 
 ///|
@@ -272,3 +362,6 @@ pub extend RsaPublic with Eq::{equal, not_equal}
 
 ///|
 pub extend RsaPrivate with Eq::{equal, not_equal}
+
+///|
+pub extend OtherPrime with Eq::{equal, not_equal}

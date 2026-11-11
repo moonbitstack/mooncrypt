@@ -22,6 +22,8 @@ pub fn parse_pkcs8(BytesView) -> Bytes raise @asn1.Refused
 
 pub fn parse_rsa_private(BytesView) -> RsaPrivate raise @asn1.Refused
 
+pub fn parse_rsa_private_multi(BytesView) -> (RsaPrivate, Array[OtherPrime]) raise @asn1.Refused
+
 pub fn parse_rsa_public(BytesView) -> RsaPublic raise @asn1.Refused
 
 pub fn parse_sec1(BytesView) -> EcPrivate raise @asn1.Refused
@@ -33,6 +35,8 @@ pub fn parse_spki_ec(BytesView) -> (@curve.Curve, Bytes) raise @asn1.Refused
 pub fn pkcs8_der(BytesView) -> Bytes
 
 pub fn rsa_private_der(RsaPrivate) -> Bytes
+
+pub fn rsa_private_multi_der(RsaPrivate, Array[OtherPrime]) -> Bytes
 
 pub fn rsa_public_der(BytesView, BytesView) -> Bytes
 
@@ -50,6 +54,15 @@ pub(all) struct EcPrivate {
   scalar : @bigint.BigInt
   public : Bytes?
 }
+
+#derive(Eq)
+pub(all) struct OtherPrime {
+  prime : @bigint.BigInt
+  exponent : @bigint.BigInt
+  coefficient : @bigint.BigInt
+}
+pub fn OtherPrime::equal(Self, Self) -> Bool
+pub fn OtherPrime::not_equal(Self, Self) -> Bool
 
 #derive(Eq)
 pub(all) struct RsaPrivate {

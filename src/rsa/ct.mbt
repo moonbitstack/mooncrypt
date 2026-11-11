@@ -358,60 +358,78 @@ fn Mont::to(self : Mont, a : FixedArray[UInt64]) -> BigInt {
 }
 
 ///|
-/// The Chinese-remainder half of a private key: the two primes, the exponents
-/// reduced against the factors' own group orders, and `q^-1 mod p` to
-/// recombine. Each half runs over the full width of its own prime, so both are
-/// fixed width. The Montgomery engines are built from these on the fly; only the
-/// key material is carried, so nothing secret is held between operations.
+/// The Chinese-remainder half of a private key: the primes, the exponents reduced
+/// against each factor's own group order, and the inverses Garner recombines
+/// with. Each exponentiation runs over the full width of its own prime, so each
+/// is fixed width, and the number of them is the key's prime count, which is
+/// public key material. The Montgomery engines are built from these on the fly;
+/// only the key material is carried, so nothing secret is held between
+/// operations.
 priv struct Crt {
-  p_big : BigInt
-  q_big : BigInt
-  d_p : BigInt
-  d_q : BigInt
-  q_inv : BigInt
+  primes : Array[BigInt]
+  exps : Array[BigInt]
+  /// `coeffs[i]` is `(primes[0] * … * primes[i-1])^-1 mod primes[i]`, unused at
+  /// zero: the chain below starts from the first prime's own residue.
+  coeffs : Array[BigInt]
 }
 
 ///|
-/// Build the CRT half from two primes the caller handed in: `d_p` and `d_q` are
-/// `d` reduced against the factors' own group orders, so each half exponentiates
-/// to a width half the modulus. `e * d_p ≡ 1 (mod p-1)`, and likewise for `q`,
-/// holds for a genuine factor pair; a pair that fails it is `Weak`, refused here
-/// rather than at a signature.
+/// Build the CRT half from primes the caller handed in: each exponent is `d`
+/// reduced against its factor's own group order, so every half exponentiates to
+/// the width of one prime rather than of the modulus. `e * d_i ≡ 1 (mod p_i - 1)`
+/// holds for genuine factors; a set that fails it is `Weak`, refused here rather
+/// than at a signature.
 fn Crt::new(
-  p : BigInt,
-  q : BigInt,
+  primes : Array[BigInt],
   d : BigInt,
   e : BigInt,
 ) -> Crt raise @spec.Broken {
-  let crt = Crt::fitted(p, q, d)
-  guard e * crt.d_p % (p - 1N) == 1N && e * crt.d_q % (q - 1N) == 1N else {
-    raise @spec.Weak
+  let crt = Crt::fitted(primes, d)
+  for i in 0..<primes.length() {
+    guard e * crt.exps[i] % (primes[i] - 1N) == 1N else { raise @spec.Weak }
   }
   crt
 }
 
 ///|
-/// The CRT half of factors already known to fit `d`, as a key just generated
-/// from them does. `q_inv` is `q^-1 mod p`.
-fn Crt::fitted(p : BigInt, q : BigInt, d : BigInt) -> Crt {
-  {
-    p_big: p,
-    q_big: q,
-    d_p: d % (p - 1N),
-    d_q: d % (q - 1N),
-    q_inv: modinv(q, p),
+/// The CRT half of factors already known to fit `d`, as a key just generated from
+/// them does.
+fn Crt::fitted(primes : Array[BigInt], d : BigInt) -> Crt {
+  let exps : Array[BigInt] = []
+  let coeffs : Array[BigInt] = []
+  let mut prod = 1N
+  for i in 0..<primes.length() {
+    let p = primes[i]
+    exps.push(d % (p - 1N))
+    coeffs.push(if i == 0 { 0N } else { modinv(prod % p, p) })
+    prod = prod * p
   }
+  { primes, exps, coeffs, }
 }
 
 ///|
-/// The CRT private exponentiation of a value already below the modulus: the two
-/// fixed-width halves, recombined with `q_inv`. Returns the value below `n`.
+/// The CRT private exponentiation of a value already below the modulus: one
+/// fixed-width exponentiation per prime, then Garner's chain to put the residues
+/// back together. Returns the value below `n`.
+///
+/// Garner adds one prime at a time — `x` is the value modulo the product of the
+/// primes seen so far, and each step corrects it by a multiple of that product
+/// so that it lands on the next residue too. A two-prime key takes one step and
+/// a three-prime key two, which is the whole difference between them.
 fn Crt::dp(self : Crt, c : BigInt) -> BigInt {
-  let mp = pow_mod(c % self.p_big, self.d_p, self.p_big)
-  let mq = pow_mod(c % self.q_big, self.d_q, self.q_big)
-  let h = ((mp - mq) % self.p_big + self.p_big) % self.p_big
-  let hb = h * self.q_inv % self.p_big
-  (mq + hb * self.q_big) % (self.p_big * self.q_big)
+  let primes = self.primes
+  let mut x = pow_mod(c % primes[0], self.exps[0], primes[0])
+  let mut prod = primes[0]
+  for i in 1..<primes.length() {
+    let p = primes[i]
+    let residue = pow_mod(c % p, self.exps[i], p)
+    // `(residue - x) mod p`, non-negative: the correction Garner's step adds.
+    let gap = ((residue - x % p) % p + p) % p
+    let h = gap * self.coeffs[i] % p
+    x = x + h * prod
+    prod = prod * p
+  }
+  x % prod
 }
 
 ///|

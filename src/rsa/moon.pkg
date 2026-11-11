@@ -13,12 +13,15 @@ import {
   "moonbitstack/mooncrypt/spec",
   "moonbitstack/mooncrypt/hash/sha1",
   "moonbitstack/mooncrypt/hash/sha2",
+  "moonbitstack/mooncrypt/hash/sha3",
   "moonbitstack/mooncrypt/mac/hmac",
 }
 
 import {
   "moonbitstack/moonbase/base16",
   "moonbitstack/mooncrypt/drbg",
+  "moonbitstack/mooncrypt/key",
+  "moonbitstack/mooncrypt/spec",
   "moonbitlang/core/bench",
 } for "test"
 

@@ -159,7 +159,7 @@ pub fn[S : @moonseed.Source] PrivateKey::generate(
       size: octets(n),
       digest,
       scheme,
-      crt: Some(Crt::fitted(p, q, d)),
+      crt: Some(Crt::fitted([p, q], d)),
     }
   }
   abort("rsa: unreachable")
