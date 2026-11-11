@@ -1,6 +1,6 @@
 name = "moonbitstack/mooncrypt"
 
-version = "0.4.15"
+version = "0.4.16"
 
 readme = "README.md"
 
@@ -92,8 +92,8 @@ keywords = [
 description = "Cryptographic algorithms for MoonBit, one per package."
 
 import {
-  "moonbitstack/moonbase@0.4.4",
-  "moonbitstack/moondate@0.1.6",
+  "moonbitstack/moonbase@0.4.5",
+  "moonbitstack/moondate@0.1.7",
   "moonbitstack/moonseed@0.1.3",
 }
 
