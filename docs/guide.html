@@ -355,6 +355,26 @@ true</div>
             are the older block TLS's RSA key exchange still uses.
           </p>
 
+          <p>
+            The digest is a name from a closed set rather than any hash, because
+            PKCS#1 v1.5 embeds an ASN.1 identifier in the block it signs:
+            SHA-1, the SHA-2 family including the truncated SHA-512/224 and
+            SHA-512/256, and SHA-3 in all four widths. PSS masks with the message
+            digest unless the scheme says otherwise — <code>PssMgf</code> names a
+            hash of its own, which is how a block whose MGF1 runs SHA-1 under a
+            SHA-256 message verifies without weakening the message hash to match.
+          </p>
+
+          <p>
+            A key may carry two primes or three. Three primes is PKCS#1's
+            multi-prime form, and <code>parse_rsa_private_multi</code> reads it
+            out of a key file: that third factor is what
+            <code>PrivateKey::new_crt3</code> takes, and the signing path
+            exponentiates once per prime either way, each at a third of the
+            modulus's width. <code>RsaPublic</code> and every wire format stay the
+            same: nothing outside the key knows how many factors it has.
+          </p>
+
           <h2 id="kex">Agreeing on a secret</h2>
           <p>
             Two private scalars, two public points, one shared secret. The

@@ -74,7 +74,7 @@
         <h1>Every package, in order</h1>
         <p class="lede">
           Generated from each package's interface file and the comments above its
-          declarations. 712 public declarations across 64
+          declarations. 716 public declarations across 64
           packages.
         </p>
       </div>
@@ -2169,6 +2169,12 @@
   Sha256
   Sha384
   Sha512
+  Sha512_224
+  Sha512_256
+  Sha3_224
+  Sha3_256
+  Sha3_384
+  Sha3_512
 }</div></div>
 </div>
 <div class="item" id="rsa-salt">
@@ -2183,6 +2189,7 @@
 <div class="body"><div class="sig">pub(all) enum Scheme {
   Pkcs1
   Pss(salt~ : Salt)
+  PssMgf(salt~ : Salt, mgf~ : Digest)
 }</div></div>
 </div>
 <div class="item" id="rsa-privatekey-decrypt">
@@ -2204,6 +2211,10 @@
 <div class="item" id="rsa-privatekey-new-crt">
 <div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>new_crt</div>
 <div class="body"><div class="sig">pub fn PrivateKey::new_crt(BytesView, BytesView, BytesView, BytesView, BytesView, digest? : Digest, scheme? : Scheme) -&gt; Self raise @spec.Broken</div><p>Read a signing key that also carries its CRT factors: the modulus, the two exponents and the two primes, all big-endian. The factors are checked against `d` before the key is returned, so a pair that does not fit the exponent is refused here rather than producing a signature that leaks.</p></div>
+</div>
+<div class="item" id="rsa-privatekey-new-crt3">
+<div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>new_crt3</div>
+<div class="body"><div class="sig">pub fn PrivateKey::new_crt3(BytesView, BytesView, BytesView, BytesView, BytesView, BytesView, digest? : Digest, scheme? : Scheme) -&gt; Self raise @spec.Broken</div><p>Read a signing key whose modulus is the product of three primes, as PKCS#1's multi-prime form allows. The three are checked against the modulus and against `d` before the key is returned, the same way the two-prime form is.</p><p>A key like this signs and decrypts through three fixed-width exponentiations, one per prime, each a third of the modulus's width — the reason multi-prime keys exist at all. Everything else about it is ordinary: the public operation never learns how many factors there are.</p></div>
 </div>
 <div class="item" id="rsa-privatekey-public">
 <div class="name"><span class="kind">fn</span><span class="dim">PrivateKey::</span>public</div>
@@ -3236,6 +3247,14 @@
   public : Bytes?
 }</div><p>An elliptic-curve private key as SEC1 (RFC 5915) holds it.</p><p>The curve name and the public point are both optional in the format. A key without them is still a key — the scalar is the secret — but it cannot be used without being told which curve it is on, so [`curve`](#curve) being `None` is the parser saying "this file is not enough on its own".</p></div>
 </div>
+<div class="item" id="key-otherprime">
+<div class="name"><span class="kind">type</span>OtherPrime</div>
+<div class="body"><div class="sig">pub(all) struct OtherPrime {
+  prime : @bigint.BigInt
+  exponent : @bigint.BigInt
+  coefficient : @bigint.BigInt
+}</div></div>
+</div>
 <div class="item" id="key-rsaprivate">
 <div class="name"><span class="kind">type</span>RsaPrivate</div>
 <div class="body"><div class="sig">pub(all) struct RsaPrivate {
@@ -3282,7 +3301,11 @@
 </div>
 <div class="item" id="key-parse-rsa-private">
 <div class="name"><span class="kind">fn</span>parse_rsa_private</div>
-<div class="body"><div class="sig">pub fn parse_rsa_private(BytesView) -&gt; RsaPrivate raise @asn1.Refused</div><p>Read a PKCS#1 `RSAPrivateKey`.</p></div>
+<div class="body"><div class="sig">pub fn parse_rsa_private(BytesView) -&gt; RsaPrivate raise @asn1.Refused</div><p>Read a PKCS#1 `RSAPrivateKey`.</p><p>A version-1 key — one whose modulus has more than two prime factors — is refused here rather than silently read as its first two factors, which would be a key that signs to the wrong modulus. [`parse_rsa_private_multi`] reads those.</p></div>
+</div>
+<div class="item" id="key-parse-rsa-private-multi">
+<div class="name"><span class="kind">fn</span>parse_rsa_private_multi</div>
+<div class="body"><div class="sig">pub fn parse_rsa_private_multi(BytesView) -&gt; (RsaPrivate, Array[OtherPrime]) raise @asn1.Refused</div><p>Read a PKCS#1 `RSAPrivateKey` of either version: the two-prime object and the primes a version-1 key carries beyond it, in the order the format lists them.</p></div>
 </div>
 <div class="item" id="key-parse-rsa-public">
 <div class="name"><span class="kind">fn</span>parse_rsa_public</div>
@@ -3306,7 +3329,11 @@
 </div>
 <div class="item" id="key-rsa-private-der">
 <div class="name"><span class="kind">fn</span>rsa_private_der</div>
-<div class="body"><div class="sig">pub fn rsa_private_der(RsaPrivate) -&gt; Bytes</div><p>The PKCS#1 `RSAPrivateKey` of RFC 8017 §A.1.2, version 0.</p><p>The two-prime form is the only one written: `version` 1 exists for keys with more than two primes, which no library here generates and no format in practice carries.</p></div>
+<div class="body"><div class="sig">pub fn rsa_private_der(RsaPrivate) -&gt; Bytes</div><p>The PKCS#1 `RSAPrivateKey` of RFC 8017 §A.1.2, version 0.</p><p>The two-prime form is the only one written here: `version` 1 exists for keys with more than two primes, which [`rsa_private_multi_der`] writes.</p></div>
+</div>
+<div class="item" id="key-rsa-private-multi-der">
+<div class="name"><span class="kind">fn</span>rsa_private_multi_der</div>
+<div class="body"><div class="sig">pub fn rsa_private_multi_der(RsaPrivate, Array[OtherPrime]) -&gt; Bytes</div><p>The PKCS#1 `RSAPrivateKey` of RFC 8017 §A.1.2 in its multi-prime form, version 1: the nine fields of the two-prime object, then `otherPrimeInfos` holding one `(prime, exponent, coefficient)` triple per further factor.</p><p>`version` is written as the format requires — 0 when there is nothing beyond the first two primes, 1 when there is — so a key read by [`parse_rsa_private_multi`] and written back is byte-identical.</p></div>
 </div>
 <div class="item" id="key-rsa-public-der">
 <div class="name"><span class="kind">fn</span>rsa_public_der</div>

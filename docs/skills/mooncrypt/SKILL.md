@@ -65,9 +65,28 @@ let strict = sk.public().with_scheme(digest=@rsa.Sha256, scheme=@rsa.Pss(salt=@r
 assert_false(strict.verify(b"the quick brown fox"[:], sig[:]))
 ```
 
+The digest is one of the names `Digest` carries — SHA-1, SHA-2 including
+SHA-512/224 and SHA-512/256, and SHA-3 in four widths — because PKCS#1 v1.5
+writes an ASN.1 identifier into the block it signs. PSS masks with the message
+digest unless `PssMgf` names another:
+
+```mbt
+let mask = @rsa.PssMgf(salt=@rsa.Exact(20), mgf=@rsa.Sha1)
+let peer = sk.public().with_scheme(digest=@rsa.Sha256, scheme=mask)
+assert_true(peer.verify(b"the quick brown fox"[:], sk.with_scheme(
+  digest=@rsa.Sha256,
+  scheme=mask,
+).sign(b"the quick brown fox"[:])[:]))
+```
+
 Encryption is OAEP — `encrypt` takes the seed OAEP masks with, because the
 library holds no entropy source of its own — or RSAES-PKCS1-v1_5 through
 `encrypt_pkcs1` and `decrypt_pkcs1` for the older data that still uses it.
+
+A key with three primes signs and decrypts exactly as one with two: read it with
+`@key.parse_rsa_private_multi`, which returns the nine fields and the primes
+beyond them, then hand the third to `@rsa.PrivateKey::new_crt3`. The public half
+and every wire format are the same — the factor count is the key's own business.
 
 ## Rules that catch people out
 
@@ -83,7 +102,8 @@ library holds no entropy source of its own — or RSAES-PKCS1-v1_5 through
   asks for. Zero is a salt of no bytes, not a wildcard.
 - **The padding and the hash travel together.** A signature under SHA-256 does
   not verify under SHA-1 with the same key, and the same key signs under
-  whichever digest it is asked to.
+  whichever digest it is asked to. If a peer masks with a hash of its own, say
+  so with `PssMgf`; a plain `Pss` will read that block as broken.
 - **Post-quantum keys are wide.** An ML-KEM or ML-DSA key is hundreds of
   bytes, not the 32 an elliptic-curve key is; size buffers for that before
   putting them on the wire.
