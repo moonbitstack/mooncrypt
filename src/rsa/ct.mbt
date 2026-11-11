@@ -340,29 +340,6 @@ fn Mont::pow(
 }
 
 ///|
-/// `base^e mod n` for a public exponent: square-and-multiply from the
-/// exponent's top bit, branching on its bits, which leak nothing. The blinder's
-/// `r^e` takes this route, at seventeen bits for `e = 65537`.
-fn Mont::pow_public(
-  self : Mont,
-  base : FixedArray[UInt64],
-  exp : BigInt,
-) -> FixedArray[UInt64] {
-  let bits = bit_length(exp)
-  let e = limbs(exp, width(bits))
-  let r = copied(self.one)
-  let mut i = bits - 1
-  while i >= 0 {
-    self.sqr(r, r)
-    if ((e[i / 32] >> (i % 32)) & 1UL) == 1UL {
-      self.mul(r, r, base)
-    }
-    i = i - 1
-  }
-  r
-}
-
-///|
 /// A plain integer below the modulus into the engine's form.
 fn Mont::from(self : Mont, v : BigInt) -> FixedArray[UInt64] {
   let out = limbs(v, self.size)
@@ -443,11 +420,4 @@ fn Crt::dp(self : Crt, c : BigInt) -> BigInt {
 fn pow_mod(base : BigInt, exp : BigInt, modulus : BigInt) -> BigInt {
   let m = Mont::new(modulus)
   m.to(m.pow(m.from(base), exp))
-}
-
-///|
-/// `base^exp mod modulus` for a public exponent and a base below the modulus.
-fn pow_public_mod(base : BigInt, exp : BigInt, modulus : BigInt) -> BigInt {
-  let m = Mont::new(modulus)
-  m.to(m.pow_public(m.from(base), exp))
 }

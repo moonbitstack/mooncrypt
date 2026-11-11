@@ -330,7 +330,7 @@ pub impl @spec.Verifier for PublicKey with fn verify(
   if s >= self.n {
     return false
   }
-  let em = s.pow(self.e, modulus=self.n).to_octets(length=self.size)
+  let em = pow_public_mod(s, self.e, self.n).to_octets(length=self.size)
   match self.scheme {
     Pkcs1 => @spec.eq(em[:], pkcs1_encode(self.digest, msg, self.size)[:])
     Pss(salt~) => pss_check(self.digest, msg, em, salt)
@@ -612,8 +612,7 @@ pub fn PublicKey::encrypt(
   for b in masked_db {
     em.push(b)
   }
-  BigInt::from_octets(Bytes::from_array(em)[:])
-  .pow(self.e, modulus=self.n)
+  pow_public_mod(BigInt::from_octets(Bytes::from_array(em)[:]), self.e, self.n)
   .to_octets(length=k)
 }
 
@@ -710,8 +709,7 @@ pub fn PublicKey::encrypt_pkcs1(
   for b in plain {
     em.push(b)
   }
-  BigInt::from_octets(Bytes::from_array(em)[:])
-  .pow(self.e, modulus=self.n)
+  pow_public_mod(BigInt::from_octets(Bytes::from_array(em)[:]), self.e, self.n)
   .to_octets(length=k)
 }
 
@@ -785,7 +783,7 @@ pub fn PublicKey::rsaep(
   }
   let m = BigInt::from_octets(message)
   guard m < self.n else { raise @spec.Tag }
-  m.pow(self.e, modulus=self.n).to_octets(length=self.size)
+  pow_public_mod(m, self.e, self.n).to_octets(length=self.size)
 }
 
 ///|
