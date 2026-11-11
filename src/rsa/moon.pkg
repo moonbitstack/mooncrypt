@@ -29,8 +29,5 @@ options(
   targets: {
     "pow_public_mont.mbt": [ "native", "wasm", "wasm-gc" ],
     "pow_public_bigint.mbt": [ "js" ],
-    "wycheproof_test.mbt": [ "native", "wasm-gc" ],
-    "wycheproof_sign_test.mbt": [ "native", "wasm-gc" ],
-    "wycheproof_decrypt_test.mbt": [ "native", "wasm-gc" ],
   },
 )

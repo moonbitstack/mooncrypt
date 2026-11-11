@@ -212,6 +212,12 @@ RSA_SHA = {
     "SHA-256": "Sha256",
     "SHA-384": "Sha384",
     "SHA-512": "Sha512",
+    "SHA-512/224": "Sha512_224",
+    "SHA-512/256": "Sha512_256",
+    "SHA3-224": "Sha3_224",
+    "SHA3-256": "Sha3_256",
+    "SHA3-384": "Sha3_384",
+    "SHA3-512": "Sha3_512",
 }
 
 VERDICT = {"valid": "Valid", "invalid": "Invalid", "acceptable": "Acceptable"}
@@ -241,21 +247,27 @@ def chunks(name, rows, entry, per=200):
 
 
 def rsa_verify(src):
-    """The RSA signature sets: PKCS#1 v1.5 and PSS, at every key width and digest
-    the library signs.
+    """The RSA signature sets: PKCS#1 v1.5 and PSS, at every key width and every
+    digest the library signs.
 
     Each case carries only a public key, so verification is all a table needs;
     the signing direction is the `rsa_pkcs1_*_sig_gen` sets below, which hand
     over the private key and the signature it must reproduce. Keys repeat across
     the cases of a group, so they are held once and referred to by index.
 
-    Left out, and why: the sets whose digest is not one the library names
-    (SHA-3, SHA-512/224, SHA-512/256, SHAKE), and the PSS set whose MGF1 hash
-    differs from its message hash — `Pss` runs one digest for both."""
+    A PSS group names two hashes, the message's and MGF1's, and they are carried
+    apart because `Scheme` has both: the sets where the two differ are exactly
+    what `PssMgf` is for.
+
+    Left out, and why: the SHAKE-based PSS sets. SHAKE is an extendable output
+    function whose length the caller chooses, and `Digest` is a closed set of
+    digests with a fixed length each; naming one there would be a different
+    kind of parameter, not another member.
+    """
     files = sorted(
         p
         for p in (src.glob("rsa_signature_*_test.json"))
-        if not p.name.endswith("_params_test.json") and "_8192_" not in p.name
+        if not p.name.endswith("_params_test.json")
     )
     keys, rows, skipped = {}, [], []
 
@@ -264,6 +276,14 @@ def rsa_verify(src):
             keys[(n, e)] = len(keys)
         return keys[(n, e)]
 
+    def key_rows(group):
+        n = _pad_to_octets(group["publicKey"]["modulus"], group["keySize"] // 8)
+        e = _pad_to_octets(
+            group["publicKey"]["publicExponent"],
+            (int(group["publicKey"]["publicExponent"], 16).bit_length() + 7) // 8,
+        )
+        return key_id(n, e)
+
     for path in files:
         data = json.loads(path.read_text(encoding="utf-8"))
         for group in data["testGroups"]:
@@ -271,55 +291,42 @@ def rsa_verify(src):
             if sha not in RSA_SHA:
                 skipped.append(f"{path.name} ({sha})")
                 continue
-            digest = RSA_SHA[sha]
-            n = _pad_to_octets(group["publicKey"]["modulus"], group["keySize"] // 8)
-            e = _pad_to_octets(
-                group["publicKey"]["publicExponent"],
-                (int(group["publicKey"]["publicExponent"], 16).bit_length() + 7) // 8,
-            )
-            k = key_id(n, e)
+            k = key_rows(group)
             for t in group["tests"]:
                 rows.append(
-                    f'    ({k}, "pkcs1", "{digest}", 0, "{t["msg"]}", "{t["sig"]}", '
-                    f'{VERDICT[t["result"]]}),'
+                    f'    ({k}, "pkcs1", "{RSA_SHA[sha]}", 0, "", "{t["msg"]}", '
+                    f'"{t["sig"]}", {VERDICT[t["result"]]}),'
                 )
     pss_files = sorted(
         p
         for p in src.glob("rsa_pss_*_test.json")
-        if not p.name.endswith("_params_test.json") and "shake" not in p.name
+        if not p.name.endswith("_params_test.json")
     )
     for path in pss_files:
         data = json.loads(path.read_text(encoding="utf-8"))
         for group in data["testGroups"]:
-            sha = group.get("sha")
-            if sha not in RSA_SHA or group.get("mgfSha") != sha:
-                skipped.append(f"{path.name} ({sha}, MGF {group.get('mgfSha')})")
+            sha, mgf = group.get("sha"), group.get("mgfSha")
+            if sha not in RSA_SHA or mgf not in RSA_SHA:
+                skipped.append(f"{path.name} ({sha}, MGF {mgf})")
                 continue
-            digest = RSA_SHA[sha]
-            n = _pad_to_octets(group["publicKey"]["modulus"], group["keySize"] // 8)
-            e = _pad_to_octets(
-                group["publicKey"]["publicExponent"],
-                (int(group["publicKey"]["publicExponent"], 16).bit_length() + 7) // 8,
-            )
-            k = key_id(n, e)
+            k = key_rows(group)
             salt = group["sLen"]
             for t in group["tests"]:
                 rows.append(
-                    f'    ({k}, "pss", "{digest}", {salt}, "{t["msg"]}", "{t["sig"]}", '
-                    f'{VERDICT[t["result"]]}),'
+                    f'    ({k}, "pss", "{RSA_SHA[sha]}", {salt}, "{RSA_SHA[mgf]}", '
+                    f'"{t["msg"]}", "{t["sig"]}", {VERDICT[t["result"]]}),'
                 )
-    entry = "(Int, String, String, Int32, String, String, RsaVerdict)"
-    key_rows = [f'    ("{n}", "{e}"),' for (n, e) in keys]
+    entry = "(Int, String, String, Int32, String, String, String, RsaVerdict)"
+    key_rows_text = [f'    ("{n}", "{e}"),' for (n, e) in keys]
     text = [
         "// Generated by scripts/gen_wycheproof.py --rsa from Wycheproof's",
         "// rsa_signature_* and rsa_pss_* files; rerun it rather than editing.",
         f"// {SOURCE}",
         "//",
-        "// Every key width the library is aimed at — 2048, 3072 and 4096 bits — and",
-        "// every digest it signs: SHA-1, SHA-224, SHA-256, SHA-384 and SHA-512. The",
-        "// sets whose digest `Digest` does not name (SHA-3, SHA-512/224, SHA-512/256,",
-        "// SHAKE) are not here, nor is the PSS set whose MGF1 hash differs from its",
-        "// message hash — `Pss` runs one digest for both — nor the 8192-bit sets.",
+        "// Every key width the sets carry — 2048, 3072, 4096 and 8192 bits — and",
+        "// every digest the library signs: SHA-1, SHA-2 with its two truncated",
+        "// forms, and SHA-3. The SHAKE-based PSS sets are not here, because an",
+        "// extendable output function has no single length for `Digest` to name.",
         "",
         "///|",
         "/// Whether Wycheproof expects the signature to verify, to refuse, or",
@@ -336,7 +343,7 @@ def rsa_verify(src):
         "///|",
         "/// (modulus, exponent) — one entry for every key the sets carry.",
         "let rsa_public_keys : Array[(String, String)] = [",
-        *key_rows,
+        *key_rows_text,
         "]",
         "",
         *chunks("rsa_signatures", rows, entry),
@@ -359,7 +366,28 @@ def rsa_verify(src):
         '    "Sha224" => @rsa.Sha224',
         '    "Sha256" => @rsa.Sha256',
         '    "Sha384" => @rsa.Sha384',
-        "    _ => @rsa.Sha512",
+        '    "Sha512" => @rsa.Sha512',
+        '    "Sha512_224" => @rsa.Sha512_224',
+        '    "Sha512_256" => @rsa.Sha512_256',
+        '    "Sha3_224" => @rsa.Sha3_224',
+        '    "Sha3_256" => @rsa.Sha3_256',
+        '    "Sha3_384" => @rsa.Sha3_384',
+        "    _ => @rsa.Sha3_512",
+        "  }",
+        "}",
+        "",
+        "///|",
+        "/// The scheme a row names: `Pss` when MGF1 masks with the message digest,",
+        "/// `PssMgf` when the set gives it a hash of its own.",
+        "fn rsa_scheme(scheme : String, digest : String, salt : Int32, mgf : String) -> @rsa.Scheme {",
+        "  if scheme == \"pss\" {",
+        "    if mgf == digest {",
+        "      @rsa.Pss(salt=@rsa.Exact(salt))",
+        "    } else {",
+        "      @rsa.PssMgf(salt=@rsa.Exact(salt), mgf=rsa_digest(mgf))",
+        "    }",
+        "  } else {",
+        "    @rsa.Pkcs1",
         "  }",
         "}",
         "",
@@ -377,13 +405,11 @@ def rsa_verify(src):
         "    )",
         "  }",
         "  for v in rsa_signatures {",
-        "    let (k, scheme, digest, salt, msg, sig, verdict) = v",
-        '    let s = if scheme == "pss" {',
-        "      @rsa.Pss(salt=@rsa.Exact(salt))",
-        "    } else {",
-        "      @rsa.Pkcs1",
-        "    }",
-        "    let pk = keys[k].with_scheme(digest=rsa_digest(digest), scheme=s)",
+        "    let (k, scheme, digest, salt, mgf, msg, sig, verdict) = v",
+        "    let pk = keys[k].with_scheme(",
+        "      digest=rsa_digest(digest),",
+        "      scheme=rsa_scheme(scheme, digest, salt, mgf),",
+        "    )",
         "    let ok = pk.verify(rsa_hex(msg)[:], rsa_hex(sig)[:])",
         "    // `Acceptable` passes either way: the outcome is a choice the",
         "    // reference makes, so it is not held to one side.",
@@ -480,30 +506,35 @@ def rsa_decrypt(src):
     """The RSA decryption sets: RSAES-OAEP and RSAES-PKCS1-v1_5, with the private
     key each group carries.
 
-    Left out: the three-prime OAEP sets — the key type here carries two CRT
-    factors, and a three-prime key has no pair that recomposes it."""
+    A key is carried with the third prime when it has one, empty otherwise, and
+    the test builds the two-prime or the three-prime form from what it finds.
+    """
     keys, oaep, pkcs1, skipped = {}, [], [], []
     entry = "(Int, String, String, String, String, String, RsaVerdict)"
 
-    def key_id(g, need_primes=True):
+    def key_id(g):
         k = g["privateKey"]
-        ident = (k["modulus"], k["publicExponent"], k["privateExponent"], k["prime1"], k["prime2"])
+        others = k.get("otherPrimeInfos") or []
+        assert len(others) <= 1, "a key with more than three primes is not supported"
+        third = others[0]["prime"] if others else ""
+        ident = (
+            k["modulus"],
+            k["publicExponent"],
+            k["privateExponent"],
+            k["prime1"],
+            k["prime2"],
+            third,
+        )
         if ident not in keys:
             keys[ident] = len(keys)
         return keys[ident]
 
     for path in sorted(src.glob("rsa_oaep_*_test.json")):
-        if "three_primes" in path.name:
-            skipped.append(f"{path.name} (three primes)")
-            continue
         data = json.loads(path.read_text(encoding="utf-8"))
         for group in data["testGroups"]:
             sha, mgf = group.get("sha"), group.get("mgfSha")
             if sha not in RSA_SHA or mgf not in RSA_SHA:
                 skipped.append(f"{path.name} ({sha}, MGF {mgf})")
-                continue
-            if group.get("keySize", 0) > 4096:
-                skipped.append(f"{path.name} ({group['keySize']} bits)")
                 continue
             kid = key_id(group)
             for t in group["tests"]:
@@ -521,18 +552,20 @@ def rsa_decrypt(src):
                 pkcs1.append(
                     f'    ({kid}, "{t["ct"]}", "{t["msg"]}", {VERDICT[t["result"]]}),'
                 )
-    key_rows = [f'    ("{n}", "{e}", "{d}", "{p}", "{q}"),' for (n, e, d, p, q) in keys]
+    key_rows = [
+        f'    ("{n}", "{e}", "{d}", "{p}", "{q}", "{r}"),' for (n, e, d, p, q, r) in keys
+    ]
     text = [
         "// Generated by scripts/gen_wycheproof.py --rsa from Wycheproof's",
         "// rsa_oaep_* and rsa_pkcs1_* files; rerun it rather than editing.",
         f"// {SOURCE}",
         "//",
-        "// The three-prime OAEP sets are not here: a key carries two CRT factors,",
-        "// and a three-prime key has no pair that recomposes it.",
+        "// The three-prime OAEP sets are here too: a key's last field is its third",
+        "// prime, empty when the key has only the first two.",
         "",
         "///|",
-        "/// (modulus, exponent, private exponent, prime p, prime q).",
-        "let rsa_decryption_keys : Array[(String, String, String, String, String)] = [",
+        "/// (modulus, exponent, private exponent, prime p, prime q, prime r or empty).",
+        "let rsa_decryption_keys : Array[(String, String, String, String, String, String)] = [",
         *key_rows,
         "]",
         "",
@@ -546,11 +579,20 @@ def rsa_decrypt(src):
         "",
         "///|",
         "fn rsa_decryption_key(index : Int) -> @rsa.PrivateKey {",
-        "  let (n, e, d, p, q) = rsa_decryption_keys[index]",
-        "  @rsa.PrivateKey::new_crt(",
-        "    rsa_hex(n)[:], rsa_hex(e)[:], rsa_hex(d)[:], rsa_hex(p)[:], rsa_hex(q)[:],",
-        "  ) catch {",
-        '    _ => abort("a Wycheproof decryption key did not fit")',
+        "  let (n, e, d, p, q, r) = rsa_decryption_keys[index]",
+        "  if r == \"\" {",
+        "    @rsa.PrivateKey::new_crt(",
+        "      rsa_hex(n)[:], rsa_hex(e)[:], rsa_hex(d)[:], rsa_hex(p)[:], rsa_hex(q)[:],",
+        "    ) catch {",
+        '      _ => abort("a Wycheproof decryption key did not fit")',
+        "    }",
+        "  } else {",
+        "    @rsa.PrivateKey::new_crt3(",
+        "      rsa_hex(n)[:], rsa_hex(e)[:], rsa_hex(d)[:], rsa_hex(p)[:], rsa_hex(q)[:],",
+        "      rsa_hex(r)[:],",
+        "    ) catch {",
+        '      _ => abort("a Wycheproof three-prime key did not fit")',
+        "    }",
         "  }",
         "}",
         "",
