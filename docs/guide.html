@@ -366,6 +366,20 @@ true</div>
           </p>
 
           <p>
+            <code>PssShake</code> is RFC 8702's shape of the same scheme: the
+            message hash and the mask are one SHAKE, and the mask is that SHAKE
+            run natively over the seed at the mask's own length rather than
+            MGF1's counter over it. The digest lengths are the profile's —
+            32 octets from SHAKE128, 64 from SHAKE256 — and <code>Auto</code>
+            signs at them, while a key verifying under <code>Auto</code> reads
+            the length back out, so a peer that chose another one still checks
+            out. It is the one part of RSA here that OpenSSL will not make: its
+            provider refuses a SHAKE digest inside PSS, so the vectors come from
+            Wycheproof and the other direction from
+            <code>scripts/gen_shake_pss_vectors.py</code>.
+          </p>
+
+          <p>
             A key may carry two primes or three. Three primes is PKCS#1's
             multi-prime form, and <code>parse_rsa_private_multi</code> reads it
             out of a key file: that third factor is what

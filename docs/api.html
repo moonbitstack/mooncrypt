@@ -74,7 +74,7 @@
         <h1>Every package, in order</h1>
         <p class="lede">
           Generated from each package's interface file and the comments above its
-          declarations. 716 public declarations across 64
+          declarations. 718 public declarations across 64
           packages.
         </p>
       </div>
@@ -2190,6 +2190,14 @@
   Pkcs1
   Pss(salt~ : Salt)
   PssMgf(salt~ : Salt, mgf~ : Digest)
+  PssShake(salt~ : Salt, xof~ : Xof)
+}</div></div>
+</div>
+<div class="item" id="rsa-xof">
+<div class="name"><span class="kind">type</span>Xof</div>
+<div class="body"><div class="sig">pub(all) enum Xof {
+  Shake128
+  Shake256
 }</div></div>
 </div>
 <div class="item" id="rsa-privatekey-decrypt">
@@ -2271,6 +2279,10 @@
 <div class="item" id="rsa-publickey-with-scheme">
 <div class="name"><span class="kind">fn</span><span class="dim">PublicKey::</span>with_scheme</div>
 <div class="body"><div class="sig">pub fn PublicKey::with_scheme(Self, digest~ : Digest, scheme~ : Scheme) -&gt; Self</div><p>The same key, verifying under `digest` and `scheme`.</p></div>
+</div>
+<div class="item" id="rsa-xof-size">
+<div class="name"><span class="kind">fn</span><span class="dim">Xof::</span>size</div>
+<div class="body"><div class="sig">pub fn Xof::size(Self) -&gt; Int32</div><p>The digest length RFC 8702 gives `self`, in octets — the `hLen` of every block made under it.</p></div>
 </div>
 </section>
 <section class="pkg">

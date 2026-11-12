@@ -86,7 +86,7 @@ Import the ones you use. A package nothing imports is not linked, which is what
 | `sign/schnorr` | Schnorr over secp256k1, x-only keys and all | BIP 340 |
 | `sign/sm2` | SM2, with the signer identity mixed into the hash | GB/T 32918.2-2016 |
 | `sign/dsa` | DSA over FIPS 186-4 domains, with RFC 6979 nonces | FIPS 186-4, RFC 6979 |
-| `rsa` | RSA PKCS#1 v1.5 and PSS signatures over every digest with a registered identifier — SHA-1, SHA-2 with its two truncated forms, and SHA-3 — OAEP and RSAES-PKCS1-v1_5 encryption, and key generation from a source; PSS may mask with a hash of its own, and the private exponentiation is a fixed-width Montgomery with a square of its own and a fresh random blinder, run once per prime, so a key that carries its CRT factors signs through two or three fixed-width halves | RFC 8017, FIPS 186-5 |
+| `rsa` | RSA PKCS#1 v1.5 and PSS signatures over every digest with a registered identifier — SHA-1, SHA-2 with its two truncated forms, and SHA-3 — PSS over SHAKE128 and SHAKE256, OAEP and RSAES-PKCS1-v1_5 encryption, and key generation from a source; PSS may mask with a hash of its own, and the private exponentiation is a fixed-width Montgomery with a square of its own and a fresh random blinder, run once per prime, so a key that carries its CRT factors signs through two or three fixed-width halves | RFC 8017, RFC 8702, FIPS 186-5 |
 | `cipher/aes` | AES-128, AES-192 and AES-256, both directions | FIPS 197 |
 | `cipher/sm4` | SM4 | GB/T 32907-2016 |
 | `cipher/camellia` | Camellia-128/192/256 | RFC 3713 |
@@ -151,9 +151,11 @@ the RSA padding and its hash, `salt` and `info` the HKDF inputs, `params` the
 scrypt and Argon2 cost, `cost` bcrypt's, `tag` the CCM, SIV and GMAC tag length,
 `group` the RFC 7919 group, `digits` the one-time password length, and
 `Pss(salt=Exact(32))` names a salt length and `Pss(salt=Auto)` takes the digest's,
-`PssMgf(salt=..., mgf=...)` names the hash MGF1 masks with when a peer's block uses a different one from its message digest, and
-`interval` the requests a DRBG serves between reseeds, defaulting to the 2^48
-SP 800-90A §10 caps it at.
+`PssMgf(salt=..., mgf=...)` names the hash MGF1 masks with when a peer's block uses a different one from its message digest,
+`PssShake(salt=..., xof=Shake128)` takes RFC 8702's profile, where the mask is the
+same SHAKE run natively rather than MGF1's counter over it, and `interval` the
+requests a DRBG serves between reseeds, defaulting to the 2^48 SP 800-90A §10
+caps it at.
 
 What is not an argument is what a specification fixes: HMAC's inner and outer
 pads, MD5's constants, SHA-2's round constants and initial values, the curve
@@ -218,16 +220,17 @@ never reaches.
 The official and authoritative suites that run in CI, and how they do:
 
 - **Wycheproof** — the vectors its repository publishes, taken into the tree by
-  `scripts/gen_wycheproof.py` and rerun on every build. RSA runs 9285 of its
-  cases, all passing: 7828 signatures (PKCS#1 v1.5 and PSS at 2048, 3072, 4096
+  `scripts/gen_wycheproof.py` and rerun on every build. RSA runs 10065 of its
+  cases, all passing: 8608 signatures (PKCS#1 v1.5 and PSS at 2048, 3072, 4096
   and 8192 bits, SHA-1, SHA-2 with SHA-512/224 and SHA-512/256, SHA-3, every
-  salt length, and the sets whose MGF1 hash differs from the message's), 158
-  signing vectors whose signature must come out byte for byte, 1098 OAEP
-  decryptions (every digest and MGF1 pairing, with and without a label, on keys
-  with two primes and with three) and 201 RSAES-PKCS1-v1_5 decryptions — the
-  last two on the private keys the sets carry. The replay runs on all four
-  backends. The brainpool curves run against its ECDH sets the same way; AES-GCM
-  and ChaCha20-Poly1305 against its AEAD sets.
+  salt length, the sets whose MGF1 hash differs from the message's, and RFC
+  8702's five SHAKE sets — 780 cases over SHAKE128 and SHAKE256 at 2048, 3072
+  and 4096 bits), 158 signing vectors whose signature must come out byte for
+  byte, 1098 OAEP decryptions (every digest and MGF1 pairing, with and without a
+  label, on keys with two primes and with three) and 201 RSAES-PKCS1-v1_5
+  decryptions — the last two on the private keys the sets carry. The replay runs
+  on all four backends. The brainpool curves run against its ECDH sets the same
+  way; AES-GCM and ChaCha20-Poly1305 against its AEAD sets.
 - **NIST ACVP** — the vectors `scripts/gen_acvp_vectors.py` writes for the
   CTR-DRBG and the post-quantum schemes.
 - **The specifications' own examples** — FIPS 180-4, RFC 4231, RFC 5869, RFC
@@ -236,12 +239,15 @@ The official and authoritative suites that run in CI, and how they do:
 Where a suite does not pass, the reason is here rather than swept under the
 table:
 
-- **The SHAKE-based PSS sets are not taken in**, and the reason is a shape this
-  library does not have rather than a case it fails: SHAKE is an extendable
-  output function whose length the caller picks, while `Digest` is a closed set
-  of digests with one length each, so naming one there would be a different kind
-  of parameter rather than another member. Every other RSA set is in the table,
-  at every width from 1024 to 8192 bits.
+- **SHAKE-based PSS has no counterpart in the tools on this machine.** OpenSSL
+  3.5 refuses it inside the provider — `openssl dgst -shake128 -sign` with
+  `rsa_padding_mode:pss` fails with "digest not allowed" — so a block made under
+  RFC 8702 cannot be checked against `openssl`, and the signatures replayed are
+  Wycheproof's five sets. The other direction comes from
+  `scripts/gen_shake_pss_vectors.py`, which implements the same encoding a
+  second time in Python over a SHAKE it checks against the `openssl` command
+  line octet for octet, and pins what signing must produce. Everything else the
+  library signs or decrypts is replayed against vectors OpenSSL itself made.
 - **The constant-time claim rests on the construction, not the number.** The
   two-class t in "Constant time" is a statistic on the clock, so it can only
   separate an implementation whose running time follows its inputs from one
