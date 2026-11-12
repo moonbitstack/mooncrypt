@@ -58,6 +58,38 @@ pub extend Salt with Eq::{equal, not_equal}
 pub extend Salt with Debug::{to_repr}
 
 ///|
+/// SHAKE as RSASSA-PSS takes it (RFC 8702), at the output length that profile
+/// fixes for each variant: 32 octets from SHAKE128, 64 from SHAKE256.
+///
+/// A SHAKE's output length is part of the call rather than of the function's
+/// name, so it cannot be a [`Digest`]: a `Digest` is something a `DigestInfo`
+/// carries an object identifier for, and no identifier exists for a SHAKE
+/// digest inside a PKCS#1 v1.5 block. RFC 8702 is what pins the two lengths,
+/// and the digest and the mask are the same SHAKE in both variants, so naming
+/// one variant names one scheme.
+#derive(Eq, Debug)
+pub(all) enum Xof {
+  Shake128
+  Shake256
+}
+
+///|
+pub extend Xof with Eq::{equal, not_equal}
+
+///|
+pub extend Xof with Debug::{to_repr}
+
+///|
+/// The digest length RFC 8702 gives `self`, in octets — the `hLen` of every
+/// block made under it.
+pub fn Xof::size(self : Xof) -> Int32 {
+  match self {
+    Shake128 => 32
+    Shake256 => 64
+  }
+}
+
+///|
 /// Which padding a signature uses.
 ///
 /// `Pkcs1` is the deterministic block of RFC 8017 §9.2, which JOSE calls RS256
@@ -70,11 +102,19 @@ pub extend Salt with Debug::{to_repr}
 /// sets the two alike, which is what [`Pss`] is, but blocks exist that carry
 /// SHA-1 under a SHA-256 message, and verifying one must not mean weakening the
 /// message hash to match.
+///
+/// `PssShake` is the third form: RFC 8702's RSASSA-PSS over SHAKE, where the
+/// message hash and the mask are one extendable-output function and the mask is
+/// that function run natively over the seed rather than MGF1's counter. Its two
+/// object identifiers — `id-RSASSA-PSS-SHAKE128` and `...-SHAKE256` — carry no
+/// parameters, because the hash, the mask, the salt length and the trailer are
+/// all fixed by the identifier rather than chosen per signature.
 #derive(Eq, Debug)
 pub(all) enum Scheme {
   Pkcs1
   Pss(salt~ : Salt)
   PssMgf(salt~ : Salt, mgf~ : Digest)
+  PssShake(salt~ : Salt, xof~ : Xof)
 }
 
 ///|
@@ -291,16 +331,25 @@ pub impl @spec.Signer for PrivateKey with fn sign(
     Pkcs1 => pkcs1_encode(self.digest, msg, self.size)
     Pss(salt~) | PssMgf(salt~, mgf=_) => {
       // `Auto` signs at the digest's own length, the RFC's recommendation.
-      let len = match salt {
-        Auto => hasher(self.digest).size()
-        Exact(n) => n
-      }
+      let d = Fixed(self.digest)
       pss_encode(
-        self.digest,
-        mask_of(self.scheme, self.digest),
+        d,
+        Fixed(mask_of(self.scheme, self.digest)),
         msg,
-        self.size,
-        len,
+        bit_len(self.n),
+        pss_salt_len(salt, pss_hash_size(d)),
+        self.d,
+      )
+    }
+    PssShake(salt~, xof~) => {
+      // The same reading, at the length RFC 8702 fixes for the variant.
+      let d = Shake(xof)
+      pss_encode(
+        d,
+        d,
+        msg,
+        bit_len(self.n),
+        pss_salt_len(salt, pss_hash_size(d)),
         self.d,
       )
     }
@@ -406,22 +455,78 @@ pub impl @spec.Verifier for PublicKey with fn verify(
   match self.scheme {
     Pkcs1 => @spec.eq(em[:], pkcs1_encode(self.digest, msg, self.size)[:])
     Pss(salt~) | PssMgf(salt~, mgf=_) =>
-      pss_check(self.digest, mask_of(self.scheme, self.digest), msg, em, salt)
+      pss_check(
+        Fixed(self.digest),
+        Fixed(mask_of(self.scheme, self.digest)),
+        msg,
+        strip_em(em, em_len(self.n)),
+        bit_len(self.n),
+        salt,
+      )
+    PssShake(salt~, xof~) =>
+      pss_check(
+        Shake(xof),
+        Shake(xof),
+        msg,
+        strip_em(em, em_len(self.n)),
+        bit_len(self.n),
+        salt,
+      )
   }
+}
+
+///|
+/// The `emLen`-octet encoding out of the `k`-octet block the exponentiation
+/// returns.
+///
+/// The two are the same length unless the modulus is one bit longer than a whole
+/// number of octets, and where they differ the encoding is the block's tail and
+/// the octets in front of it must be zero. Anything else in front is not a
+/// block this scheme can have produced, which is reported as an empty buffer —
+/// shorter than any PSS block, so the check refuses it without a special case.
+fn strip_em(em : Bytes, want : Int32) -> Bytes {
+  let pad = em.length() - want
+  if pad <= 0 {
+    return em
+  }
+  for i in 0..<pad {
+    guard em[i] == b'\x00' else { return b"" }
+  }
+  em[pad:].to_owned()
 }
 
 // ------------------------------------------------------------------- encoding
 
 ///|
-/// How many octets the modulus occupies — the width of every signature under it.
-fn octets(n : BigInt) -> Int32 {
+/// How many bits the modulus occupies — the `modBits` of RFC 8017 §8.2.
+fn bit_len(n : BigInt) -> Int32 {
   let mut bits = 0
   let mut rest = n
   while rest > (0 : BigInt) {
     bits += 1
     rest = rest >> 1
   }
-  (bits + 7) / 8
+  bits
+}
+
+///|
+/// How many octets the modulus occupies — the width of every signature under it.
+fn octets(n : BigInt) -> Int32 {
+  (bit_len(n) + 7) / 8
+}
+
+///|
+/// The length of an encoded message, `emLen = ⌈(modBits − 1)/8⌉` (§9.1.1
+/// step 1).
+///
+/// It is the modulus's width except when the modulus is one bit longer than a
+/// whole number of octets — a 2049-bit key, say — where the encoding is one
+/// octet shorter and the signature carries the difference as a leading zero.
+/// Using the modulus's width instead would put a byte of the mask where the
+/// specification has none, every block would decode to a wrong `DB`, and the
+/// fault would look like a bad signature rather than an off-by-one.
+fn em_len(n : BigInt) -> Int32 {
+  (bit_len(n) + 6) / 8
 }
 
 ///|
@@ -452,14 +557,100 @@ fn mask_of(scheme : Scheme, digest : Digest) -> Digest {
 }
 
 ///|
+/// The hash a PSS block runs under.
+///
+/// `Fixed` is a digest of one length, masked through MGF1's counter. `Shake` is
+/// a SHAKE at RFC 8702's length, masked natively: the profile is explicit that
+/// the mask is one SHAKE call over the seed at the mask's length, not MGF1's
+/// repeated hash of `seed ∥ counter`, and the two give different masks for every
+/// input. The distinction reaches no further than this file — a caller names a
+/// [`Digest`] or an [`Xof`], never one of these.
+priv enum PssHash {
+  Fixed(Digest)
+  Shake(Xof)
+}
+
+///|
+/// The `hLen` of a block under `h`.
+fn pss_hash_size(h : PssHash) -> Int32 {
+  match h {
+    Fixed(d) => hasher(d).size()
+    Shake(x) => x.size()
+  }
+}
+
+///|
+/// `len` octets out of SHAKE `x` over `seed`.
+fn shake_bytes(x : Xof, seed : BytesView, len : Int32) -> Bytes {
+  match x {
+    Shake128 => @sha3.shake128(seed, len)
+    Shake256 => @sha3.shake256(seed, len)
+  }
+}
+
+///|
+/// `h` over `msg`, at `h`'s own length.
+fn pss_hash(h : PssHash, msg : BytesView) -> Bytes {
+  match h {
+    Fixed(d) => @spec.digest(hasher(d), msg)
+    Shake(x) => shake_bytes(x, msg, x.size())
+  }
+}
+
+///|
+/// The mask over `seed`, `len` octets long.
+fn pss_mask(h : PssHash, seed : BytesView, len : Int32) -> Bytes {
+  match h {
+    Fixed(d) => mgf1(d, seed, len)
+    Shake(x) => shake_bytes(x, seed, len)
+  }
+}
+
+///|
+/// The seed [`pss_encode`] derives its salt from: this implementation's own
+/// choice, since the salt is free, and the only part of a PSS block that no
+/// specification constrains.
+///
+/// A fixed digest is keyed over the message hash, which is HMAC and the shape
+/// RFC 6979 gives a deterministic nonce. A SHAKE is not keyed — it has no
+/// block structure for HMAC to key — so the secret goes in front of the message
+/// hash and the two are hashed together, which separates two messages and two
+/// keys equally well for a value that is masked away immediately afterwards.
+fn pss_seed(h : PssHash, secret : BytesView, m_hash : BytesView) -> Bytes {
+  match h {
+    Fixed(d) => @hmac.mac(secret, m_hash, fn() { hasher(d) })
+    Shake(_) => {
+      let joined : Array[Byte] = []
+      for b in secret {
+        joined.push(b)
+      }
+      for b in m_hash {
+        joined.push(b)
+      }
+      pss_hash(h, Bytes::from_array(joined)[:])
+    }
+  }
+}
+
+///|
+/// The salt length a signature uses: the digest's own under [`Auto`], the given
+/// number under [`Exact`].
+fn pss_salt_len(salt : Salt, hlen : Int32) -> Int32 {
+  match salt {
+    Auto => hlen
+    Exact(n) => n
+  }
+}
+
+///|
 /// The DER `DigestInfo` header for each digest (RFC 8017 §9.2, note 1): an
 /// `AlgorithmIdentifier` with a NULL parameter, then the `OCTET STRING` header.
 ///
 /// The identifiers below SHA-1, SHA-2's and SHA-3's are all in NIST's arc
 /// (`2.16.840.1.101.3.4.2`), which is why only the last arc differs between the
 /// two families. They carry an explicit NULL parameter, which is what OpenSSL
-/// writes and what the signatures in the vectors carry; RFC 8702 for PKCS#1 v1.5
-/// with SHA-3 asks for the same.
+/// writes and what the signatures in the vectors carry; RFC 8692, the SHA-3
+/// counterpart of the profile this file's PSS follows, asks for the same.
 fn prefix(d : Digest) -> Bytes {
   match d {
     Sha1 => b"\x30\x21\x30\x09\x06\x05\x2b\x0e\x03\x02\x1a\x05\x00\x04\x14"
@@ -535,35 +726,44 @@ fn mgf1(d : Digest, seed : BytesView, len : Int32) -> Bytes {
 }
 
 ///|
-/// EMSA-PSS-ENCODE (RFC 8017 §9.1.1).
+/// EMSA-PSS-ENCODE (RFC 8017 §9.1.1), under a fixed digest or under a SHAKE.
 ///
 /// The salt is derived from the private exponent and the message rather than
 /// drawn at random. Any salt gives a valid signature — a length of zero is
 /// explicitly permitted — so deriving it keeps signing reproducible and removes
 /// the entropy source, exactly as RFC 6979 does for ECDSA.
 ///
-/// `mgf` is the hash MGF1 runs, which §9.1.1 step 6 lets differ from the one
-/// `d` takes the message with; the salt's derivation follows `d`, because it is
-/// this implementation's own and only the block's shape is standardised.
+/// `mgf` is the hash the mask runs under, which §9.1.1 step 6 lets differ from
+/// the one `d` takes the message with; the salt's derivation follows `d`, because
+/// it is this implementation's own and only the block's shape is standardised.
+/// Under RFC 8702 the two are the same SHAKE, and the mask is one call at the
+/// mask's length rather than MGF1's counter over it.
+///
+/// `mod_bits` is the modulus's bit length, which fixes both the encoding's
+/// length, `emLen = ⌈(modBits − 1)/8⌉`, and how many of the first octet's bits
+/// sit above it — the `8·emLen − emBits` of step 11. They are one parameter
+/// because they are one fact about the key, and taking them apart is how a
+/// 2048-bit key and a 2049-bit one end up sharing a clearing rule that is right
+/// for one of them.
 fn pss_encode(
-  d : Digest,
-  mgf : Digest,
+  d : PssHash,
+  mgf : PssHash,
   msg : BytesView,
-  size : Int32,
+  mod_bits : Int32,
   salt_len : Int32,
   secret : BigInt,
 ) -> Bytes {
-  let h = hasher(d)
-  let hlen = h.size()
-  let m_hash = @spec.digest(h, msg)
-  guard size >= hlen + salt_len + 2 else {
-    abort("rsa: a \{size}-byte modulus cannot carry a \{salt_len}-byte salt")
+  let len = (mod_bits + 6) / 8
+  let unused = 8 * len - (mod_bits - 1)
+  let hlen = pss_hash_size(d)
+  let m_hash = pss_hash(d, msg)
+  guard len >= hlen + salt_len + 2 else {
+    abort("rsa: a \{len}-byte encoding cannot carry a \{salt_len}-byte salt")
   }
   let salt = if salt_len == 0 {
     b""
   } else {
-    let seed = @hmac.mac(secret.to_octets()[:], m_hash[:], fn() { hasher(d) })
-    mgf1(mgf, seed[:], salt_len)
+    pss_mask(mgf, pss_seed(d, secret.to_octets()[:], m_hash[:]), salt_len)
   }
   // M' = eight zero octets ∥ mHash ∥ salt
   let primed : Array[Byte] = []
@@ -576,8 +776,8 @@ fn pss_encode(
   for b in salt {
     primed.push(b)
   }
-  let digest = @spec.digest(hasher(d), Bytes::from_array(primed)[:])
-  let db_len = size - hlen - 1
+  let digest = pss_hash(d, Bytes::from_array(primed)[:])
+  let db_len = len - hlen - 1
   let db : Array[Byte] = []
   for _ in 0..<(db_len - salt_len - 1) {
     db.push(b'\x00')
@@ -586,13 +786,14 @@ fn pss_encode(
   for b in salt {
     db.push(b)
   }
-  let mask = mgf1(mgf, digest[:], db_len)
+  let mask = pss_mask(mgf, digest[:], db_len)
   let em : Array[Byte] = []
   for i in 0..<db_len {
     em.push((db[i].to_int() ^ mask[i].to_int()).to_byte())
   }
-  // The leading bits above the modulus width must be zero (§9.1.1 step 11).
-  em[0] = (em[0].to_int() & 0x7F).to_byte()
+  // The bits above the modulus width must be zero (§9.1.1 step 11): one bit for
+  // a modulus that is a whole number of octets wide, none for one bit more.
+  em[0] = (em[0].to_int() & (0xFF >> unused)).to_byte()
   for b in digest {
     em.push(b)
   }
@@ -609,29 +810,39 @@ fn pss_encode(
 /// exact length holds the block to it, the way RFC 8017 §9.1.2 step 11 requires:
 /// a block made with a different salt is a valid PSS block under another
 /// setting, not under this key.
+///
+/// `em` is already `emLen` octets — separating the encoding's length from the
+/// signature's is [`strip_em`]'s job, done before this is called — and
+/// `mod_bits` is the modulus's bit length, which says how many leading bits the
+/// encoding may not use.
 fn pss_check(
-  d : Digest,
-  mgf : Digest,
+  d : PssHash,
+  mgf : PssHash,
   msg : BytesView,
   em : Bytes,
+  mod_bits : Int32,
   salt : Salt,
 ) -> Bool {
-  let hlen = hasher(d).size()
-  let size = em.length()
-  if size < hlen + 2 || em[size - 1] != b'\xBC' {
+  let hlen = pss_hash_size(d)
+  let len = em.length()
+  let unused = 8 * len - (mod_bits - 1)
+  if unused < 0 || unused > 7 {
     return false
   }
-  if (em[0].to_int() & 0x80) != 0 {
+  if len < hlen + 2 || em[len - 1] != b'\xBC' {
     return false
   }
-  let db_len = size - hlen - 1
-  let digest = em[db_len:size - 1]
-  let mask = mgf1(mgf, digest, db_len)
+  if (em[0].to_int() & ((0xFF << (8 - unused)) & 0xFF)) != 0 {
+    return false
+  }
+  let db_len = len - hlen - 1
+  let digest = em[db_len:len - 1]
+  let mask = pss_mask(mgf, digest, db_len)
   let db : Array[Byte] = []
   for i in 0..<db_len {
     db.push((em[i].to_int() ^ mask[i].to_int()).to_byte())
   }
-  db[0] = (db[0].to_int() & 0x7F).to_byte()
+  db[0] = (db[0].to_int() & (0xFF >> unused)).to_byte()
   let mut at = 0
   while at < db_len && db[at] == b'\x00' {
     at += 1
@@ -641,10 +852,10 @@ fn pss_check(
   }
   match salt {
     Auto => ()
-    Exact(len) => if db_len - at - 1 != len { return false }
+    Exact(want) => if db_len - at - 1 != want { return false }
   }
   let salt = db[at + 1:]
-  let m_hash = @spec.digest(hasher(d), msg)
+  let m_hash = pss_hash(d, msg)
   let primed : Array[Byte] = []
   for _ in 0..<8 {
     primed.push(b'\x00')
@@ -655,7 +866,7 @@ fn pss_check(
   for b in salt {
     primed.push(b)
   }
-  @spec.eq(@spec.digest(hasher(d), Bytes::from_array(primed)[:])[:], digest)
+  @spec.eq(pss_hash(d, Bytes::from_array(primed)[:])[:], digest)
 }
 
 // ----------------------------------------------------------------- encryption

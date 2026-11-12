@@ -70,10 +70,21 @@ pub(all) enum Scheme {
   Pkcs1
   Pss(salt~ : Salt)
   PssMgf(salt~ : Salt, mgf~ : Digest)
+  PssShake(salt~ : Salt, xof~ : Xof)
 }
 pub fn Scheme::equal(Self, Self) -> Bool
 pub fn Scheme::not_equal(Self, Self) -> Bool
 pub fn Scheme::to_repr(Self) -> @debug.Repr
+
+#derive(Eq, @debug.Debug)
+pub(all) enum Xof {
+  Shake128
+  Shake256
+}
+pub fn Xof::equal(Self, Self) -> Bool
+pub fn Xof::not_equal(Self, Self) -> Bool
+pub fn Xof::size(Self) -> Int32
+pub fn Xof::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 
