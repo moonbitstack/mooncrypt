@@ -224,6 +224,9 @@ RSA_SHA = {
     "SHA3-512": "Sha3_512",
 }
 
+# RFC 8702's two variants, which the sets name in `sha` and repeat in `mgf`.
+RSA_SHAKE = {"SHAKE128": "Shake128", "SHAKE256": "Shake256"}
+
 VERDICT = {"valid": "Valid", "invalid": "Invalid", "acceptable": "Acceptable"}
 
 
@@ -310,6 +313,20 @@ def rsa_verify(src):
         data = json.loads(path.read_text(encoding="utf-8"))
         for group in data["testGroups"]:
             sha, mgf = group.get("sha"), group.get("mgfSha")
+            if sha in RSA_SHAKE:
+                # RFC 8702: one SHAKE for the message and for the mask, at the
+                # length the profile fixes. The set writes the mask's name in
+                # `mgf` and leaves `mgfSha` empty.
+                if group.get("mgf") != sha:
+                    raise SystemExit(f"{path.name}: a SHAKE masked with another")
+                k = key_rows(group)
+                salt = group["sLen"]
+                for t in group["tests"]:
+                    rows.append(
+                        f'    ({k}, "shake", "{RSA_SHAKE[sha]}", {salt}, "", '
+                        f'"{t["msg"]}", "{t["sig"]}", {VERDICT[t["result"]]}),'
+                    )
+                continue
             if sha not in RSA_SHA or mgf not in RSA_SHA:
                 skipped.append(f"{path.name} ({sha}, MGF {mgf})")
                 continue
@@ -329,8 +346,8 @@ def rsa_verify(src):
         "//",
         "// Every key width the sets carry — 2048, 3072, 4096 and 8192 bits — and",
         "// every digest the library signs: SHA-1, SHA-2 with its two truncated",
-        "// forms, and SHA-3. The SHAKE-based PSS sets are not here, because an",
-        "// extendable output function has no single length for `Digest` to name.",
+        "// forms, SHA-3, and RFC 8702's two SHAKE variants, whose digest column",
+        "// names the SHAKE rather than a `Digest`.",
         "",
         "///|",
         "/// Whether Wycheproof expects the signature to verify, to refuse, or",
@@ -364,6 +381,28 @@ def rsa_verify(src):
         "}",
         "",
         "///|",
+        "/// The SHAKE a row names, for the two RFC 8702 variants.",
+        "fn rsa_xof(name : String) -> @rsa.Xof {",
+        "  if name == \"Shake128\" {",
+        "    @rsa.Shake128",
+        "  } else {",
+        "    @rsa.Shake256",
+        "  }",
+        "}",
+        "",
+        "///|",
+        "/// The digest the key itself carries. A SHAKE row has none: RFC 8702 puts",
+        "/// the hash in the object identifier, and nothing reads the key's field for",
+        "/// one, so the row's name is answered with a digest that stands in.",
+        "fn rsa_key_digest(name : String) -> @rsa.Digest {",
+        "  if name == \"Shake128\" || name == \"Shake256\" {",
+        "    @rsa.Sha256",
+        "  } else {",
+        "    rsa_digest(name)",
+        "  }",
+        "}",
+        "",
+        "///|",
         "fn rsa_digest(name : String) -> @rsa.Digest {",
         "  match name {",
         '    "Sha1" => @rsa.Sha1',
@@ -382,9 +421,13 @@ def rsa_verify(src):
         "",
         "///|",
         "/// The scheme a row names: `Pss` when MGF1 masks with the message digest,",
-        "/// `PssMgf` when the set gives it a hash of its own.",
+        "/// `PssMgf` when the set gives it a hash of its own, `PssShake` for RFC",
+        "/// 8702's two variants, whose digest column names the SHAKE rather than a",
+        "/// `Digest`.",
         "fn rsa_scheme(scheme : String, digest : String, salt : Int32, mgf : String) -> @rsa.Scheme {",
-        "  if scheme == \"pss\" {",
+        "  if scheme == \"shake\" {",
+        "    @rsa.PssShake(salt=@rsa.Exact(salt), xof=rsa_xof(digest))",
+        "  } else if scheme == \"pss\" {",
         "    if mgf == digest {",
         "      @rsa.Pss(salt=@rsa.Exact(salt))",
         "    } else {",
@@ -411,7 +454,7 @@ def rsa_verify(src):
         "  for v in rsa_signatures {",
         "    let (k, scheme, digest, salt, mgf, msg, sig, verdict) = v",
         "    let pk = keys[k].with_scheme(",
-        "      digest=rsa_digest(digest),",
+        "      digest=rsa_key_digest(digest),",
         "      scheme=rsa_scheme(scheme, digest, salt, mgf),",
         "    )",
         "    let ok = pk.verify(rsa_hex(msg)[:], rsa_hex(sig)[:])",
