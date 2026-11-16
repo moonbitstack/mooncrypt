@@ -173,6 +173,27 @@ pub fn wipe(buf : FixedArray[Byte]) -> Unit {
 }
 
 ///|
+/// Every `size`-byte slice of `input` through `each`, in order and independently: what
+/// [`Block::encrypt_blocks`] and [`Block::decrypt_blocks`] do for a cipher with no faster batch
+/// path. Aborts on an input that is not a whole number of blocks, which is a caller's bug.
+pub fn blockwise(
+  input : BytesView,
+  size : Int32,
+  each : (BytesView) -> Bytes,
+) -> Bytes {
+  guard input.length() % size == 0 else {
+    abort(
+      "spec: the input is not a whole number of blocks (\{input.length()} bytes, block is \{size})",
+    )
+  }
+  let out = Buffer(size_hint=input.length())
+  for i in 0..<(input.length() / size) {
+    out.write_bytes(each(input[i * size:(i + 1) * size]))
+  }
+  out.to_bytes()
+}
+
+///|
 /// One whole message through a hash, in one call.
 ///
 /// It resets first, so passing a state that has already been used is not a

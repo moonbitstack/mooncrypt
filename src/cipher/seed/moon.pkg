@@ -1,0 +1,14 @@
+// SEED, RFC 4269: https://www.rfc-editor.org/rfc/rfc4269
+//
+// A 128-bit block cipher with a 128-bit key, the Korean standard TTAS.KO-12.0004 that ARIA later
+// joined. It is a 16-round Feistel network whose round function runs three layers of a function G,
+// two 8-bit S-boxes followed by a byte permutation, with additions between them; decryption is
+// the same network with the round keys reversed. TLS names it in RFC 4162.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+  "moonbitstack/mooncrypt/spec",
+} for "test"

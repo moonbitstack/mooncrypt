@@ -74,7 +74,7 @@
         <h1>Every package, in order</h1>
         <p class="lede">
           Generated from each package's interface file and the comments above its
-          declarations. 718 public declarations across 64
+          declarations. 764 public declarations across 68
           packages.
         </p>
       </div>
@@ -185,6 +185,10 @@
   Size(want~ : Int32, got~ : Int32)
   Weak
 }</div></div>
+</div>
+<div class="item" id="spec-blockwise">
+<div class="name"><span class="kind">fn</span>blockwise</div>
+<div class="body"><div class="sig">pub fn blockwise(BytesView, Int32, (BytesView) -&gt; Bytes) -&gt; Bytes</div><p>Every `size`-byte slice of `input` through `each`, in order and independently: what [`Block::encrypt_blocks`] and [`Block::decrypt_blocks`] do for a cipher with no faster batch path. Aborts on an input that is not a whole number of blocks, which is a caller's bug.</p></div>
 </div>
 <div class="item" id="spec-digest">
 <div class="name"><span class="kind">fn</span>digest</div>
@@ -1573,7 +1577,46 @@
 </div>
 </section>
 <section class="pkg">
-<div class="pkg-head"><span class="no">02</span><h2>blowfish</h2><span class="path">moonbitstack/mooncrypt/cipher/blowfish</span></div><p class="pkg-note">Blowfish, as described by Bruce Schneier: https://www.schneier.com/academic/blowfish/</p><p class="pkg-note">A 16-round Feistel network keyed by a deliberately expensive key schedule: the subkeys start as the digits of pi and are then overwritten by encrypting the subkeys themselves. That is what bcrypt leans on — it makes the schedule repeat, salted, so the cost of a guess becomes the cost of a key setup rather than the cost of a block.</p><p class="pkg-note">Deprecated as a cipher: 64-bit blocks are too small for a mode of operation to be safe in general. It is here because bcrypt is defined on top of it, and because the key schedule is the interesting part.</p>
+<div class="pkg-head"><span class="no">02</span><h2>aria</h2><span class="path">moonbitstack/mooncrypt/cipher/aria</span></div><p class="pkg-note">ARIA, RFC 5794: https://www.rfc-editor.org/rfc/rfc5794</p><p class="pkg-note">A 128-bit block cipher with 128, 192 or 256-bit keys and 12, 14 or 16 rounds, the Korean standard KS X 1213. Each round is a substitution through four S-boxes, AES's and one more with their inverses, then a 16-by-16 binary matrix that is its own inverse, so decryption is the same rounds under a transformed key schedule. TLS names it in RFC 6209.</p>
+<div class="item" id="cipher-aria-cipher">
+<div class="name"><span class="kind">type</span>Cipher</div>
+<div class="body"><div class="sig">pub struct Cipher {</div><p>An ARIA key schedule: the encryption round keys and the decryption ones.</p><div class="sig">implements <code>@spec.Block</code></div></div>
+</div>
+<div class="item" id="cipher-aria-block">
+<div class="name"><span class="kind">let</span>block</div>
+<div class="body"><div class="sig">pub let block : Int32</div><p>The block length in bytes.</p></div>
+</div>
+<div class="item" id="cipher-aria-cipher-block">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>block</div>
+<div class="body"><div class="sig">pub fn Cipher::block(Self) -&gt; Int32</div><p>The block length in bytes.</p></div>
+</div>
+<div class="item" id="cipher-aria-cipher-decrypt">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>decrypt</div>
+<div class="body"><div class="sig">pub fn Cipher::decrypt(Self, BytesView) -&gt; Bytes</div><p>Decrypt one 16-byte block.</p></div>
+</div>
+<div class="item" id="cipher-aria-cipher-decrypt-blocks">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>decrypt_blocks</div>
+<div class="body"><div class="sig">pub fn Cipher::decrypt_blocks(Self, BytesView) -&gt; Bytes</div></div>
+</div>
+<div class="item" id="cipher-aria-cipher-encrypt">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>encrypt</div>
+<div class="body"><div class="sig">pub fn Cipher::encrypt(Self, BytesView) -&gt; Bytes</div><p>Encrypt one 16-byte block.</p></div>
+</div>
+<div class="item" id="cipher-aria-cipher-encrypt-blocks">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>encrypt_blocks</div>
+<div class="body"><div class="sig">pub fn Cipher::encrypt_blocks(Self, BytesView) -&gt; Bytes</div></div>
+</div>
+<div class="item" id="cipher-aria-cipher-new">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>new</div>
+<div class="body"><div class="sig">pub fn Cipher::new(BytesView) -&gt; Self raise @spec.Broken</div><p>Expand a 16, 24 or 32-byte key (RFC 5794 §2.2).</p></div>
+</div>
+<div class="item" id="cipher-aria-cipher-wipe">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>wipe</div>
+<div class="body"><div class="sig">pub fn Cipher::wipe(Self) -&gt; Unit</div><p>Overwrite both schedules: either decrypts everything the key does.</p></div>
+</div>
+</section>
+<section class="pkg">
+<div class="pkg-head"><span class="no">03</span><h2>blowfish</h2><span class="path">moonbitstack/mooncrypt/cipher/blowfish</span></div><p class="pkg-note">Blowfish, as described by Bruce Schneier: https://www.schneier.com/academic/blowfish/</p><p class="pkg-note">A 16-round Feistel network keyed by a deliberately expensive key schedule: the subkeys start as the digits of pi and are then overwritten by encrypting the subkeys themselves. That is what bcrypt leans on — it makes the schedule repeat, salted, so the cost of a guess becomes the cost of a key setup rather than the cost of a block.</p><p class="pkg-note">Deprecated as a cipher: 64-bit blocks are too small for a mode of operation to be safe in general. It is here because bcrypt is defined on top of it, and because the key schedule is the interesting part.</p>
 <div class="item" id="cipher-blowfish-cipher">
 <div class="name"><span class="kind">type</span>Cipher</div>
 <div class="body"><div class="sig">pub struct Cipher {</div><p>A Blowfish key schedule. The subkeys are the whole state; there is nothing else to keep.</p><div class="sig">implements <code>@spec.Block</code></div></div>
@@ -1628,7 +1671,7 @@
 </div>
 </section>
 <section class="pkg">
-<div class="pkg-head"><span class="no">03</span><h2>camellia</h2><span class="path">moonbitstack/mooncrypt/cipher/camellia</span></div><p class="pkg-note">Camellia, RFC 3713: https://www.rfc-editor.org/rfc/rfc3713</p><p class="pkg-note">A 128-bit block cipher with 128, 192 or 256-bit keys, designed in Japan at the same time as AES and to the same strength. It is a Feistel network — so the same circuit both encrypts and decrypts, with the subkeys reversed — with an FL/FLINV layer every six rounds that mixes in a little key material without touching the Feistel structure. That layer is what makes Camellia resistant to the meet-in-the-middle and subkey-guessing attacks a plain 18-round Feistel of this width would otherwise admit.</p>
+<div class="pkg-head"><span class="no">04</span><h2>camellia</h2><span class="path">moonbitstack/mooncrypt/cipher/camellia</span></div><p class="pkg-note">Camellia, RFC 3713: https://www.rfc-editor.org/rfc/rfc3713</p><p class="pkg-note">A 128-bit block cipher with 128, 192 or 256-bit keys, designed in Japan at the same time as AES and to the same strength. It is a Feistel network — so the same circuit both encrypts and decrypts, with the subkeys reversed — with an FL/FLINV layer every six rounds that mixes in a little key material without touching the Feistel structure. That layer is what makes Camellia resistant to the meet-in-the-middle and subkey-guessing attacks a plain 18-round Feistel of this width would otherwise admit.</p>
 <div class="item" id="cipher-camellia-cipher">
 <div class="name"><span class="kind">type</span>Cipher</div>
 <div class="body"><div class="sig">pub struct Cipher {</div><p>A Camellia key, with both directions already scheduled.</p><p>Decryption uses the same network as encryption with every list reversed, so the two schedules are built once here and the entry point is all that differs between [`encrypt`] and [`decrypt`].</p><div class="sig">implements <code>@spec.Block</code></div></div>
@@ -1667,7 +1710,7 @@
 </div>
 </section>
 <section class="pkg">
-<div class="pkg-head"><span class="no">04</span><h2>des</h2><span class="path">moonbitstack/mooncrypt/cipher/des</span></div><p class="pkg-ref">Both are legacy. DES's 56-bit key is small enough to search exhaustively — it was in 1998 and it is much cheaper now — and Triple DES exists only to stretch that key by encrypting three times. NIST withdrew approval for both in 2023, and every new protocol should use AES.</p><p class="pkg-note">DES and Triple DES, the Data Encryption Standard of 1977 and its successor.</p><p class="pkg-note">They are here because a great deal of data and a great many protocols still name them: EMV cards, some TLS and IPsec configurations, older Kerberos and a long tail of hardware. Reading that data is the reason this package exists.</p>
+<div class="pkg-head"><span class="no">05</span><h2>des</h2><span class="path">moonbitstack/mooncrypt/cipher/des</span></div><p class="pkg-ref">Both are legacy. DES's 56-bit key is small enough to search exhaustively — it was in 1998 and it is much cheaper now — and Triple DES exists only to stretch that key by encrypting three times. NIST withdrew approval for both in 2023, and every new protocol should use AES.</p><p class="pkg-note">DES and Triple DES, the Data Encryption Standard of 1977 and its successor.</p><p class="pkg-note">They are here because a great deal of data and a great many protocols still name them: EMV cards, some TLS and IPsec configurations, older Kerberos and a long tail of hardware. Reading that data is the reason this package exists.</p>
 <div class="item" id="cipher-des-cipher">
 <div class="name"><span class="kind">type</span>Cipher</div>
 <div class="body"><div class="sig">pub struct Cipher {</div><p>A DES key, expanded into its sixteen forty-eight-bit round keys.</p><div class="sig">implements <code>@spec.Block</code></div></div>
@@ -1750,7 +1793,50 @@
 </div>
 </section>
 <section class="pkg">
-<div class="pkg-head"><span class="no">05</span><h2>mode</h2><span class="path">moonbitstack/mooncrypt/cipher/mode</span></div><p class="pkg-ref">Modes of operation for a block cipher, NIST SP 800-38A: https://doi.org/10.6028/NIST.SP.800-38A</p><p class="pkg-note">A block cipher on its own only permutes one block, which leaks every repetition in the plaintext. CBC chains the blocks so each one depends on all the ones before, hiding that; CTR turns the cipher into a stream, so any length encrypts without padding and decryption is the same operation.</p><p class="pkg-note">Neither authenticates anything. A CBC or CTR ciphertext can be edited by anyone who knows the format — a flipped bit flips a bit in the plaintext — so anything that matters wants an AEAD or a MAC alongside.</p>
+<div class="pkg-head"><span class="no">06</span><h2>idea</h2><span class="path">moonbitstack/mooncrypt/cipher/idea</span></div><p class="pkg-note">IDEA, the International Data Encryption Algorithm of Lai and Massey (EUROCRYPT 1991), as RFC 5469 names it for TLS: a 64-bit block and a 128-bit key.</p><p class="pkg-note">Eight rounds and an output transformation built from three operations on 16-bit words, no two of which share an algebraic structure: XOR, addition modulo 2^16 and multiplication modulo 2^16 + 1 with the zero word standing for 2^16. Decryption is the same rounds under inverted subkeys. Its patents have expired; TLS 1.2 deprecated its suite (RFC 5469), and it is here for peers that still speak it.</p>
+<div class="item" id="cipher-idea-cipher">
+<div class="name"><span class="kind">type</span>Cipher</div>
+<div class="body"><div class="sig">pub struct Cipher {</div><p>An IDEA key schedule: 52 subkeys for encryption and their inverses for decryption.</p><div class="sig">implements <code>@spec.Block</code></div></div>
+</div>
+<div class="item" id="cipher-idea-block">
+<div class="name"><span class="kind">let</span>block</div>
+<div class="body"><div class="sig">pub let block : Int32</div><p>The block length in bytes.</p></div>
+</div>
+<div class="item" id="cipher-idea-key-size">
+<div class="name"><span class="kind">let</span>key_size</div>
+<div class="body"><div class="sig">pub let key_size : Int32</div><p>The key length in bytes: one, 16.</p></div>
+</div>
+<div class="item" id="cipher-idea-cipher-block">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>block</div>
+<div class="body"><div class="sig">pub fn Cipher::block(Self) -&gt; Int32</div><p>The block length in bytes.</p></div>
+</div>
+<div class="item" id="cipher-idea-cipher-decrypt">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>decrypt</div>
+<div class="body"><div class="sig">pub fn Cipher::decrypt(Self, BytesView) -&gt; Bytes</div><p>Decrypt one 8-byte block.</p></div>
+</div>
+<div class="item" id="cipher-idea-cipher-decrypt-blocks">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>decrypt_blocks</div>
+<div class="body"><div class="sig">pub fn Cipher::decrypt_blocks(Self, BytesView) -&gt; Bytes</div></div>
+</div>
+<div class="item" id="cipher-idea-cipher-encrypt">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>encrypt</div>
+<div class="body"><div class="sig">pub fn Cipher::encrypt(Self, BytesView) -&gt; Bytes</div><p>Encrypt one 8-byte block.</p></div>
+</div>
+<div class="item" id="cipher-idea-cipher-encrypt-blocks">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>encrypt_blocks</div>
+<div class="body"><div class="sig">pub fn Cipher::encrypt_blocks(Self, BytesView) -&gt; Bytes</div></div>
+</div>
+<div class="item" id="cipher-idea-cipher-new">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>new</div>
+<div class="body"><div class="sig">pub fn Cipher::new(BytesView) -&gt; Self raise @spec.Broken</div><p>Expand a 16-byte key: eight 16-bit subkeys at a time, the key turned left by 25 bits between each eight.</p></div>
+</div>
+<div class="item" id="cipher-idea-cipher-wipe">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>wipe</div>
+<div class="body"><div class="sig">pub fn Cipher::wipe(Self) -&gt; Unit</div><p>Overwrite both subkey sets.</p></div>
+</div>
+</section>
+<section class="pkg">
+<div class="pkg-head"><span class="no">07</span><h2>mode</h2><span class="path">moonbitstack/mooncrypt/cipher/mode</span></div><p class="pkg-ref">Modes of operation for a block cipher, NIST SP 800-38A: https://doi.org/10.6028/NIST.SP.800-38A</p><p class="pkg-note">A block cipher on its own only permutes one block, which leaks every repetition in the plaintext. CBC chains the blocks so each one depends on all the ones before, hiding that; CTR turns the cipher into a stream, so any length encrypts without padding and decryption is the same operation.</p><p class="pkg-note">Neither authenticates anything. A CBC or CTR ciphertext can be edited by anyone who knows the format — a flipped bit flips a bit in the plaintext — so anything that matters wants an AEAD or a MAC alongside.</p>
 <div class="item" id="cipher-mode-cbc">
 <div class="name"><span class="kind">type</span>Cbc</div>
 <div class="body"><div class="sig">pub struct Cbc {</div><p>Cipher Block Chaining: each block is XORed with the ciphertext of the one before it, so the same plaintext block at two positions encrypts differently and a change anywhere propagates to everything after it.</p><p>The chaining state carries across calls, so a message can be encrypted in pieces as long as every piece is a whole number of blocks. Use [`pad`] and [`unpad`] when the message is not.</p></div>
@@ -1805,7 +1891,50 @@
 </div>
 </section>
 <section class="pkg">
-<div class="pkg-head"><span class="no">06</span><h2>sm4</h2><span class="path">moonbitstack/mooncrypt/cipher/sm4</span></div><p class="pkg-note">SM4, GB/T 32907-2016: https://openstd.samr.gov.cn/bzgk/gb/newGbInfo?hcno=7803DE42D3BC5E80B0C3E5D8E873D56A</p><p class="pkg-note">A 128-bit block cipher with a 128-bit key. It is a Feistel-free design in the same family as AES's round structure — four S-box lookups and a linear diffusion — with a key schedule that runs the same round function backwards.</p>
+<div class="pkg-head"><span class="no">08</span><h2>seed</h2><span class="path">moonbitstack/mooncrypt/cipher/seed</span></div><p class="pkg-note">SEED, RFC 4269: https://www.rfc-editor.org/rfc/rfc4269</p><p class="pkg-note">A 128-bit block cipher with a 128-bit key, the Korean standard TTAS.KO-12.0004 that ARIA later joined. It is a 16-round Feistel network whose round function runs three layers of a function G, two 8-bit S-boxes followed by a byte permutation, with additions between them; decryption is the same network with the round keys reversed. TLS names it in RFC 4162.</p>
+<div class="item" id="cipher-seed-cipher">
+<div class="name"><span class="kind">type</span>Cipher</div>
+<div class="body"><div class="sig">pub struct Cipher {</div><p>A SEED key schedule: sixteen round keys, two words each.</p><div class="sig">implements <code>@spec.Block</code></div></div>
+</div>
+<div class="item" id="cipher-seed-block">
+<div class="name"><span class="kind">let</span>block</div>
+<div class="body"><div class="sig">pub let block : Int32</div><p>The block length in bytes.</p></div>
+</div>
+<div class="item" id="cipher-seed-key-size">
+<div class="name"><span class="kind">let</span>key_size</div>
+<div class="body"><div class="sig">pub let key_size : Int32</div><p>The key length in bytes: one, 16.</p></div>
+</div>
+<div class="item" id="cipher-seed-cipher-block">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>block</div>
+<div class="body"><div class="sig">pub fn Cipher::block(Self) -&gt; Int32</div><p>The block length in bytes.</p></div>
+</div>
+<div class="item" id="cipher-seed-cipher-decrypt">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>decrypt</div>
+<div class="body"><div class="sig">pub fn Cipher::decrypt(Self, BytesView) -&gt; Bytes</div><p>Decrypt one 16-byte block.</p></div>
+</div>
+<div class="item" id="cipher-seed-cipher-decrypt-blocks">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>decrypt_blocks</div>
+<div class="body"><div class="sig">pub fn Cipher::decrypt_blocks(Self, BytesView) -&gt; Bytes</div></div>
+</div>
+<div class="item" id="cipher-seed-cipher-encrypt">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>encrypt</div>
+<div class="body"><div class="sig">pub fn Cipher::encrypt(Self, BytesView) -&gt; Bytes</div><p>Encrypt one 16-byte block.</p></div>
+</div>
+<div class="item" id="cipher-seed-cipher-encrypt-blocks">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>encrypt_blocks</div>
+<div class="body"><div class="sig">pub fn Cipher::encrypt_blocks(Self, BytesView) -&gt; Bytes</div></div>
+</div>
+<div class="item" id="cipher-seed-cipher-new">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>new</div>
+<div class="body"><div class="sig">pub fn Cipher::new(BytesView) -&gt; Self raise @spec.Broken</div><p>Expand a 16-byte key (RFC 4269 §2.3).</p></div>
+</div>
+<div class="item" id="cipher-seed-cipher-wipe">
+<div class="name"><span class="kind">fn</span><span class="dim">Cipher::</span>wipe</div>
+<div class="body"><div class="sig">pub fn Cipher::wipe(Self) -&gt; Unit</div><p>Overwrite the round keys.</p></div>
+</div>
+</section>
+<section class="pkg">
+<div class="pkg-head"><span class="no">09</span><h2>sm4</h2><span class="path">moonbitstack/mooncrypt/cipher/sm4</span></div><p class="pkg-note">SM4, GB/T 32907-2016: https://openstd.samr.gov.cn/bzgk/gb/newGbInfo?hcno=7803DE42D3BC5E80B0C3E5D8E873D56A</p><p class="pkg-note">A 128-bit block cipher with a 128-bit key. It is a Feistel-free design in the same family as AES's round structure — four S-box lookups and a linear diffusion — with a key schedule that runs the same round function backwards.</p>
 <div class="item" id="cipher-sm4-cipher">
 <div class="name"><span class="kind">type</span>Cipher</div>
 <div class="body"><div class="sig">pub struct Cipher {</div><p>An SM4 key schedule: thirty-two round keys, either direction.</p><div class="sig">implements <code>@spec.Block</code></div></div>
@@ -2741,7 +2870,82 @@
 </div>
 </section>
 <section class="pkg">
-<div class="pkg-head"><span class="no">03</span><h2>x25519</h2><span class="path">moonbitstack/mooncrypt/kex/x25519</span></div><p class="pkg-note">X25519, RFC 7748: https://www.rfc-editor.org/rfc/rfc7748</p><p class="pkg-note">The Curve25519 Diffie-Hellman, over the field mod 2^255-19. A low-order point is refused rather than returned as an all-zero secret.</p>
+<div class="pkg-head"><span class="no">03</span><h2>srp</h2><span class="path">moonbitstack/mooncrypt/kex/srp</span></div><p class="pkg-note">SRP-6a as RFC 5054 runs it for TLS: https://www.rfc-editor.org/rfc/rfc5054</p><p class="pkg-note">A password-authenticated key exchange. The server keeps a verifier, g^x where x is a hash of the salt, the user name and the password, and never the password; the two ends then agree a secret that only a client knowing the password and a server holding its verifier can compute. RFC 5054 fixes SHA-1 throughout and seven groups, safe primes with generators of the whole group, of which the 1024 and 1536-bit ones are mandatory.</p>
+<div class="item" id="kex-srp-client">
+<div class="name"><span class="kind">type</span>Client</div>
+<div class="body"><div class="sig">pub struct Client {</div><p>The client's half: its secret exponent a and its public value A = g^a % N.</p></div>
+</div>
+<div class="item" id="kex-srp-server">
+<div class="name"><span class="kind">type</span>Server</div>
+<div class="body"><div class="sig">pub struct Server {</div><p>The server's half: its secret exponent b, the user's verifier v and its public value B = (k * v + g^b) % N.</p></div>
+</div>
+<div class="item" id="kex-srp-group">
+<div class="name"><span class="kind">type</span>Group</div>
+<div class="body"><div class="sig">pub(all) enum Group {
+  G1024
+  G1536
+  G2048
+  G3072
+  G4096
+  G6144
+  G8192
+}</div></div>
+</div>
+<div class="item" id="kex-srp-groups">
+<div class="name"><span class="kind">let</span>groups</div>
+<div class="body"><div class="sig">pub let groups : Array[Group]</div><p>Every group, smallest first.</p></div>
+</div>
+<div class="item" id="kex-srp-client-new">
+<div class="name"><span class="kind">fn</span><span class="dim">Client::</span>new</div>
+<div class="body"><div class="sig">pub fn Client::new(Group, BytesView) -&gt; Self raise @spec.Broken</div><p>A client in `group` with the secret exponent `secret`.</p></div>
+</div>
+<div class="item" id="kex-srp-client-premaster">
+<div class="name"><span class="kind">fn</span><span class="dim">Client::</span>premaster</div>
+<div class="body"><div class="sig">pub fn Client::premaster(Self, BytesView, salt~ : BytesView, identity~ : BytesView, password~ : BytesView) -&gt; Bytes raise @spec.Broken</div><p>The premaster secret (RFC 5054 §2.6), (B - k * g^x) ^ (a + u * x) % N, from the server's public value and salt and the user's name and password.</p></div>
+</div>
+<div class="item" id="kex-srp-client-public">
+<div class="name"><span class="kind">fn</span><span class="dim">Client::</span>public</div>
+<div class="body"><div class="sig">pub fn Client::public(Self) -&gt; Bytes</div><p>A, as the ClientKeyExchange carries it.</p></div>
+</div>
+<div class="item" id="kex-srp-group-bits">
+<div class="name"><span class="kind">fn</span><span class="dim">Group::</span>bits</div>
+<div class="body"><div class="sig">pub fn Group::bits(Self) -&gt; Int32</div><p>The size of the group in bits.</p></div>
+</div>
+<div class="item" id="kex-srp-group-generator">
+<div class="name"><span class="kind">fn</span><span class="dim">Group::</span>generator</div>
+<div class="body"><div class="sig">pub fn Group::generator(Self) -&gt; @bigint.BigInt</div><p>The generator g. The larger primes are RFC 3526's, with generators recomputed to be primitive roots rather than RFC 3526's 2.</p></div>
+</div>
+<div class="item" id="kex-srp-group-of">
+<div class="name"><span class="kind">fn</span><span class="dim">Group::</span>of</div>
+<div class="body"><div class="sig">pub fn Group::of(BytesView, BytesView) -&gt; Self?</div><p>The group a ServerKeyExchange's prime and generator name, `None` for parameters outside the appendix: RFC 5054 §2.5.3 has a client refuse those unless it has its own reason to trust them.</p></div>
+</div>
+<div class="item" id="kex-srp-group-prime">
+<div class="name"><span class="kind">fn</span><span class="dim">Group::</span>prime</div>
+<div class="body"><div class="sig">pub fn Group::prime(Self) -&gt; @bigint.BigInt</div><p>The prime N, decoded on demand.</p></div>
+</div>
+<div class="item" id="kex-srp-group-size">
+<div class="name"><span class="kind">fn</span><span class="dim">Group::</span>size</div>
+<div class="body"><div class="sig">pub fn Group::size(Self) -&gt; Int32</div><p>The size of the group in bytes, which is the width `PAD()` writes a value at.</p></div>
+</div>
+<div class="item" id="kex-srp-server-new">
+<div class="name"><span class="kind">fn</span><span class="dim">Server::</span>new</div>
+<div class="body"><div class="sig">pub fn Server::new(Group, BytesView, BytesView) -&gt; Self raise @spec.Broken</div><p>A server in `group` for the user whose verifier is `verifier`, with the secret exponent `secret`.</p></div>
+</div>
+<div class="item" id="kex-srp-server-premaster">
+<div class="name"><span class="kind">fn</span><span class="dim">Server::</span>premaster</div>
+<div class="body"><div class="sig">pub fn Server::premaster(Self, BytesView) -&gt; Bytes raise @spec.Broken</div><p>The premaster secret (RFC 5054 §2.6), (A * v^u) ^ b % N, from the client's public value.</p></div>
+</div>
+<div class="item" id="kex-srp-server-public">
+<div class="name"><span class="kind">fn</span><span class="dim">Server::</span>public</div>
+<div class="body"><div class="sig">pub fn Server::public(Self) -&gt; Bytes</div><p>B, as the ServerKeyExchange carries it.</p></div>
+</div>
+<div class="item" id="kex-srp-verifier">
+<div class="name"><span class="kind">fn</span>verifier</div>
+<div class="body"><div class="sig">pub fn verifier(Group, BytesView, BytesView, BytesView) -&gt; Bytes</div><p>The verifier a server stores for a user, v = g^x % N (RFC 5054 §2.4). The user name and password are the UTF-8 octets after SASLprep (§2.3), which the caller has done.</p></div>
+</div>
+</section>
+<section class="pkg">
+<div class="pkg-head"><span class="no">04</span><h2>x25519</h2><span class="path">moonbitstack/mooncrypt/kex/x25519</span></div><p class="pkg-note">X25519, RFC 7748: https://www.rfc-editor.org/rfc/rfc7748</p><p class="pkg-note">The Curve25519 Diffie-Hellman, over the field mod 2^255-19. A low-order point is refused rather than returned as an all-zero secret.</p>
 <div class="item" id="kex-x25519-base">
 <div class="name"><span class="kind">let</span>base</div>
 <div class="body"><div class="sig">pub let base : Bytes</div><p>The base point, `u = 9`, little-endian (RFC 7748 §4.1).</p></div>
@@ -2764,7 +2968,7 @@
 </div>
 </section>
 <section class="pkg">
-<div class="pkg-head"><span class="no">04</span><h2>x448</h2><span class="path">moonbitstack/mooncrypt/kex/x448</span></div><p class="pkg-note">X448, RFC 7748: https://www.rfc-editor.org/rfc/rfc7748</p><p class="pkg-note">The Curve448 Diffie-Hellman, over the field mod 2^448 - 2^224 - 1. The same ladder as X25519 with a wider field, which buys a larger security margin than the 128 bits Curve25519 offers — and costs about three times the work per operation.</p><p class="pkg-note">Unlike X25519 there is no high bit to mask off the u-coordinate: 448 bits is exactly 56 bytes, so every bit of the input is part of the value. A low-order point is refused rather than returned as an all-zero secret.</p>
+<div class="pkg-head"><span class="no">05</span><h2>x448</h2><span class="path">moonbitstack/mooncrypt/kex/x448</span></div><p class="pkg-note">X448, RFC 7748: https://www.rfc-editor.org/rfc/rfc7748</p><p class="pkg-note">The Curve448 Diffie-Hellman, over the field mod 2^448 - 2^224 - 1. The same ladder as X25519 with a wider field, which buys a larger security margin than the 128 bits Curve25519 offers — and costs about three times the work per operation.</p><p class="pkg-note">Unlike X25519 there is no high bit to mask off the u-coordinate: 448 bits is exactly 56 bytes, so every bit of the input is part of the value. A low-order point is refused rather than returned as an all-zero secret.</p>
 <div class="item" id="kex-x448-base">
 <div class="name"><span class="kind">let</span>base</div>
 <div class="body"><div class="sig">pub let base : Bytes</div><p>The base point, `u = 5`, little-endian (RFC 7748 §4.2).</p></div>

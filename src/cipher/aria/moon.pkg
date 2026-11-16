@@ -1,0 +1,14 @@
+// ARIA, RFC 5794: https://www.rfc-editor.org/rfc/rfc5794
+//
+// A 128-bit block cipher with 128, 192 or 256-bit keys and 12, 14 or 16 rounds, the Korean
+// standard KS X 1213. Each round is a substitution through four S-boxes, AES's and one more with
+// their inverses, then a 16-by-16 binary matrix that is its own inverse, so decryption is the
+// same rounds under a transformed key schedule. TLS names it in RFC 6209.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+  "moonbitstack/mooncrypt/spec",
+} for "test"

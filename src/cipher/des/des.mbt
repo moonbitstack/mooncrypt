@@ -259,74 +259,22 @@ pub impl @spec.Block for TripleDes with fn decrypt(self, input) {
 /// Encrypt every [`block`]-byte slice of `input` as an independent block, in
 /// order, for both the single and triple DES keys.
 pub impl @spec.Block for Cipher with fn encrypt_blocks(self, input) {
-  let b = self.block()
-  guard input.length() % b == 0 else {
-    abort(
-      "des: the input is not a whole number of blocks (\{input.length()} bytes, block is \{b})",
-    )
-  }
-  let out = Array::make(input.length(), b'\x00')
-  for i in 0..<(input.length() / b) {
-    let blk = self.encrypt(input[i * b:(i + 1) * b])
-    for j in 0..<b {
-      out[i * b + j] = blk[j]
-    }
-  }
-  Bytes::from_array(out)
+  @spec.blockwise(input, self.block(), b => self.encrypt(b))
 }
 
 ///|
 pub impl @spec.Block for Cipher with fn decrypt_blocks(self, input) {
-  let b = self.block()
-  guard input.length() % b == 0 else {
-    abort(
-      "des: the input is not a whole number of blocks (\{input.length()} bytes, block is \{b})",
-    )
-  }
-  let out = Array::make(input.length(), b'\x00')
-  for i in 0..<(input.length() / b) {
-    let blk = self.decrypt(input[i * b:(i + 1) * b])
-    for j in 0..<b {
-      out[i * b + j] = blk[j]
-    }
-  }
-  Bytes::from_array(out)
+  @spec.blockwise(input, self.block(), b => self.decrypt(b))
 }
 
 ///|
 pub impl @spec.Block for TripleDes with fn encrypt_blocks(self, input) {
-  let b = self.block()
-  guard input.length() % b == 0 else {
-    abort(
-      "des: the input is not a whole number of blocks (\{input.length()} bytes, block is \{b})",
-    )
-  }
-  let out = Array::make(input.length(), b'\x00')
-  for i in 0..<(input.length() / b) {
-    let blk = self.encrypt(input[i * b:(i + 1) * b])
-    for j in 0..<b {
-      out[i * b + j] = blk[j]
-    }
-  }
-  Bytes::from_array(out)
+  @spec.blockwise(input, self.block(), b => self.encrypt(b))
 }
 
 ///|
 pub impl @spec.Block for TripleDes with fn decrypt_blocks(self, input) {
-  let b = self.block()
-  guard input.length() % b == 0 else {
-    abort(
-      "des: the input is not a whole number of blocks (\{input.length()} bytes, block is \{b})",
-    )
-  }
-  let out = Array::make(input.length(), b'\x00')
-  for i in 0..<(input.length() / b) {
-    let blk = self.decrypt(input[i * b:(i + 1) * b])
-    for j in 0..<b {
-      out[i * b + j] = blk[j]
-    }
-  }
-  Bytes::from_array(out)
+  @spec.blockwise(input, self.block(), b => self.decrypt(b))
 }
 
 // ------------------------------------------------------------------- tables

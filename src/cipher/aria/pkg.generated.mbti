@@ -1,0 +1,29 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/cipher/aria"
+
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub let block : Int32
+
+// Errors
+
+// Types and methods
+pub struct Cipher {
+  ek : FixedArray[FixedArray[Byte]]
+  dk : FixedArray[FixedArray[Byte]]
+}
+pub fn Cipher::block(Self) -> Int32
+pub fn Cipher::decrypt(Self, BytesView) -> Bytes
+pub fn Cipher::decrypt_blocks(Self, BytesView) -> Bytes
+pub fn Cipher::encrypt(Self, BytesView) -> Bytes
+pub fn Cipher::encrypt_blocks(Self, BytesView) -> Bytes
+pub fn Cipher::new(BytesView) -> Self raise @spec.Broken
+pub fn Cipher::wipe(Self) -> Unit
+pub impl @spec.Block for Cipher
+
+// Type aliases
+
+// Traits

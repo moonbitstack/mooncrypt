@@ -1,0 +1,16 @@
+// SRP-6a as RFC 5054 runs it for TLS: https://www.rfc-editor.org/rfc/rfc5054
+//
+// A password-authenticated key exchange. The server keeps a verifier, g^x where x is a hash of
+// the salt, the user name and the password, and never the password; the two ends then agree a
+// secret that only a client knowing the password and a server holding its verifier can compute.
+// RFC 5054 fixes SHA-1 throughout and seven groups, safe primes with generators of the whole
+// group, of which the 1024 and 1536-bit ones are mandatory.
+import {
+  "moonbitstack/mooncrypt/spec",
+  "moonbitstack/mooncrypt/hash/sha1",
+  "moonbitstack/moonbase/base16",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "test"

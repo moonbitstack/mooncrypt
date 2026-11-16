@@ -1,0 +1,16 @@
+// IDEA, the International Data Encryption Algorithm of Lai and Massey (EUROCRYPT 1991), as
+// RFC 5469 names it for TLS: a 64-bit block and a 128-bit key.
+//
+// Eight rounds and an output transformation built from three operations on 16-bit words, no two
+// of which share an algebraic structure: XOR, addition modulo 2^16 and multiplication modulo
+// 2^16 + 1 with the zero word standing for 2^16. Decryption is the same rounds under inverted
+// subkeys. Its patents have expired; TLS 1.2 deprecated its suite (RFC 5469), and it is here for
+// peers that still speak it.
+import {
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+  "moonbitstack/mooncrypt/spec",
+} for "test"

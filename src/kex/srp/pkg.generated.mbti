@@ -1,0 +1,53 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/kex/srp"
+
+import {
+  "moonbitlang/core/bigint",
+  "moonbitlang/core/debug",
+  "moonbitstack/mooncrypt/spec",
+}
+
+// Values
+pub let groups : Array[Group]
+
+pub fn verifier(Group, BytesView, BytesView, BytesView) -> Bytes
+
+// Errors
+
+// Types and methods
+pub struct Client {
+  // private fields
+}
+pub fn Client::new(Group, BytesView) -> Self raise @spec.Broken
+pub fn Client::premaster(Self, BytesView, salt~ : BytesView, identity~ : BytesView, password~ : BytesView) -> Bytes raise @spec.Broken
+pub fn Client::public(Self) -> Bytes
+
+#derive(Eq, @debug.Debug)
+pub(all) enum Group {
+  G1024
+  G1536
+  G2048
+  G3072
+  G4096
+  G6144
+  G8192
+}
+pub fn Group::bits(Self) -> Int32
+pub fn Group::equal(Self, Self) -> Bool
+pub fn Group::generator(Self) -> @bigint.BigInt
+pub fn Group::not_equal(Self, Self) -> Bool
+pub fn Group::of(BytesView, BytesView) -> Self?
+pub fn Group::prime(Self) -> @bigint.BigInt
+pub fn Group::size(Self) -> Int32
+pub fn Group::to_repr(Self) -> @debug.Repr
+
+pub struct Server {
+  // private fields
+}
+pub fn Server::new(Group, BytesView, BytesView) -> Self raise @spec.Broken
+pub fn Server::premaster(Self, BytesView) -> Bytes raise @spec.Broken
+pub fn Server::public(Self) -> Bytes
+
+// Type aliases
+
+// Traits

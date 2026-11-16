@@ -90,11 +90,14 @@ Import the ones you use. A package nothing imports is not linked, which is what
 | `cipher/aes` | AES-128, AES-192 and AES-256, both directions | FIPS 197 |
 | `cipher/sm4` | SM4 | GB/T 32907-2016 |
 | `cipher/camellia` | Camellia-128/192/256 | RFC 3713 |
+| `cipher/aria` | ARIA-128/192/256 | RFC 5794 |
+| `cipher/seed` | SEED | RFC 4269 |
 | `cipher/mode` | CBC and CTR over any `Block`, with PKCS#7 padding | SP 800-38A |
 | `cipher/chacha20` | ChaCha20 with the 96-bit nonce, and one block on its own for QUIC's header protection | RFC 8439 §2.3–2.4 |
 | `cipher/xchacha20` | XChaCha20, the 192-bit nonce form | draft-irtf-cfrg-xchacha |
 | `cipher/blowfish` | Blowfish — legacy, and the core of bcrypt | Schneier 1993 |
 | `cipher/des` | DES and triple DES, E-D-E in both key forms — legacy: a 56-bit key | FIPS 46-3 |
+| `cipher/idea` | IDEA — legacy: a 64-bit block | Lai and Massey 1991, RFC 5469 |
 | `cipher/rc4` | RC4 and its keystream — legacy: the first bytes are biased | — |
 | `cipher/salsa20` | Salsa20 — legacy: superseded by ChaCha20 | Bernstein 2005 |
 | `aead/gcm` | GCM over any 128-bit block cipher, any nonce length, the seven tag lengths | SP 800-38D |
@@ -107,6 +110,7 @@ Import the ones you use. A package nothing imports is not linked, which is what
 | `kex/x448` | X448, with the same refusal | RFC 7748 |
 | `kex/ecdh` | ECDH over P-256, P-384, P-521, secp256k1 and the three brainpool curves, with an off-curve point refused | SEC 1 §3.3.1, RFC 5639, RFC 8734 |
 | `kex/dh` | Finite-field Diffie-Hellman over the five ffdhe groups, with a range check on the peer's share | RFC 7919 |
+| `kex/srp` | SRP-6a over RFC 5054's seven groups: the verifier, each side's public value and premaster secret, a public value that is a multiple of N refused | RFC 5054 |
 | `pq/mlkem` | ML-KEM-512, -768 and -1024: the key encapsulation behind TLS's hybrid group, with both key checks and the implicit rejection | FIPS 203 |
 | `pq/mldsa` | ML-DSA-44, -65 and -87, with contexts, the pre-hash form and the internal interface | FIPS 204 |
 | `pq/slhdsa` | SLH-DSA, all twelve parameter sets of the hash-based scheme | FIPS 205 |

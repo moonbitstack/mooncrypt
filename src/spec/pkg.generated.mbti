@@ -6,6 +6,8 @@ import {
 }
 
 // Values
+pub fn blockwise(BytesView, Int32, (BytesView) -> Bytes) -> Bytes
+
 pub fn digest(&Hash, BytesView) -> Bytes
 
 pub fn eq(BytesView, BytesView) -> Bool
