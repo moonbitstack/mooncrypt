@@ -280,9 +280,8 @@ let d : BigInt = p - 39081N
 
 ///|
 /// `L`, the order of the base point's subgroup.
-let l : BigInt = BigInt::from_string(
+let l : BigInt = @big.hex(
   "3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7CCA23E9C44EDB49AED63690216CC2728DC58F552378C292AB5844F3",
-  radix=16,
 )
 
 ///|
@@ -302,13 +301,11 @@ priv struct Point {
 /// The base point of edwards448, in the decimal the RFC states it and converted
 /// to hex.
 let base : Point = {
-  x: BigInt::from_string(
+  x: @big.hex(
     "4F1970C66BED0DED221D15A622BF36DA9E146570470F1767EA6DE324A3D3A46412AE1AF72AB66511433B80E18B00938E2626A82BC70CC05E",
-    radix=16,
   ),
-  y: BigInt::from_string(
+  y: @big.hex(
     "693F46716EB6BC248876203756C9C7624BEA73736CA3984087789C1E05A0C2D73AD3FF1CE67C39C4FDBD132C4ED7C8AD9808795BF230FA14",
-    radix=16,
   ),
   z: 1N,
 }

@@ -10,8 +10,6 @@ import {
 // Values
 pub fn add(@curve.Curve, Point, Point) -> Point
 
-pub fn big(String) -> @bigint.BigInt
-
 pub fn bits(@bigint.BigInt) -> Int32
 
 pub fn decode(@curve.Curve, BytesView) -> Point raise @spec.Broken

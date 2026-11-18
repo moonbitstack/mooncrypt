@@ -178,7 +178,7 @@ fn Cipher::run(self : Cipher, input : BytesView, reverse : Bool) -> Bytes {
       l1 = t1
     }
   }
-  let out = Buffer(size_hint=16)
+  let out = Buffer(capacity=16)
   for w in [l0, l1, r0, r1] {
     out.write_uint_be(w)
   }

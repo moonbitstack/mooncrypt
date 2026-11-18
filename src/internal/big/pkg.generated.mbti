@@ -1,0 +1,17 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/mooncrypt/internal/big"
+
+import {
+  "moonbitlang/core/bigint",
+}
+
+// Values
+pub fn hex(String) -> @bigint.BigInt
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

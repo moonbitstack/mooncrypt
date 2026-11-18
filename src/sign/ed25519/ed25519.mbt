@@ -170,10 +170,7 @@ pub impl @spec.Verifier for PublicKey with fn verify(
 ///|
 /// The curve coefficient `d = -121665/121666`.
 let d : @field25519.Fe = @field25519.from_bigint(
-  BigInt::from_string(
-    "52036CEE2B6FFE738CC740797779E89800700A4D4141D8AB75EB4DCA135978A3",
-    radix=16,
-  ),
+  @big.hex("52036CEE2B6FFE738CC740797779E89800700A4D4141D8AB75EB4DCA135978A3"),
 )
 
 ///|
@@ -183,18 +180,14 @@ let two_d : @field25519.Fe = @field25519.add(d, d)
 ///|
 /// The order of the base point's subgroup. Scalar arithmetic stays in `BigInt`:
 /// it is a handful of operations per signature, not the inner loop.
-let l : BigInt = BigInt::from_string(
+let l : BigInt = @big.hex(
   "1000000000000000000000000000000014DEF9DEA2F79CD65812631A5CF5D3ED",
-  radix=16,
 )
 
 ///|
 /// A square root of -1, which decompression needs because `p ≡ 5 (mod 8)`.
 let sqrt_m1 : @field25519.Fe = @field25519.from_bigint(
-  BigInt::from_string(
-    "2B8324804FC1DF0B2B4D00993DFBD7A72F431806AD2FE478C4EE1B274A0EA0B0",
-    radix=16,
-  ),
+  @big.hex("2B8324804FC1DF0B2B4D00993DFBD7A72F431806AD2FE478C4EE1B274A0EA0B0"),
 )
 
 ///|
@@ -225,16 +218,10 @@ priv struct Ext {
 ///|
 let base : Point = {
   x: @field25519.from_bigint(
-    BigInt::from_string(
-      "216936D3CD6E53FEC0A4E231FDD6DC5C692CC7609525A7B2C9562D608F25D51A",
-      radix=16,
-    ),
+    @big.hex("216936D3CD6E53FEC0A4E231FDD6DC5C692CC7609525A7B2C9562D608F25D51A"),
   ),
   y: @field25519.from_bigint(
-    BigInt::from_string(
-      "6666666666666666666666666666666666666666666666666666666666666658",
-      radix=16,
-    ),
+    @big.hex("6666666666666666666666666666666666666666666666666666666666666658"),
   ),
 }
 

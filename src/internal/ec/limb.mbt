@@ -904,7 +904,7 @@ fn mul_g_limb(c : Curve, k : BigInt) -> Point {
 /// the width — the lattice below is the one the GLV paper gives for this curve —
 /// and `[k]P` becomes `[k₁]P + [k₂]φ(P)` with both halves under `2^128`. That
 /// halves the doublings, which is where most of the work is.
-let glv_beta : BigInt = big(
+let glv_beta : BigInt = @big.hex(
   "7AE96A2B657C07106E64479EAC3434E99CF0497512F58995C1396C28719501EE",
 )
 

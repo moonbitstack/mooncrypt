@@ -1,4 +1,5 @@
 import {
+  "moonbitstack/mooncrypt/internal/big",
   "moonbitstack/mooncrypt/curve",
   "moonbitstack/mooncrypt/spec",
 }

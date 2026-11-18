@@ -186,7 +186,7 @@ pub fn blockwise(
       "spec: the input is not a whole number of blocks (\{input.length()} bytes, block is \{size})",
     )
   }
-  let out = Buffer(size_hint=input.length())
+  let out = Buffer(capacity=input.length())
   for i in 0..<(input.length() / size) {
     out.write_bytes(each(input[i * size:(i + 1) * size]))
   }

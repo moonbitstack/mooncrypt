@@ -1,0 +1,4 @@
+// The curve constants the signature and key-exchange packages write in hex.
+import {
+  "moonbitlang/core/string",
+}

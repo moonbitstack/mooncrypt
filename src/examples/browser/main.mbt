@@ -33,7 +33,7 @@ fn digest(kind : String, input : String) -> String {
     "sha3-256" => @sha3.hash(data[:], kind=@sha3.Sha3_256)
     "blake3" => @blake3.hash(data[:])
     "sm3" => @sm3.hash(data[:])
-    _ => Bytes::new(0)
+    _ => b""
   }
   @base16.encode(out)
 }

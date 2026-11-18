@@ -204,9 +204,9 @@ test "zero and the point at infinity come out right" {
 /// `c₂` round `k` onto the lattice, and the rest is arithmetic.
 fn exact_glv_split(k : BigInt) -> (BigInt, BigInt) {
   let n = params(@curve.Secp256k1).n
-  let a1 = big("3086D221A7D46BCDE86C90E49284EB15")
-  let b1 = big("0E4437ED6010E88286F547FA90ABFE4C3")
-  let a2 = big("114CA50F7A8E2F3F657C1108D9D44CFD8")
+  let a1 = @big.hex("3086D221A7D46BCDE86C90E49284EB15")
+  let b1 = @big.hex("0E4437ED6010E88286F547FA90ABFE4C3")
+  let a2 = @big.hex("114CA50F7A8E2F3F657C1108D9D44CFD8")
   let half = n / (2 : BigInt)
   let c1 = (a1 * k + half) / n
   let c2 = (b1 * k + half) / n
@@ -256,7 +256,7 @@ test "the endomorphism split matches the exact rounding" {
 
 ///|
 test "the split holds over a swept scalar range" {
-  let lam = big(
+  let lam = @big.hex(
     "5363AD4CC05C30E0A5261C028812645A122E22EA20816678DF02967C1B23BD72",
   )
   let mut k = (1 : BigInt)
